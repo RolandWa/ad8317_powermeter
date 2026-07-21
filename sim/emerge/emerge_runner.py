@@ -627,27 +627,31 @@ class EmergeModelBuilder:
             ymin, ymax = min(ys_p) - margin, max(ys_p) + margin
             self._log("Board outline: not found — using port-based bounds")
 
+        # Always expand domain to include every port, even those outside the board outline.
+        # This handles components placed off-board in KiCad (e.g. IC placed outside Edge.Cuts).
+        for p in ports:
+            if p["x"] - margin < xmin:
+                self._log(f"  Domain expanded left  for {p['name']}: "
+                          f"{xmin*1e3:.1f} → {(p['x']-margin)*1e3:.1f} mm")
+                xmin = p["x"] - margin
+            if p["x"] + margin > xmax:
+                self._log(f"  Domain expanded right for {p['name']}: "
+                          f"{xmax*1e3:.1f} → {(p['x']+margin)*1e3:.1f} mm")
+                xmax = p["x"] + margin
+            if p["y"] - margin < ymin:
+                self._log(f"  Domain expanded down  for {p['name']}: "
+                          f"{ymin*1e3:.1f} → {(p['y']-margin)*1e3:.1f} mm")
+                ymin = p["y"] - margin
+            if p["y"] + margin > ymax:
+                self._log(f"  Domain expanded up    for {p['name']}: "
+                          f"{ymax*1e3:.1f} → {(p['y']+margin)*1e3:.1f} mm")
+                ymax = p["y"] + margin
+
         dom_w = (xmax - xmin) * 1e3
         dom_h = (ymax - ymin) * 1e3
         self._log(f"Simulation domain: ({xmin*1e3:.1f}, {ymin*1e3:.1f}) – "
                   f"({xmax*1e3:.1f}, {ymax*1e3:.1f}) mm  "
                   f"size {dom_w:.1f} x {dom_h:.1f} mm  margin={margin*1e3:.1f} mm")
-
-        # Warn about ports that fall outside the simulation domain
-        for p in ports:
-            px_mm, py_mm = p["x"] * 1e3, p["y"] * 1e3
-            in_x = xmin * 1e3 <= px_mm <= xmax * 1e3
-            in_y = ymin * 1e3 <= py_mm <= ymax * 1e3
-            status = "OK" if (in_x and in_y) else "WARNING: OUTSIDE DOMAIN"
-            self._log(f"  Port check {p['name']}: ({px_mm:.2f}, {py_mm:.2f}) mm — {status}")
-            if not (in_x and in_y):
-                self._log(f"    domain X [{xmin*1e3:.1f}, {xmax*1e3:.1f}]  "
-                          f"port X={px_mm:.2f}  in={in_x}")
-                self._log(f"    domain Y [{ymin*1e3:.1f}, {ymax*1e3:.1f}]  "
-                          f"port Y={py_mm:.2f}  in={in_y}")
-                self._log(f"    Port {p['name']} is outside the simulation domain — "
-                          f"it will NOT be excited. Check pad '{p.get('name', '?')}' "
-                          f"placement in KiCad.")
 
         if DEBUG:
             _dbg(f"Board region (m): x=[{xmin:.4f},{xmax:.4f}] y=[{ymin:.4f},{ymax:.4f}]",
@@ -738,20 +742,35 @@ class EmergeModelBuilder:
                 layer_idx += 1
 
         # ── Add lumped ports ─────────────────────────────────────────────────
+        # Probe lumped_port_pts signature once — 'name' kwarg not present in all
+        # v2.8.x builds; pass it only when supported to avoid TypeError.
+        import inspect as _inspect
+        try:
+            _lpp_params = set(_inspect.signature(pcb.lumped_port_pts).parameters.keys())
+        except Exception:
+            _lpp_params = set()
+
         port_half = max(0.0005, board_t * 0.5)  # half-size of port rectangle
         port_geos = []
         for p in ports:
             p1 = (p["x"] - port_half, p["y"])
             p2 = (p["x"] + port_half, p["y"])
             z_top = board_t
-            port_geo = pcb.lumped_port_pts(
-                p1=p1, p2=p2,
-                z=z_top,
-                z_ground=0.0,
-                name=p["name"],
-            )
+            kwargs = {"p1": p1, "p2": p2, "z": z_top, "z_ground": 0.0}
+            if "name" in _lpp_params:
+                kwargs["name"] = p["name"]
+            port_geo = pcb.lumped_port_pts(**kwargs)
+            # Try to set name on the returned geometry object directly
+            for attr in ("name", "label", "_name"):
+                try:
+                    setattr(port_geo, attr, p["name"])
+                    break
+                except Exception:
+                    pass
             port_geos.append((p, port_geo))
-            self._log(f"  Port {p['name']} added at ({p['x']*1e3:.2f}, {p['y']*1e3:.2f}) mm")
+            self._log(f"  Port {p['name']} added at ({p['x']*1e3:.2f}, {p['y']*1e3:.2f}) mm  "
+                      f"p1=({p1[0]*1e3:.2f},{p1[1]*1e3:.2f})  "
+                      f"p2=({p2[0]*1e3:.2f},{p2[1]*1e3:.2f}) mm")
 
         # ── Passive R/L/C lumped elements ────────────────────────────────────
         if self.model_passives:
