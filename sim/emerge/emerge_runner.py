@@ -614,24 +614,44 @@ class EmergeModelBuilder:
             ol_ys = [p[1] * 1e-3 for p in outline_pts]
             xmin, xmax = min(ol_xs) - margin, max(ol_xs) + margin
             ymin, ymax = min(ol_ys) - margin, max(ol_ys) + margin
+            bw = (max(ol_xs) - min(ol_xs)) * 1e3
+            bh = (max(ol_ys) - min(ol_ys)) * 1e3
             self._log(f"Board outline: {len(outline_pts)} vertices  "
                       f"({min(ol_xs)*1e3:.1f}, {min(ol_ys)*1e3:.1f}) – "
-                      f"({max(ol_xs)*1e3:.1f}, {max(ol_ys)*1e3:.1f}) mm")
+                      f"({max(ol_xs)*1e3:.1f}, {max(ol_ys)*1e3:.1f}) mm  "
+                      f"size {bw:.1f} x {bh:.1f} mm")
         else:
-            # Fallback: derive bounds from port pad positions
             xs_p = [p["x"] for p in ports]
             ys_p = [p["y"] for p in ports]
             xmin, xmax = min(xs_p) - margin, max(xs_p) + margin
             ymin, ymax = min(ys_p) - margin, max(ys_p) + margin
             self._log("Board outline: not found — using port-based bounds")
 
+        dom_w = (xmax - xmin) * 1e3
+        dom_h = (ymax - ymin) * 1e3
         self._log(f"Simulation domain: ({xmin*1e3:.1f}, {ymin*1e3:.1f}) – "
-                  f"({xmax*1e3:.1f}, {ymax*1e3:.1f}) mm")
+                  f"({xmax*1e3:.1f}, {ymax*1e3:.1f}) mm  "
+                  f"size {dom_w:.1f} x {dom_h:.1f} mm  margin={margin*1e3:.1f} mm")
+
+        # Warn about ports that fall outside the simulation domain
+        for p in ports:
+            px_mm, py_mm = p["x"] * 1e3, p["y"] * 1e3
+            in_x = xmin * 1e3 <= px_mm <= xmax * 1e3
+            in_y = ymin * 1e3 <= py_mm <= ymax * 1e3
+            status = "OK" if (in_x and in_y) else "WARNING: OUTSIDE DOMAIN"
+            self._log(f"  Port check {p['name']}: ({px_mm:.2f}, {py_mm:.2f}) mm — {status}")
+            if not (in_x and in_y):
+                self._log(f"    domain X [{xmin*1e3:.1f}, {xmax*1e3:.1f}]  "
+                          f"port X={px_mm:.2f}  in={in_x}")
+                self._log(f"    domain Y [{ymin*1e3:.1f}, {ymax*1e3:.1f}]  "
+                          f"port Y={py_mm:.2f}  in={in_y}")
+                self._log(f"    Port {p['name']} is outside the simulation domain — "
+                          f"it will NOT be excited. Check pad '{p.get('name', '?')}' "
+                          f"placement in KiCad.")
+
         if DEBUG:
             _dbg(f"Board region (m): x=[{xmin:.4f},{xmax:.4f}] y=[{ymin:.4f},{ymax:.4f}]",
                  self.report_lines)
-
-        if DEBUG:
             _dbg(f"stack_layers ({len(stack_layers)}): "
                  f"{[(l.name, l.thickness) for l in stack_layers]}",
                  self.report_lines)
@@ -676,11 +696,20 @@ class EmergeModelBuilder:
             self._log(f"PCB geometry: PCBNew (simplified — {reason})")
         pcb.set_bounds(xmin, ymin, xmax, ymax)
 
+        if DEBUG and self.gerber_dir.is_dir():
+            gbr_files = sorted(self.gerber_dir.glob("*.gbr"))
+            _dbg(f"Gerber directory ({len(gbr_files)} .gbr files): {self.gerber_dir}",
+                 self.report_lines)
+            for gf in gbr_files:
+                _dbg(f"  {gf.name:<55} {gf.stat().st_size/1024:6.0f} kB", self.report_lines)
+
         # Load copper layers from Gerber files when FileBasedPCB is active.
         # KiCad kicad-cli names files: {stem}-{LayerName}.gbr, dots → underscores.
         if use_gerbers:
             copper_layers = stackup.get("layers", [])
             cu_layer_names = [l["name"] for l in copper_layers if l["type"] == "copper"]
+            self._log(f"Loading {len(cu_layer_names)} copper layer(s) from Gerbers "
+                      f"(this can take several minutes for complex boards):")
             layer_idx = 0
             for layer_name in cu_layer_names:
                 gbr_stem = layer_name.replace(".", "_")
@@ -690,17 +719,22 @@ class EmergeModelBuilder:
                 ]
                 gbr_path = next((p for p in candidates if p.exists()), None)
                 if gbr_path is None:
-                    self._log(f"  WARNING: Gerber not found for layer '{layer_name}' — "
-                              f"layer {layer_idx} will be empty copper plane")
+                    self._log(f"  Layer {layer_idx} ({layer_name}): "
+                              f"WARNING — Gerber not found, will use empty copper plane")
+                    if DEBUG:
+                        _dbg(f"  Searched: {[str(c) for c in candidates]}", self.report_lines)
                 else:
+                    size_kb = gbr_path.stat().st_size / 1024
+                    self._log(f"  Layer {layer_idx} ({layer_name}): "
+                              f"{gbr_path.name}  {size_kb:.0f} kB  — parsing ...")
                     _t_lyr = time.monotonic()
                     try:
                         pcb.layer_from_file(layer_idx, str(gbr_path))
                         self._log(f"  Layer {layer_idx} ({layer_name}): "
-                                  f"{gbr_path.name}  ({time.monotonic()-_t_lyr:.1f} s)")
+                                  f"done  ({time.monotonic()-_t_lyr:.1f} s)")
                     except Exception as exc:
-                        self._log(f"  WARNING: layer_from_file failed for "
-                                  f"{gbr_path.name}: {exc}")
+                        self._log(f"  Layer {layer_idx} ({layer_name}): "
+                                  f"WARNING — layer_from_file failed: {exc}")
                 layer_idx += 1
 
         # ── Add lumped ports ─────────────────────────────────────────────────
