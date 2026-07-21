@@ -1,0 +1,594 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	(paper "A3")
+	(title_block
+		(title "RF Frontend")
+		(date "2026-07-19")
+		(rev "A")
+		(company "Author")
+		(comment 1 "SMA (J1 Amphenol RF 132372), 30 dB attenuator")
+		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
+	)
+	(lib_symbols)
+	(text "UI: SSD1306 OLED DISP1, SW1/SW2 buttons, USB-C CONN1; I2C/USB in, SW_MENU/NEXT out"
+		(exclude_from_sim no)
+		(at 256.413 109.474 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "0098f5e6-280a-4e96-be39-d164529aa75a")
+	)
+	(text "MCU: STM32F373 U1, REF3030 U3; pins: power in, PC13_PWR/I2C/USB out"
+		(exclude_from_sim no)
+		(at 204.343 101.854 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "177bb3a6-ce95-42e3-9830-004a17d75195")
+	)
+	(text "RF Frontend: SMA J1, AD8317 U2, RC filter; +3V3_A in, VDET/AGND_RF out"
+		(exclude_from_sim no)
+		(at 113.835 105.63 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "1f38efcb-837b-4935-a265-4d46635588e8")
+	)
+	(text "Power: MCP73831 U6, AP2112K-3.3 U4 (digital), ADP150-2.8 U5 (analog 9uVrms), MOSFETs, AP9101/FS8205A; +3V3/+3V3_A/VBAT out"
+		(exclude_from_sim no)
+		(at 137.965 173.84 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "35641809-fae8-43f9-a2cd-3c3a31ddce9b")
+	)
+	(text "ad8317_powermeter.kicad_sch — top-level A3: 4 hierarchical sub-sheets"
+		(exclude_from_sim no)
+		(at 113.835 100.63 0)
+		(effects
+			(font
+				(size 1.2 1.2)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "b0a19ae4-90d0-44ee-b000-1c9f8f3169d0")
+	)
+	(junction
+		(at 189.23 120.65)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4a5a36a8-9964-432a-a773-10a2b0e9e732")
+	)
+	(junction
+		(at 248.92 118.11)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a3179e1f-a6f3-43e0-a3ae-56c45399e8b4")
+	)
+	(wire
+		(pts
+			(xy 171.45 133.35) (xy 203.2 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "11eb3a1e-b1aa-44bf-83f4-87ef7503489a")
+	)
+	(wire
+		(pts
+			(xy 171.45 120.65) (xy 189.23 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1b051120-4633-4a0c-8eb3-58047433b3ca")
+	)
+	(wire
+		(pts
+			(xy 240.665 146.05) (xy 254 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "229eab1e-852f-41f1-a4e8-d2f859287f09")
+	)
+	(wire
+		(pts
+			(xy 189.23 120.65) (xy 203.2 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2422d82a-a9c8-4e56-968c-48d7f75e9439")
+	)
+	(wire
+		(pts
+			(xy 248.92 184.15) (xy 248.92 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2fd5d0e1-369f-4977-a50d-0c9001502d0b")
+	)
+	(wire
+		(pts
+			(xy 240.665 127) (xy 254 127)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "30dfa328-4678-4341-9dc3-26e55705b99f")
+	)
+	(wire
+		(pts
+			(xy 196.85 140.97) (xy 196.85 196.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40bfbda3-6d29-452d-926b-dff718180bf1")
+	)
+	(wire
+		(pts
+			(xy 240.665 139.7) (xy 254 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4aee4f27-e6e6-4040-b800-3fd389b91297")
+	)
+	(wire
+		(pts
+			(xy 240.665 133.35) (xy 254 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4d2dc42a-02f6-4dea-a68d-5001a392d6d0")
+	)
+	(wire
+		(pts
+			(xy 171.45 190.5) (xy 189.23 190.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7281066d-12f8-4e36-8fdc-589d89ddde26")
+	)
+	(wire
+		(pts
+			(xy 248.92 118.11) (xy 254 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a69b93c9-fcd3-44f8-a47c-2a885ca33b7b")
+	)
+	(wire
+		(pts
+			(xy 189.23 120.65) (xy 189.23 190.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b86e6aa9-c981-4346-ac6c-040a420b7d10")
+	)
+	(wire
+		(pts
+			(xy 171.45 184.15) (xy 248.92 184.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bfd0f969-58be-4956-a1d6-7da5c43ef644")
+	)
+	(wire
+		(pts
+			(xy 240.665 118.11) (xy 248.92 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d85b794f-37bc-405a-9261-6bb2925f6083")
+	)
+	(wire
+		(pts
+			(xy 203.2 140.97) (xy 196.85 140.97)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e4d86c8a-3ebf-4c6f-8fb4-29136c7d1839")
+	)
+	(wire
+		(pts
+			(xy 196.85 196.85) (xy 171.45 196.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ec3f11a6-ee7b-4c6d-a7d5-76971449274e")
+	)
+	(sheet
+		(at 142.875 114.3)
+		(size 28.575 40.64)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 255 255 204 0.3000)
+		)
+		(uuid "b1000001-0000-0000-0000-000000000001")
+		(property "Sheetname" "RF_Frontend"
+			(at 142.875 113.4746 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "RF_Frontend.kicad_sch"
+			(at 142.875 155.5234 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "+3V3_A" input
+			(at 171.45 120.65 0)
+			(uuid "e1000001-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VDET" output
+			(at 171.45 133.35 0)
+			(uuid "e1000001-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(sheet
+		(at 203.2 114.3)
+		(size 37.465 40.005)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 204 228 255 0.3000)
+		)
+		(uuid "b1000002-0000-0000-0000-000000000002")
+		(property "Sheetname" "MCU"
+			(at 203.2 113.4746 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "MCU.kicad_sch"
+			(at 203.2 154.8884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "+3V3" input
+			(at 240.665 118.11 0)
+			(uuid "e1000002-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "+3V3_A" input
+			(at 203.2 120.65 180)
+			(uuid "e1000002-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "VDET" input
+			(at 203.2 133.35 180)
+			(uuid "e1000002-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "ANALOG_PWR" output
+			(at 203.2 140.97 180)
+			(uuid "e1000002-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "I2C_SCL" output
+			(at 240.665 127 0)
+			(uuid "e1000002-0000-0000-0000-000000000006")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "I2C_SDA" output
+			(at 240.665 133.35 0)
+			(uuid "e1000002-0000-0000-0000-000000000007")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "USB_DP" bidirectional
+			(at 240.665 139.7 0)
+			(uuid "e1000002-0000-0000-0000-000000000008")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "USB_DM" bidirectional
+			(at 240.665 146.05 0)
+			(uuid "e1000002-0000-0000-0000-000000000009")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(sheet
+		(at 144.145 177.8)
+		(size 27.305 41.91)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 255 220 204 0.3000)
+		)
+		(uuid "b1000003-0000-0000-0000-000000000003")
+		(property "Sheetname" "Power_Management"
+			(at 144.145 176.9746 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Power_Management.kicad_sch"
+			(at 144.145 220.2934 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "ANALOG_PWR" input
+			(at 171.45 196.85 0)
+			(uuid "e1000003-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "CHG_STAT" output
+			(at 144.145 196.85 180)
+			(uuid "e1000003-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "+3V3" output
+			(at 171.45 184.15 0)
+			(uuid "e1000003-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "+3V3_A" output
+			(at 171.45 190.5 0)
+			(uuid "e1000003-0000-0000-0000-000000000004")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VBAT" output
+			(at 144.145 193.04 180)
+			(uuid "e1000003-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(sheet
+		(at 254 114.3)
+		(size 20.32 40.005)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 220 255 220 0.3000)
+		)
+		(uuid "b1000004-0000-0000-0000-000000000004")
+		(property "Sheetname" "User_Interface"
+			(at 254 113.4746 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "User_Interface.kicad_sch"
+			(at 254 154.8884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "I2C_SCL" input
+			(at 254 127 180)
+			(uuid "e1000004-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "I2C_SDA" input
+			(at 254 133.35 180)
+			(uuid "e1000004-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "+3V3" input
+			(at 254 118.11 180)
+			(uuid "e1000004-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USB_DP" bidirectional
+			(at 254 139.7 180)
+			(uuid "e1000004-0000-0000-0000-000000000004")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USB_DM" bidirectional
+			(at 254 146.05 180)
+			(uuid "e1000004-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../mcucommander"
+		},
+		{
+			"path": "../Multilayer_SMA2Microstrip"
+		},
+		{
+			"path": "../wireless-esp8266-dap"
+		},
+		{
+			"path": "../../../../../../Subnet/ENIP_800T_HW"
+		},
+		{
+			"path": "../../../../AppData/Roaming/FreeCAD/v1-1/Mod/FreeCAD-OpenEMS-Export-0_7_5"
+		}
+	],
+	"settings": {
+		"cfs.configureWorkspace": "No"
+	}
+}

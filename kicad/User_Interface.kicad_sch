@@ -1,0 +1,28 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "b1000004-1111-0000-0000-000000000004")
+	(paper "A4")
+	(title_block
+		(title "RF Frontend")
+		(date "2026-07-19")
+		(rev "A")
+		(company "Author")
+		(comment 1 "SMA (J1 Amphenol RF 132372), 30 dB attenuator")
+		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
+		(comment 3 "USB-C connector USB4110-GF-A (CONN1) — shared net with Power sheet")
+	)
+	(lib_symbols)
+	(text "User_Interface.kicad_sch — SBC-OLED01 SSD1306 I2C DISP1, SW1 MENU PA0, SW2 NEXT PA1, USB-C CONN1 USB4110-GF-A; pins: I2C/+3V3/USB in, SW_MENU/SW_NEXT out"
+		(exclude_from_sim no)
+		(at 24.13 47.498 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "fe041121-97bc-48f3-8db2-ccc8a192a072")
+	)
+)

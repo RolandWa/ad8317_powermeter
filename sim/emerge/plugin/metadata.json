@@ -1,0 +1,29 @@
+{
+  "$schema": "https://go.kicad.org/pcm/schemas/v1",
+  "name": "EMerge FEM Simulation",
+  "description": "Run the EMerge FEM solver directly from the KiCad PCB editor. Exports Gerbers, builds a 3-D FEM model from the board stackup, runs a frequency sweep, and produces Touchstone (.s2p) and a pass/fail report against configurable S-parameter thresholds.",
+  "description_full": "EMerge FEM Simulation Plugin for KiCad\n\nThe plugin reads all material and geometry data directly from the open .kicad_pcb file — the board stackup is the single source of truth (no hardcoded dielectrics). Port definitions (ref:pad notation, impedance, direction) are stored in emerge_config.toml next to the plugin.\n\nWorkflow triggered from the toolbar button:\n  1. Gerber export via kicad-cli\n  2. FEM model build (FileBasedPCB, open_pml_region, series/parallel impedance ports)\n  3. Frequency sweep (configurable start/stop/steps, cells-per-lambda)\n  4. Touchstone export and pass/fail against IL / RL thresholds\n\nResults written to  <pcb_parent>/sim/emerge/results/",
+  "identifier": "com.github.author.emerge-fem-simulation",
+  "type": "plugin",
+  "author": {
+    "name": "Author",
+    "contact": {
+      "email": "author@example.com"
+    }
+  },
+  "license": "MIT",
+  "resources": {
+    "homepage": "https://github.com/author/ad8317_powermeter"
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "status": "stable",
+      "kicad_version": "9.0",
+      "download_sha256": "",
+      "download_url": "",
+      "install_size": 32768,
+      "platforms": ["windows", "linux", "macos"]
+    }
+  ]
+}

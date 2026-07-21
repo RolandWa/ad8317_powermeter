@@ -1,0 +1,41 @@
+(version 1)
+
+# JLCPCB 2-layer standard DRC rules
+# Source: https://jlcpcb.com/capabilities/pcb-capabilities
+
+(rule "Min track width"
+  (constraint track_width (min 0.127mm))
+)
+
+(rule "Min clearance"
+  (constraint clearance (min 0.127mm))
+)
+
+(rule "Min via diameter"
+  (constraint via_diameter (min 0.6mm))
+)
+
+(rule "Min via drill"
+  (constraint hole_size (min 0.3mm))
+)
+
+(rule "Min via annular ring"
+  (constraint annular_width (min 0.15mm))
+)
+
+(rule "Min hole to hole clearance"
+  (constraint hole_to_hole (min 0.5mm))
+)
+
+(rule "Min copper to edge clearance"
+  (constraint edge_clearance (min 0.3mm))
+)
+
+(rule "Min silkscreen text height"
+  (constraint text_height (min 0.8mm))
+)
+
+(rule "RF net — wider tracks"
+  (condition "A.NetName == 'RF_IN'")
+  (constraint track_width (min 0.5mm))
+)

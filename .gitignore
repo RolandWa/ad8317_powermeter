@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Simulation results (generated outputs)
+sim/emerge/results/
+sim/emerge/dist/
+
+# KiCad lock files and auto-saves
+*.lck
+*-backups/
+
+# KiCad cache files
+fp-info-cache
+
+# Backup files
+*.bak
+
+# Stray copies outside plugin/ directory
+sim/emerge/python_bridge.py
+
+# Memory (local only)
+memory/

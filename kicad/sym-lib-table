@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "project_custom")(type "KiCad")(uri "${KIPRJMOD}/../lib/symbols/ad8317_custom.kicad_sym")(options "")(descr "Custom symbols for ad8317_powermeter"))
+)

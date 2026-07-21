@@ -1,0 +1,134 @@
+# emerge_config.toml — EMerge FEM Simulation Plugin configuration
+# This file is the single configuration source for the KiCad action plugin.
+# Copy it into ~/.local/share/kicad/9.0/scripting/plugins/emerge_plugin/ after
+# installation, or let build.py / sync_to_kicad.ps1 do it automatically.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Debug mode
+#   debug = true  → passes --debug to emerge_runner and sets EMERGE_DEBUG=1
+#   Also activatable via environment variable: set EMERGE_DEBUG=1
+# ─────────────────────────────────────────────────────────────────────────────
+
+debug = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Port definitions
+#   pad    = "REF:pad_number"  — resolved from the open .kicad_pcb file
+#   R      = port reference impedance in ohms (default 50)
+#   C      = series capacitance in farads (leave unset for purely resistive)
+#   active = true  → excitation port (source); false → observation port
+#   dir    = excitation direction: "z" (normal to board), "x", or "y"
+# ─────────────────────────────────────────────────────────────────────────────
+
+[ports.PORT1]
+pad    = "J1:1"    # SMA input connector centre pin
+R      = 50.0
+active = true
+dir    = "z"
+
+[ports.PORT2]
+pad    = "U2:1"      # AD8317 INHI — pin 1 (LFCSP-8)
+R      = 200.0       # AD8317 input resistance [Ω]
+C      = 2e-12       # AD8317 input capacitance [F]  (200Ω ∥ 2 pF equivalent)
+active = false       # load port
+dir    = "z"
+
+[ports.PORT3]
+pad    = "U2:8"      # AD8317 INHI — pin 8 (LFCSP-8)
+R      = 200.0       # AD8317 input resistance [Ω]
+C      = 2e-12       # AD8317 input capacitance [F]  (200Ω ∥ 2 pF equivalent)
+active = false       # load port
+dir    = "z"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frequency sweep
+# ─────────────────────────────────────────────────────────────────────────────
+
+[sweep]
+start_hz         = 100_000_000    # 100 MHz
+stop_hz          = 6_000_000_000  # 6 GHz
+steps            = 21             # keep low for test runs; increase to 101+ for production
+cells_per_lambda = 10             # mesh density — increase for better accuracy (15+ for production)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pass/fail thresholds
+#   Violation is flagged when the simulated value EXCEEDS the threshold.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[thresholds]
+insertion_loss_db = 3.0   # |S21| > 3 dB loss triggers a warning
+return_loss_db    = 10.0  # |S11| < 10 dB return loss triggers a warning
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gerber export settings (used by GerberExporter stage)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Solver engine (linear algebra backend for the FEM system)
+#   "auto"    — EMerge picks the best available solver automatically (default)
+#   "pardiso" — Intel MKL PARDISO (fast direct; requires MKL)
+#   "mumps"   — MUMPS parallel direct solver
+#   "cuda"    — NVIDIA cuDSS GPU solver (requires CUDA GPU)
+#   "superlu" — SuperLU sparse direct (always available)
+#   "umfpack" — UMFPACK (requires SciPy)
+# ─────────────────────────────────────────────────────────────────────────────
+
+[solver]
+engine = "auto"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Visualization — show interactive 3D windows before the FEM solve starts.
+# Both windows are blocking: close the viewer to continue.
+#   show_geometry = true  → open PyVista viewer after model build (ports + BCs visible)
+#   show_mesh     = true  → open PyVista viewer after mesh generation (surface mesh)
+# ─────────────────────────────────────────────────────────────────────────────
+
+[visualization]
+show_geometry = true   # 3D geometry view after commit_geometry() — close window to continue
+show_mesh     = true   # 3D mesh view after generate_mesh() — close window to continue
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gerber export settings (used by GerberExporter stage)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Passive component modelling (R, L, C)
+#   model_passives = true  → automatically identify all R*/L*/C* footprints,
+#                            parse their values, and insert lumped element
+#                            geometry into the FEM model before the solve.
+#   skip = ["R5", "C3"]    → exclude specific components (e.g. decoupling caps
+#                            that are too small to affect the RF path, or
+#                            components not yet populated on the board).
+#
+# Zero-ohm jumpers (0R), DNP, NC, and unparseable values are always skipped.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[passives]
+model_passives = false  # temporarily disabled to isolate GMSH edge-recovery failure
+skip           = []    # e.g. ["C5", "C6", "R10"] to exclude specific parts
+
+[gerber]
+# Path to kicad-cli executable — leave empty to auto-detect
+kicad_cli = ""
+
+# use_gerbers = true  → FileBasedPCB: loads actual copper trace geometry from
+#                        Gerber files (accurate but slow — F.Cu can take 4+ min)
+# use_gerbers = false → PCBNew: simplified uniform copper planes (fast, ~seconds)
+#                        Use false for quick port/domain checks; true for production.
+use_gerbers = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Python interpreter used to run emerge_runner.py (system Python, not KiCad's)
+#   Set this to the full path of the Python exe that has emerge installed.
+#   Leave empty to auto-detect (searches AppData, PATH, etc.).
+# ─────────────────────────────────────────────────────────────────────────────
+
+[python]
+python_exe = "C:\\Users\\<user>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+
+[gerber.layers]
+# Layers to export — names must match those in the .kicad_pcb stackup
+copper  = ["F.Cu", "B.Cu"]
+mask    = ["F.Mask", "B.Mask"]
+silk    = ["F.Silkscreen", "B.Silkscreen"]
+edge    = ["Edge.Cuts"]
