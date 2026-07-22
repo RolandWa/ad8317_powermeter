@@ -455,6 +455,7 @@ class EmergePlugin(pcbnew.ActionPlugin):
         vis_cfg      = self._config.get("visualization", {})
         passives_cfg = self._config.get("passives", {})
         gerber_cfg   = self._config.get("gerber", {})
+        mesh_cfg     = self._config.get("mesh", {})
         gerber_dir   = output_dir / "gerbers"
 
         job = {
@@ -485,6 +486,13 @@ class EmergePlugin(pcbnew.ActionPlugin):
             },
             "gerber": {
                 "use_gerbers": bool(gerber_cfg.get("use_gerbers", True)),
+            },
+            "mesh": {
+                "curved_boundary_resolution": int(mesh_cfg.get("curved_boundary_resolution", 40)),
+                "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm", 0)),
+                "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm", 0)),
+                "gerber_circ_segments":       int(mesh_cfg.get("gerber_circ_segments", 64)),
+                "gerber_res_mm":              float(mesh_cfg.get("gerber_res_mm", 0.05)),
             },
         }
 

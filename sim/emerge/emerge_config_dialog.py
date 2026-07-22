@@ -114,10 +114,36 @@ def _summarise(text: str) -> str:
     lines.append(f"  3D preview : {', '.join(vis_parts) if vis_parts else 'off'}")
     lines.append("")
 
-    # Gerber
+    # Mesh
+    mesh = cfg.get("mesh", {})
+    cbr  = mesh.get("curved_boundary_resolution", 200)
+    maxs = mesh.get("max_mesh_size_mm", 0)
+    mins = mesh.get("min_mesh_size_mm", 0)
+    lines.append(f"  Mesh curved boundary : {cbr}  (arc faceting resolution)")
+    lines.append(f"  Mesh size limits     : "
+                 f"min={mins if mins else 'auto'}  max={maxs if maxs else 'auto'}  mm")
+    lines.append("")
+
+    # Gerber / PCB
     ger = cfg.get("gerber", {})
     cli = ger.get("kicad_cli", "") or "(auto-detect)"
+    use_gbr = ger.get("use_gerbers", True)
+    lines.append(f"  PCB mode   : {'FileBasedPCB (Gerbers, accurate)' if use_gbr else 'PCBNew (simplified, fast)'}")
     lines.append(f"  kicad-cli  : {cli}")
+    lines.append("")
+
+    # Passives
+    pas = cfg.get("passives", {})
+    model_pas = pas.get("model_passives", True)
+    skip_pas  = pas.get("skip", [])
+    lines.append(f"  Passives   : {'modelled' if model_pas else 'disabled (faster)'}"
+                 + (f"  skip={skip_pas}" if skip_pas else ""))
+    lines.append("")
+
+    # Python
+    py_cfg = cfg.get("python", {})
+    py_exe = py_cfg.get("python_exe", "") or "(auto-detect)"
+    lines.append(f"  Python     : {py_exe}")
 
     return "\n".join(lines)
 

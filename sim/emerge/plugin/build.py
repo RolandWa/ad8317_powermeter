@@ -12,8 +12,21 @@ Usage
     # Dev iteration: copy source files directly to KiCad (no ZIP step)
     python build.py --dev-deploy
 
+    # Remove the plugin from KiCad
+    python build.py --uninstall
+
     # Specify KiCad version or plugin version
     python build.py --kicad-version 9.0 --version 1.1.0
+
+Deployment — single location
+-----------------------------
+The plugin lives in exactly ONE place on disk (the KiCad PCM 3rdparty directory).
+Installing it in BOTH 3rdparty AND scripting/plugins causes double-registration
+and makes the toolbar icon disappear.  Never copy the plugin to:
+    %APPDATA%/kicad/<ver>/scripting/plugins/
+
+Correct install location (Windows):
+    %OneDrive%/Simulation tools/KiCad/9.0/3rdparty/plugins/com_github_<github-user>_emerge_fem/
 
 Source layout
 -------------
@@ -84,6 +97,8 @@ _PLUGIN_FILES = [
 _ENGINE_FILES = [
     "emerge_runner.py",
     "emerge_config_dialog.py",
+    "gerber_builder.py",
+    "passive_modeler.py",
     "gerber_exporter.py",
     "kicad_reader.py",
     "python_bridge.py",
@@ -91,6 +106,18 @@ _ENGINE_FILES = [
 
 # emerge_pipeline.py is intentionally excluded — it is the standalone CLI,
 # not part of the KiCad plugin runtime.
+
+
+# Files that must NOT be in the deployed plugin directory.
+# emerge_pipeline.py is the standalone CLI — not part of the KiCad plugin.
+_STALE_FILES = [
+    "emerge_pipeline.py",
+]
+
+# The old duplicate install location — must never exist alongside 3rdparty.
+def _appdata_scripting_dir(kicad_version: str) -> pathlib.Path:
+    return (pathlib.Path(os.environ.get("APPDATA", "")) /
+            "kicad" / kicad_version / "scripting" / "plugins" / "emerge_plugin")
 
 
 def _kicad_plugin_dir(kicad_version: str) -> pathlib.Path:
@@ -204,10 +231,49 @@ def _deploy_from_zip(zip_path: pathlib.Path, kicad_version: str):
     return True
 
 
+def _cleanup_duplicates(kicad_version: str):
+    """
+    Remove the old AppData scripting/plugins duplicate if it exists.
+    Having the plugin in both 3rdparty and scripting/plugins causes
+    double-registration and makes the toolbar icon disappear.
+    """
+    dup = _appdata_scripting_dir(kicad_version)
+    if dup.exists():
+        try:
+            shutil.rmtree(dup)
+            print(f"  Removed duplicate install: {dup}")
+        except Exception as exc:
+            print(f"  WARNING: could not remove duplicate {dup}: {exc}")
+    else:
+        print(f"  No duplicate found at: {dup}")
+
+
+def _remove_stale_files(dest: pathlib.Path):
+    """Delete files that must not be in the deployed plugin directory."""
+    for name in _STALE_FILES:
+        stale = dest / name
+        if stale.exists():
+            stale.unlink()
+            print(f"  Removed stale file: {name}")
+
+
+def _uninstall(kicad_version: str):
+    """Remove the plugin from the KiCad 3rdparty plugins directory."""
+    plugins_root = _kicad_plugin_dir(kicad_version)
+    dest = plugins_root / PLUGIN_NAME
+    if dest.exists():
+        shutil.rmtree(dest)
+        print(f"  Uninstalled: {dest}")
+    else:
+        print(f"  Not installed at: {dest}")
+    _cleanup_duplicates(kicad_version)
+
+
 def _dev_deploy(kicad_version: str):
     """
     Copy source files directly to KiCad's plugin folder — no ZIP needed.
     Faster than build+deploy for development iteration.
+    Also removes any duplicate AppData install and stale files.
     """
     plugins_root = _kicad_plugin_dir(kicad_version)
     if not plugins_root.exists():
@@ -234,6 +300,12 @@ def _dev_deploy(kicad_version: str):
         else:
             print(f"  MISSING   {src}")
 
+    # Remove any stale files left over from old versions
+    _remove_stale_files(dest)
+
+    # Remove duplicate AppData install (causes double-registration / missing icon)
+    _cleanup_duplicates(kicad_version)
+
     # Clear stale .pyc so KiCad picks up fresh source (may be locked if KiCad is open)
     pycache = dest / "__pycache__"
     if pycache.exists():
@@ -251,17 +323,35 @@ def _dev_deploy(kicad_version: str):
 def main():
     parser = argparse.ArgumentParser(
         description="Package and/or deploy the EMerge KiCad plugin")
-    parser.add_argument("--deploy",      action="store_true",
+    parser.add_argument("--deploy",           action="store_true",
                         help="Build ZIP then install into KiCad plugins directory")
-    parser.add_argument("--dev-deploy",  action="store_true",
+    parser.add_argument("--dev-deploy",       action="store_true",
                         help="Copy source files directly to KiCad (fast dev iteration)")
-    parser.add_argument("--kicad-version", default="9.0",
+    parser.add_argument("--uninstall",        action="store_true",
+                        help="Remove the plugin from KiCad plugins directory")
+    parser.add_argument("--clean-duplicates", action="store_true",
+                        help="Remove duplicate AppData scripting/plugins install if present")
+    parser.add_argument("--kicad-version",    default="9.0",
                         help="KiCad version string (default: 9.0)")
-    parser.add_argument("--version",     default=None,
+    parser.add_argument("--version",          default=None,
                         help="Plugin version string (default: read from metadata.json)")
     args = parser.parse_args()
 
     version = args.version or _read_version_from_metadata()
+
+    # ── uninstall ────────────────────────────────────────────────────────────
+    if args.uninstall:
+        print(f"\nEMerge uninstall — KiCad {args.kicad_version}")
+        print("=" * 50)
+        _uninstall(args.kicad_version)
+        return
+
+    # ── clean duplicates only ────────────────────────────────────────────────
+    if args.clean_duplicates:
+        print(f"\nEMerge clean duplicates — KiCad {args.kicad_version}")
+        print("=" * 50)
+        _cleanup_duplicates(args.kicad_version)
+        return
 
     # ── dev-deploy: copy from source, skip ZIP ───────────────────────────────
     if args.dev_deploy:

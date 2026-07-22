@@ -27,14 +27,14 @@ active = true
 dir    = "z"
 
 [ports.PORT2]
-pad    = "U2:1"      # AD8317 INHI — pin 1 (LFCSP-8)
+pad    = "U1:1"      # AD8317 INHI — pin 1 (LFCSP-8)
 R      = 200.0       # AD8317 input resistance [Ω]
 C      = 2e-12       # AD8317 input capacitance [F]  (200Ω ∥ 2 pF equivalent)
 active = false       # load port
 dir    = "z"
 
 [ports.PORT3]
-pad    = "U2:8"      # AD8317 INHI — pin 8 (LFCSP-8)
+pad    = "U1:8"      # AD8317 INLO — pin 8 (LFCSP-8)
 R      = 200.0       # AD8317 input resistance [Ω]
 C      = 2e-12       # AD8317 input capacitance [F]  (200Ω ∥ 2 pF equivalent)
 active = false       # load port
@@ -49,6 +49,38 @@ start_hz         = 100_000_000    # 100 MHz
 stop_hz          = 6_000_000_000  # 6 GHz
 steps            = 21             # keep low for test runs; increase to 101+ for production
 cells_per_lambda = 10             # mesh density — increase for better accuracy (15+ for production)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mesh settings
+#   curved_boundary_resolution  — arc faceting for curved pads / board outlines.
+#     GMSH default is ~10; low values cause "PLC: segment and facet intersect"
+#     errors on PCBs with rounded pads.  50–200 is safe for most boards.
+#     Set higher (200–500) if GMSH still reports PLC errors after a first run.
+#   max_mesh_size_mm  — global upper bound on element edge length in mm.
+#     0 = let EMerge/GMSH decide automatically (default).
+#   min_mesh_size_mm  — global lower bound on element edge length in mm.
+#     0 = no lower bound (default).
+# ─────────────────────────────────────────────────────────────────────────────
+
+[mesh]
+# curved_boundary_resolution: EMerge/GMSH arc meshing density for curved surfaces.
+#   EMerge hint: use 20–50 (too high → GMSH edge-recovery failure; too low → coarse arcs).
+curved_boundary_resolution = 40
+
+max_mesh_size_mm            = 0     # 0 = auto
+min_mesh_size_mm            = 0     # 0 = auto
+
+# gerber_circ_segments: line segments per circle arc in layer_from_file() Gerber parsing.
+#   EMerge default is 8 — too coarse; polygon vertices land on flat board-outline faces
+#   in GMSH, causing PLC / edge-recovery errors.
+#   64 creates smooth circular pads without degenerate tiny edges.
+gerber_circ_segments        = 64
+
+# gerber_res_mm: geometry resolution passed to layer_from_file() as res_mm.
+#   Smaller = more detailed copper trace geometry; larger = faster, less detail.
+#   Default EMerge value 0.01 (10 µm) is very fine and creates many tiny edges that
+#   GMSH struggles to mesh. 0.05 mm (50 µm) is a good RF accuracy / stability trade-off.
+gerber_res_mm               = 0.05
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pass/fail thresholds
@@ -84,8 +116,8 @@ engine = "auto"
 # ─────────────────────────────────────────────────────────────────────────────
 
 [visualization]
-show_geometry = true   # 3D geometry view after commit_geometry() — close window to continue
-show_mesh     = true   # 3D mesh view after generate_mesh() — close window to continue
+show_geometry = true  # set true only for interactive debugging (blocks pipeline)
+show_mesh     = true  # set true only for interactive debugging (blocks pipeline)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gerber export settings (used by GerberExporter stage)
@@ -111,11 +143,13 @@ skip           = []    # e.g. ["C5", "C6", "R10"] to exclude specific parts
 # Path to kicad-cli executable — leave empty to auto-detect
 kicad_cli = ""
 
-# use_gerbers = true  → FileBasedPCB: loads actual copper trace geometry from
-#                        Gerber files (accurate but slow — F.Cu can take 4+ min)
-# use_gerbers = false → PCBNew: simplified uniform copper planes (fast, ~seconds)
-#                        Use false for quick port/domain checks; true for production.
-use_gerbers = false
+# use_gerbers = true  → emerge.beta.gerber.FileBasedPCB — original high-level API.
+#                        Reads the Gerber directory directly (auto-scans layers),
+#                        uses pcb.add_port() / pcb.solve() / pcb.export_touchstone().
+#                        Most accurate copper geometry. Recommended for production.
+# use_gerbers = false → PCBNew — simplified uniform copper planes (fast, seconds).
+#                        Low-level Simulation API. Use for quick domain/port checks.
+use_gerbers = true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Python interpreter used to run emerge_runner.py (system Python, not KiCad's)
