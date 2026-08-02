@@ -320,6 +320,24 @@ class EmergeModelBuilder:
         self._log(f"Simulation domain: ({xmin*1e3:.1f}, {ymin*1e3:.1f}) – "
                   f"({xmax*1e3:.1f}, {ymax*1e3:.1f}) mm  margin={margin*1e3:.1f} mm")
 
+        # ── Simulation domain as KiCad-coordinate bbox (for passive filtering) ─
+        # Gerber Y-up (metres) → KiCad Y-down (mm): negate Y, scale ×1000
+        # This rectangle is passed to PassiveElementModeler so only components
+        # inside the simulation area are modelled — not the whole board.
+        _sd_xmin_mm =  xmin * 1e3
+        _sd_xmax_mm =  xmax * 1e3
+        _sd_ymin_mm = -ymax * 1e3   # Gerber Y-up → KiCad Y-down: negate
+        _sd_ymax_mm = -ymin * 1e3
+        sim_domain_outline = [
+            (_sd_xmin_mm, _sd_ymin_mm),
+            (_sd_xmax_mm, _sd_ymin_mm),
+            (_sd_xmax_mm, _sd_ymax_mm),
+            (_sd_xmin_mm, _sd_ymax_mm),
+        ]
+        self._log(f"Passive filter bbox (KiCad mm): "
+                  f"({_sd_xmin_mm:.1f}, {_sd_ymin_mm:.1f}) – "
+                  f"({_sd_xmax_mm:.1f}, {_sd_ymax_mm:.1f})")
+
         # ── Create Simulation (must be BEFORE FileBasedPCB) ───────────────────
         loglevel = "DEBUG" if DEBUG else "WARNING"
         self._log(f"Creating Simulation '{self.pcb_path.stem}' (loglevel={loglevel})")
@@ -361,6 +379,7 @@ class EmergeModelBuilder:
                     gerber_dir = self.gerber_dir,
                     circ_segs  = self.gerber_circ_segments,
                     res_mm     = self.gerber_res_mm,
+                    sim_bounds = (xmin, ymin, xmax, ymax),
                     log        = self._log,
                 )
             else:
@@ -398,7 +417,7 @@ class EmergeModelBuilder:
                     pcb_obj      = pcb,
                     pcb_path     = self.pcb_path,
                     stackup      = stackup,
-                    outline_pts  = outline_pts,
+                    outline_pts  = sim_domain_outline,   # clip to sim domain, not full board
                     skip_refs    = self.skip_passives,
                     report_lines = self.report_lines,
                     verbose      = self.verbose,

@@ -34,8 +34,138 @@ save_geometry_debug(sim, output_dir, ...)
 
 import inspect
 import pathlib
+import re as _re
 import time
 import traceback
+
+# =============================================================================
+# Gerber bounding-box crop
+# =============================================================================
+
+def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
+                        xmin_m: float, ymin_m: float,
+                        xmax_m: float, ymax_m: float,
+                        log=None) -> bool:
+    """
+    Write a cropped copy of a Gerber (.gbr) keeping only copper features
+    whose centroid falls inside the simulation bounding box.
+
+    sim bounds are in metres, Gerber Y-up convention.
+    KiCad Gerbers use millimetres with Y-down, so the box is converted:
+      gx = x_m * 1000
+      gy = -y_m * 1000   (Y-up → Y-down flip; ymax/ymin swap)
+
+    Kept elements:
+      D03 flash  — centroid of the flash position
+      D01 draw   — current pen position (midpoint of move)
+      Region blocks — all interior coordinates kept once the region opens
+                      inside the box (avoids broken polygon outlines)
+
+    Header / aperture / format lines are always preserved so the output is
+    a valid Gerber file.  Returns True if dst was written, False on error.
+    """
+    def _log(msg):
+        if log:
+            log(msg)
+
+    gx_min = xmin_m * 1e3;  gx_max = xmax_m * 1e3
+    gy_min = -ymax_m * 1e3; gy_max = -ymin_m * 1e3   # Y-flip: ymax/ymin swap
+
+    try:
+        text = src.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        _log(f"  crop_gerber: cannot read {src.name}: {exc}")
+        return False
+
+    fmt_m = _re.search(r'%FS[LT]A[XY](\d)(\d)[XY]\d\d', text)
+    if fmt_m:
+        frac_d = int(fmt_m.group(2))
+    else:
+        frac_d = 6   # KiCad default FSLAX46Y46
+
+    scale = 10.0 ** frac_d
+
+    def _to_mm(raw: str) -> float:
+        return int(raw) / scale
+
+    coord_re     = _re.compile(r'(?:X(-?\d+))?(?:Y(-?\d+))?D0*([123])\*')
+    region_start = _re.compile(r'G36\*')
+    region_end   = _re.compile(r'G37\*')
+
+    def _in_box(x_mm: float, y_mm: float) -> bool:
+        return gx_min <= x_mm <= gx_max and gy_min <= y_mm <= gy_max
+
+    cur_x = 0.0
+    cur_y = 0.0
+    in_region      = False
+    region_in_box  = False
+    in_header      = True
+
+    header_lines: list[str] = []
+    body_lines:   list[str] = []
+
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.strip()
+
+        if in_header:
+            header_lines.append(raw_line)
+            if coord_re.search(line) or line == 'M02*':
+                in_header = False
+            continue
+
+        if region_start.match(line):
+            in_region     = True
+            region_in_box = False
+            body_lines.append(raw_line)
+            continue
+
+        if region_end.match(line):
+            in_region = False
+            body_lines.append(raw_line)
+            continue
+
+        m = coord_re.search(line)
+        if m:
+            raw_x, raw_y, d = m.group(1), m.group(2), m.group(3)
+            if raw_x is not None:
+                cur_x = _to_mm(raw_x)
+            if raw_y is not None:
+                cur_y = _to_mm(raw_y)
+
+            if in_region:
+                # Keep region if any vertex falls in the box
+                if _in_box(cur_x, cur_y):
+                    region_in_box = True
+                body_lines.append(raw_line)
+                continue
+
+            if d == '3':   # D03 flash
+                if _in_box(cur_x, cur_y):
+                    body_lines.append(raw_line)
+                continue
+
+            if d == '1':   # D01 draw — keep if endpoint is in box
+                if _in_box(cur_x, cur_y):
+                    body_lines.append(raw_line)
+                continue
+
+            # D02 move — always keep
+            body_lines.append(raw_line)
+            continue
+
+        body_lines.append(raw_line)
+
+    kept = sum(1 for l in body_lines if coord_re.search(l.strip()))
+    _log(f"  Gerber crop {src.name}: {kept} features in "
+         f"bbox ({gx_min:.1f},{gy_min:.1f})–({gx_max:.1f},{gy_max:.1f}) mm")
+
+    try:
+        dst.write_text("".join(header_lines + body_lines), encoding="utf-8")
+        return True
+    except Exception as exc:
+        _log(f"  crop_gerber: cannot write {dst}: {exc}")
+        return False
+
 
 # ── lazy gmsh import (available after emerge initialises GMSH) ────────────────
 
@@ -51,9 +181,15 @@ def _gmsh():
 def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
                        gerber_dir: pathlib.Path,
                        circ_segs: int = 64, res_mm: float = 0.05,
+                       sim_bounds: tuple | None = None,
                        log=None) -> int:
     """
     Load copper Gerber files into *pcb* via layer_from_file().
+
+    When *sim_bounds* = (xmin, ymin, xmax, ymax) in metres (Gerber Y-up) is
+    provided, each Gerber is pre-cropped to that bounding box before being
+    passed to EMerge.  This restricts copper geometry to the simulation area
+    of interest and avoids parser failures from complex fills elsewhere.
 
     Args:
         pcb         : FileBasedPCB instance (created before calling this).
@@ -62,6 +198,8 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
         gerber_dir  : directory containing the exported .gbr files.
         circ_segs   : arc segments per circle (default 64).
         res_mm      : geometry resolution in mm (default 0.05).
+        sim_bounds  : (xmin, ymin, xmax, ymax) metres, Gerber Y-up.
+                      Gerbers are pre-cropped to this box when given.
         log         : callable(str) for progress messages, or None.
 
     Returns:
@@ -72,11 +210,16 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             log(msg)
 
     cu_layers = [l for l in stackup.get("layers", []) if l["type"] == "copper"]
+    suffix = ", pre-crop=ON)" if sim_bounds else ")"
     _log(f"Loading {len(cu_layers)} copper layer(s) "
-         f"(n_circ={circ_segs}, res_mm={res_mm}):")
+         f"(n_circ={circ_segs}, res_mm={res_mm}{suffix}")
 
     pcb_stem = pcb_path.stem if (pcb_path and pcb_path.exists()) else ""
     loaded   = 0
+
+    crop_dir = gerber_dir / "_cropped"
+    if sim_bounds:
+        crop_dir.mkdir(parents=True, exist_ok=True)
 
     for idx, layer in enumerate(cu_layers):
         name     = layer["name"]
@@ -92,11 +235,21 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
                  f"(searched: {[c.name for c in candidates]})")
             continue
 
-        size_kb = gbr.stat().st_size / 1024
-        _log(f"  [{idx}] {name}: {gbr.name}  ({size_kb:.0f} kB)  parsing ...")
+        if sim_bounds:
+            xmin_m, ymin_m, xmax_m, ymax_m = sim_bounds
+            cropped = crop_dir / gbr.name
+            ok = crop_gerber_to_bbox(gbr, cropped,
+                                     xmin_m, ymin_m, xmax_m, ymax_m,
+                                     log=_log)
+            load_path = cropped if ok else gbr
+        else:
+            load_path = gbr
+
+        size_kb = load_path.stat().st_size / 1024
+        _log(f"  [{idx}] {name}: {load_path.name}  ({size_kb:.0f} kB)  parsing ...")
         t0 = time.monotonic()
         try:
-            pcb.layer_from_file(idx, str(gbr),
+            pcb.layer_from_file(idx, str(load_path),
                                 res_mm=res_mm,
                                 n_circ_segments=circ_segs)
             _log(f"  [{idx}] {name}: done  ({time.monotonic()-t0:.1f} s)")
