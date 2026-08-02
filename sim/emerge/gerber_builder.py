@@ -50,10 +50,10 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
     Write a cropped copy of a Gerber (.gbr) keeping only copper features
     whose centroid falls inside the simulation bounding box.
 
-    sim bounds are in metres, Gerber Y-up convention.
-    KiCad Gerbers use millimetres with Y-down, so the box is converted:
+    sim bounds are in metres, same Y convention as KiCad Gerber files (Y-up, negative Y).
+    KiCad Gerbers also use Y-up (negative Y), so no sign flip is needed:
       gx = x_m * 1000
-      gy = -y_m * 1000   (Y-up → Y-down flip; ymax/ymin swap)
+      gy = y_m * 1000   (no flip)
 
     Kept elements:
       D03 flash  — centroid of the flash position
@@ -68,8 +68,10 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
         if log:
             log(msg)
 
+    # sim_bounds are in metres, same Y convention as KiCad Gerber files (Y-up, negative Y).
+    # No sign flip needed — just scale to mm.
     gx_min = xmin_m * 1e3;  gx_max = xmax_m * 1e3
-    gy_min = -ymax_m * 1e3; gy_max = -ymin_m * 1e3   # Y-flip: ymax/ymin swap
+    gy_min = ymin_m * 1e3;  gy_max = ymax_m * 1e3
 
     try:
         text = src.read_text(encoding="utf-8", errors="replace")
@@ -97,9 +99,11 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
 
     cur_x = 0.0
     cur_y = 0.0
-    in_region      = False
-    region_in_box  = False
-    in_header      = True
+    in_region       = False
+    region_in_box   = False
+    region_buf: list[str] = []   # buffered region lines, flushed only if in-box
+    in_header       = True
+    prev_in_box     = False      # whether the pen was inside the box before last move
 
     header_lines: list[str] = []
     body_lines:   list[str] = []
@@ -108,49 +112,56 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
         line = raw_line.strip()
 
         if in_header:
-            header_lines.append(raw_line)
             if coord_re.search(line) or line == 'M02*':
                 in_header = False
-            continue
+                # Fall through — process this line as the first body command.
+            else:
+                header_lines.append(raw_line)
+                continue
 
         if region_start.match(line):
             in_region     = True
             region_in_box = False
-            body_lines.append(raw_line)
+            region_buf    = [raw_line]
             continue
 
         if region_end.match(line):
             in_region = False
-            body_lines.append(raw_line)
+            if region_in_box:
+                # Only flush the whole region if at least one vertex was inside
+                region_buf.append(raw_line)
+                body_lines.extend(region_buf)
+            region_buf = []
             continue
 
         m = coord_re.search(line)
         if m:
             raw_x, raw_y, d = m.group(1), m.group(2), m.group(3)
+            prev_x, prev_y  = cur_x, cur_y
             if raw_x is not None:
                 cur_x = _to_mm(raw_x)
             if raw_y is not None:
                 cur_y = _to_mm(raw_y)
 
             if in_region:
-                # Keep region if any vertex falls in the box
                 if _in_box(cur_x, cur_y):
                     region_in_box = True
+                region_buf.append(raw_line)
+                continue
+
+            if d == '3':   # D03 flash — keep if centroid in box
+                if _in_box(cur_x, cur_y):
+                    body_lines.append(raw_line)
+                continue
+
+            if d == '1':   # D01 draw — keep if either endpoint in box
+                if _in_box(cur_x, cur_y) or _in_box(prev_x, prev_y):
+                    body_lines.append(raw_line)
+                continue
+
+            # D02 move — only keep if destination is in box (sets pen for D01)
+            if _in_box(cur_x, cur_y):
                 body_lines.append(raw_line)
-                continue
-
-            if d == '3':   # D03 flash
-                if _in_box(cur_x, cur_y):
-                    body_lines.append(raw_line)
-                continue
-
-            if d == '1':   # D01 draw — keep if endpoint is in box
-                if _in_box(cur_x, cur_y):
-                    body_lines.append(raw_line)
-                continue
-
-            # D02 move — always keep
-            body_lines.append(raw_line)
             continue
 
         body_lines.append(raw_line)
@@ -396,7 +407,7 @@ def compound_sliver_surfaces(gmsh_module=None, threshold_m: float = 0.1e-3,
     # For each sliver, find its best non-sliver anchor (largest adjacent non-sliver)
     # anchor → set of slivers that chose it
     anchor_to_slivers: dict[int, list[int]] = {}
-    n_no_anchor = 0
+    isolated_slivers: list[int] = []
     try:
         for sliver in sliver_set:
             adj       = _get_adj(sliver)
@@ -407,7 +418,9 @@ def compound_sliver_surfaces(gmsh_module=None, threshold_m: float = 0.1e-3,
                 # all adjacent surfaces are also slivers — pick the largest one
                 best = max(adj, key=_bbox_area)
             else:
-                n_no_anchor += 1
+                # No adjacent surfaces at all — isolated ghost face.
+                # Cannot be compounded; must be handled by remove_ghost_faces().
+                isolated_slivers.append(sliver)
                 continue
             anchor_to_slivers.setdefault(best, []).append(sliver)
     except Exception as exc:
@@ -421,8 +434,12 @@ def compound_sliver_surfaces(gmsh_module=None, threshold_m: float = 0.1e-3,
             g.model.mesh.setCompound(2, [anchor] + slivers)
             n_compounded += len(slivers)
         _log(f"  Compound sliver surfaces: {n_compounded} in {len(anchor_to_slivers)} "
-             f"groups  (threshold {threshold_m*1e3:.2f} mm)"
-             + (f"  [{n_no_anchor} isolated slivers skipped]" if n_no_anchor else ""))
+             f"groups  (threshold {threshold_m*1e3:.2f} mm)")
+        if isolated_slivers:
+            _log(f"  WARNING: {len(isolated_slivers)} isolated sliver(s) with no adjacent "
+                 f"surface — cannot compound; should have been removed by "
+                 f"remove_ghost_faces(): {isolated_slivers[:10]}"
+                 + (f"  ... +{len(isolated_slivers)-10} more" if len(isolated_slivers) > 10 else ""))
     except Exception as exc:
         _log(f"  Compound sliver surfaces error (setCompound): {exc}")
 
@@ -506,6 +523,329 @@ def fix_sliver_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
 
 
 # =============================================================================
+# Ghost face removal (OCC boolean artefacts with no parent volume)
+# =============================================================================
+
+def remove_ghost_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
+                       log=None) -> int:
+    """
+    Neutralise dangling 2D surfaces that have no adjacent 3D volume and zero
+    Z-thickness.  These are OCC boolean artefacts — typically coplanar copper
+    fragments from the Gerber import that were not absorbed into any solid
+    during commit_geometry().
+
+    TetGen treats every surface in the GMSH model as a PLC constraint and
+    tries to recover all its boundary edges.  A ghost face with degenerate
+    Z=0 geometry makes that impossible, causing repeated
+    "Unable to recover the edge on surface N" failures that no algorithm
+    switch can cure.
+
+    Strategy: force a trivial transfinite mesh on each ghost face (2 nodes per
+    boundary curve, setTransfiniteSurface).  This gives TetGen clean, trivially
+    recoverable edges on a nearly-zero-area face without modifying the model
+    topology.  We deliberately do NOT call removeEntities() — that leaves OCC's
+    internal BVH/topology caches in an inconsistent state which causes a native
+    SEGFAULT on the next GMSH API call from any background OCC thread.
+
+    Detection criteria (ALL must be true):
+      • Surface has no adjacent volumes (getAdjacencies returns empty list)
+      • Z span of the bounding box < 1 µm  (coplanar — lies on a Cu layer)
+      • XY bbox diagonal < threshold_m  (small — classifies it as a sliver)
+
+    Must be called after commit_geometry() / occ.synchronize(), before
+    sim.generate_mesh().
+
+    Returns: number of ghost faces neutralised.
+    """
+    def _log(msg):
+        if log:
+            log(msg)
+
+    if gmsh_module is None:
+        import gmsh as gmsh_module
+
+    g = gmsh_module
+    neutralised = 0
+
+    try:
+        for _, stag in g.model.getEntities(2):
+            x0, y0, z0, x1, y1, z1 = g.model.getBoundingBox(2, stag)
+            dz   = abs(z1 - z0)
+            diag = ((x1-x0)**2 + (y1-y0)**2) ** 0.5
+            if dz > 1e-6 or diag >= threshold_m:
+                continue
+            try:
+                vols = g.model.getAdjacencies(2, stag)[0]
+            except Exception:
+                continue
+            if len(vols) > 0:
+                continue
+
+            # Neutralise: force 2 nodes on every boundary curve so TetGen
+            # recovers trivial 1-segment edges.  Then set transfinite surface
+            # so GMSH meshes it with the minimum possible element count.
+            try:
+                bcs = g.model.getBoundary([(2, stag)], oriented=False)
+                for _, ctag in bcs:
+                    try:
+                        g.model.mesh.setTransfiniteCurve(abs(ctag), 2)
+                    except Exception:
+                        pass
+                g.model.mesh.setTransfiniteSurface(stag)
+                neutralised += 1
+            except Exception as exc:
+                _log(f"  Ghost face {stag}: neutralise failed: {exc}")
+
+        if neutralised:
+            _log(f"  Ghost faces neutralised: {neutralised}  "
+                 f"(coplanar faces with no parent volume forced to trivial mesh, "
+                 f"threshold {threshold_m*1e3:.2f} mm)")
+        else:
+            _log(f"  Ghost faces neutralised: 0  (none found)")
+    except Exception as exc:
+        _log(f"  Ghost face neutralisation error: {exc}")
+
+    return neutralised
+
+
+# =============================================================================
+# Geometry colouring helper
+# =============================================================================
+
+def color_geometry():
+    """
+    Apply layer-based colours to the current GMSH model before display.
+
+    Classification is by surface bounding-box Z centre:
+      • Top copper    (F.Cu)  — near board top   → orange  (255,140,  0)
+      • Bottom copper (B.Cu)  — near board bottom → blue    ( 30,144,255)
+      • Substrate / core       — mid-Z            → tan     (180,140, 80)
+      • Port surfaces          — small area, any Z → lime   ( 50,220, 50)
+
+    Volumes:
+      • Largest volume (air box) → very transparent white
+      • Other volumes            → semi-transparent substrate colour
+    """
+    g = _gmsh()
+    if not g.isInitialized():
+        return
+
+    try:
+        surfs   = g.model.getEntities(2)
+        volumes = g.model.getEntities(3)
+        if not surfs:
+            return
+
+        # ── collect bounding boxes ────────────────────────────────────────────
+        surf_bb  = {}  # tag → (xmin,ymin,zmin,xmax,ymax,zmax)
+        for _, tag in surfs:
+            try:
+                surf_bb[tag] = g.model.getBoundingBox(2, tag)
+            except Exception:
+                pass
+
+        vol_bb = {}
+        for _, tag in volumes:
+            try:
+                vol_bb[tag] = g.model.getBoundingBox(3, tag)
+            except Exception:
+                pass
+
+        # ── board Z extents (ignore volumes, just surfaces) ───────────────────
+        all_z = []
+        for bb in surf_bb.values():
+            all_z.extend([bb[2], bb[5]])
+        if not all_z:
+            return
+        z_lo = min(all_z)
+        z_hi = max(all_z)
+        board_span = z_hi - z_lo
+        # Tolerance for "near top/bottom": 15 % of board span, at least 0.1 mm
+        z_tol = max(board_span * 0.15, 1e-4)
+
+        # ── surface classification ────────────────────────────────────────────
+        COPPER_TOP    = (255, 140,   0, 255)   # orange
+        COPPER_BOT    = ( 30, 144, 255, 255)   # dodger-blue
+        SUBSTRATE     = (160, 120,  60, 200)   # tan
+        PORT_COL      = ( 50, 240,  50, 255)   # bright lime
+        AIR_SURF      = (200, 200, 200,  20)   # near-invisible
+
+        # "Port surfaces" heuristic: very small XY footprint (< 2 mm²)
+        def _xy_area(bb):
+            return (bb[3] - bb[0]) * (bb[4] - bb[1]) * 1e6  # m² → mm²
+
+        # Largest volume volume → air box
+        def _vol_extent(bb):
+            return ((bb[3]-bb[0])**2 + (bb[4]-bb[1])**2 + (bb[5]-bb[2])**2) ** 0.5
+
+        air_tag = None
+        if vol_bb:
+            air_tag = max(vol_bb, key=lambda t: _vol_extent(vol_bb[t]))
+
+        for tag, bb in surf_bb.items():
+            z_ctr = (bb[2] + bb[5]) * 0.5
+            area  = _xy_area(bb)
+            if area < 2.0:                          # tiny surface → port
+                col = PORT_COL
+            elif z_ctr > z_hi - z_tol:             # near top → F.Cu
+                col = COPPER_TOP
+            elif z_ctr < z_lo + z_tol:             # near bottom → B.Cu
+                col = COPPER_BOT
+            else:
+                col = SUBSTRATE
+            try:
+                g.model.setColor([(2, tag)], *col)
+            except Exception:
+                pass
+
+        # ── volume colours ────────────────────────────────────────────────────
+        for tag in vol_bb:
+            if tag == air_tag:
+                try:
+                    g.model.setColor([(3, tag)], 200, 200, 255, 8)   # very transparent
+                except Exception:
+                    pass
+            else:
+                try:
+                    g.model.setColor([(3, tag)], 160, 120, 60, 40)
+                except Exception:
+                    pass
+
+        # Mark air-box surfaces semi-transparent too
+        if air_tag is not None:
+            try:
+                boundary = g.model.getBoundary([(3, air_tag)], oriented=False)
+                for _, stag in boundary:
+                    try:
+                        g.model.setColor([(2, abs(stag))], *AIR_SURF)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+    except Exception as exc:
+        print(f"  color_geometry warning: {exc}")
+
+
+# =============================================================================
+# Per-region mesh size constraints
+# =============================================================================
+
+def apply_region_mesh_sizes(copper_mm: float = 0.10,
+                             component_mm: float = 0.10,
+                             air_mm: float = 1.00,
+                             substrate_mm: float = 0.30):
+    """
+    Apply per-region mesh size constraints to the current GMSH model.
+
+    Surfaces are classified by Z bounding-box position and XY footprint:
+      • Small XY area (< 2 mm²) — ports / component faces  → component_mm
+      • Z clearly outside board (> 25 % board-height beyond top/bottom) → air_mm
+      • Z near board top or bottom (within 5 % of board span)  → copper_mm
+      • Everything else (substrate interior)                    → substrate_mm
+
+    Sizes are applied via gmsh.model.mesh.setSize() on boundary vertices.
+    A size of 0 for any region means that region is left at the global
+    CharacteristicLengthMax (no per-region override).
+    """
+    g = _gmsh()
+    if not g.isInitialized():
+        return
+    # All-zero → nothing to do
+    if copper_mm <= 0 and component_mm <= 0 and air_mm <= 0 and substrate_mm <= 0:
+        return
+
+    try:
+        surfs = g.model.getEntities(2)
+        if not surfs:
+            return
+
+        surf_bb = {}
+        for _, tag in surfs:
+            try:
+                surf_bb[tag] = g.model.getBoundingBox(2, tag)
+            except Exception:
+                pass
+        if not surf_bb:
+            return
+
+        # Board Z extents from all surfaces
+        z_lo = min(bb[2] for bb in surf_bb.values())
+        z_hi = max(bb[5] for bb in surf_bb.values())
+        board_span = z_hi - z_lo
+        z_tol   = max(board_span * 0.05, 1e-4)   # copper classification band
+        air_tol = board_span * 0.25               # Z this far beyond board → air
+
+        _PORT_AREA_MM2 = 2.0  # mm²
+
+        # Collect the minimum requested size per vertex
+        _pt_size: dict[int, float] = {}
+
+        for tag, bb in surf_bb.items():
+            z_ctr   = (bb[2] + bb[5]) * 0.5
+            xy_area = (bb[3] - bb[0]) * (bb[4] - bb[1]) * 1e6  # m² → mm²
+
+            if xy_area < _PORT_AREA_MM2:
+                size = component_mm
+            elif z_ctr > z_hi + air_tol or z_ctr < z_lo - air_tol:
+                size = air_mm
+            elif z_ctr > z_hi - z_tol or z_ctr < z_lo + z_tol:
+                size = copper_mm
+            else:
+                size = substrate_mm
+
+            if size <= 0:
+                continue
+            size_m = size * 1e-3
+
+            try:
+                pts = g.model.getBoundary([(2, tag)], recursive=True)
+                for _, pt in pts:
+                    pt = abs(pt)
+                    if pt not in _pt_size or size_m < _pt_size[pt]:
+                        _pt_size[pt] = size_m
+            except Exception:
+                pass
+
+        if not _pt_size:
+            return
+
+        # Group points by size and apply in batches
+        from collections import defaultdict
+        _by_size: dict[float, list] = defaultdict(list)
+        for pt, sz in _pt_size.items():
+            _by_size[sz].append((0, pt))
+
+        # Build a set of all currently valid point tags to avoid calling
+        # setSize() on orphaned points left behind by removeEntities().
+        # setSize() on an orphaned (deleted) point triggers a deferred native
+        # crash in GMSH's internal mesh-size field update on a background thread.
+        try:
+            _valid_pts = {t for _, t in g.model.getEntities(0)}
+        except Exception:
+            _valid_pts = None  # fall back to no filtering
+
+        n_applied = 0
+        for sz, dimtags in sorted(_by_size.items()):
+            try:
+                if _valid_pts is not None:
+                    dimtags = [(d, t) for d, t in dimtags if t in _valid_pts]
+                if not dimtags:
+                    continue
+                g.model.mesh.setSize(dimtags, sz)
+                n_applied += len(dimtags)
+            except Exception:
+                pass
+
+        print(f"  Region mesh sizes applied: {n_applied} vertices "
+              f"(Cu={copper_mm:.2f} Comp={component_mm:.2f} "
+              f"Sub={substrate_mm:.2f} Air={air_mm:.2f} mm)", flush=True)
+
+    except Exception as exc:
+        print(f"  apply_region_mesh_sizes warning: {exc}")
+
+
+# =============================================================================
 # GMSH FLTK viewers
 # =============================================================================
 
@@ -518,14 +858,24 @@ def gmsh_view_geometry(title: str = "Geometry — close window to continue"):
     if not g.isInitialized():
         return
     try:
-        g.option.setNumber("General.Verbosity",    0)
-        g.option.setNumber("Geometry.Surfaces",    1)   # filled surfaces
-        g.option.setNumber("Geometry.SurfaceType", 2)   # shaded + edges
-        g.option.setNumber("Geometry.Points",      0)
-        g.option.setNumber("Geometry.Lines",       1)
-        g.option.setNumber("General.RotationX",  -65)
-        g.option.setNumber("General.RotationY",    0)
-        g.option.setNumber("General.RotationZ",   25)
+        for _opt, _val in [
+            ("General.Verbosity",          0),
+            ("Geometry.Surfaces",          1),
+            ("Geometry.SurfaceType",       2),
+            ("Geometry.Points",            0),
+            ("Geometry.Lines",             1),
+            ("General.AlphaChannelSupport", 1),
+            # Top-down view, X→right, Y-up (our model has negative Y so
+            # less-negative = top, matching KiCad Y-down orientation).
+            ("General.RotationX",          0),
+            ("General.RotationY",          0),
+            ("General.RotationZ",          0),
+        ]:
+            try:
+                g.option.setNumber(_opt, _val)
+            except Exception:
+                pass
+        color_geometry()
         print(f"\n{'='*60}\n{title}\n{'='*60}")
         g.fltk.initialize()
         g.fltk.run()
@@ -549,9 +899,9 @@ def gmsh_view_mesh(title: str = "Mesh — close window to continue"):
         g.option.setNumber("Mesh.SurfaceFaces",   1)
         g.option.setNumber("Mesh.VolumeEdges",    0)
         g.option.setNumber("Mesh.VolumeFaces",    0)
-        g.option.setNumber("General.RotationX", -65)
+        g.option.setNumber("General.RotationX",   0)
         g.option.setNumber("General.RotationY",   0)
-        g.option.setNumber("General.RotationZ",  25)
+        g.option.setNumber("General.RotationZ",   0)
         print(f"\n{'='*60}\n{title}\n{'='*60}")
         g.fltk.initialize()
         g.fltk.run()

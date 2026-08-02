@@ -111,15 +111,15 @@ class TestReadPadPositions:
 
     def test_u2_pad1_rotated_90(self, pcb_file):
         """
-        U2 is at (60, 40) rotated 90°.
+        U2 is at (60, 40) rotated 90° (KiCad Y-down, CW-positive).
         Pad 1 local (0, 1.0):
-            ax = 60 + 0*cos(90°) - 1.0*sin(90°) = 60 - 1.0 = 59.0
-            ay = 40 + 0*sin(90°) + 1.0*cos(90°) = 40 + 0.0 = 40.0
+            ax = 60 + 0*cos(90°) + 1.0*sin(90°) = 60 + 1.0 = 61.0
+            ay = 40 - 0*sin(90°) + 1.0*cos(90°) = 40 + 0.0 = 40.0
         """
         pads = read_pad_positions(pcb_file)
         assert "U2:1" in pads
         x, y = pads["U2:1"]
-        assert abs(x - 59.0) < 0.001
+        assert abs(x - 61.0) < 0.001
         assert abs(y - 40.0) < 0.001
 
     def test_all_pads_found(self, pcb_file):
@@ -331,18 +331,22 @@ class TestReadPassiveComponents:
 
     def test_r3_rotated_90_pad_positions(self, passive_pcb_file):
         """
-        R3 at (75,40) rotated 90°.  Local pad1 at (-0.5, 0):
-          ax = 75 + (-0.5)*cos(90°) - 0*sin(90°) = 75.0
-          ay = 40 + (-0.5)*sin(90°) + 0*cos(90°) = 39.5
+        R3 at (75,40) rotated 90° (KiCad Y-down, CW-positive).
+        Local pad1 at (-0.5, 0):
+          ax = 75 + (-0.5)*cos(90°) + 0*sin(90°) = 75.0
+          ay = 40 - (-0.5)*sin(90°) + 0*cos(90°) = 40 + 0.5 = 40.5
+        Local pad2 at (+0.5, 0):
+          ax = 75.0
+          ay = 40 - (+0.5)*sin(90°) = 40 - 0.5 = 39.5
         """
         comps = read_passive_components(passive_pcb_file)
         r3 = next(c for c in comps if c["ref"] == "R3")
         x1, y1 = r3["pad1_xy"]
         x2, y2 = r3["pad2_xy"]
         assert abs(x1 - 75.0) < 0.001
-        assert abs(y1 - 39.5) < 0.001
+        assert abs(y1 - 40.5) < 0.001
         assert abs(x2 - 75.0) < 0.001
-        assert abs(y2 - 40.5) < 0.001
+        assert abs(y2 - 39.5) < 0.001
 
     def test_empty_pcb_returns_empty_list(self, tmp_path):
         """PCB with no R/L/C footprints returns []."""

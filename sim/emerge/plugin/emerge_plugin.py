@@ -141,11 +141,19 @@ def _test_emerge(python_exe: str) -> bool:
 
 
 def _emerge_version(python_exe: str) -> str:
+    # Redirect stdout→stderr during emerge import so the ANSI INFO line
+    # does not pollute stdout; only the plain version number is printed.
+    _cmd = (
+        "import sys; _s=sys.stdout; sys.stdout=sys.stderr; "
+        "import emerge; sys.stdout=_s; print(emerge.__version__)"
+    )
     try:
         r = subprocess.run(
-            [python_exe, "-c", "import emerge; print(emerge.__version__)"],
-            capture_output=True, text=True, timeout=10)
-        return r.stdout.strip() if r.returncode == 0 else "?"
+            [python_exe, "-c", _cmd],
+            capture_output=True, text=True, timeout=15,
+            encoding="utf-8", errors="replace")
+        ver = r.stdout.strip()
+        return ver if ver else "?"
     except Exception:
         return "?"
 
@@ -488,11 +496,24 @@ class EmergePlugin(pcbnew.ActionPlugin):
                 "use_gerbers": bool(gerber_cfg.get("use_gerbers", True)),
             },
             "mesh": {
-                "curved_boundary_resolution": int(mesh_cfg.get("curved_boundary_resolution", 40)),
-                "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm", 0)),
-                "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm", 0)),
-                "gerber_circ_segments":       int(mesh_cfg.get("gerber_circ_segments", 64)),
-                "gerber_res_mm":              float(mesh_cfg.get("gerber_res_mm", 0.05)),
+                "curved_boundary_resolution": int  (mesh_cfg.get("curved_boundary_resolution",    40)),
+                "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm",               0)),
+                "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm",               0)),
+                "gerber_circ_segments":       int  (mesh_cfg.get("gerber_circ_segments",          64)),
+                "gerber_res_mm":              float(mesh_cfg.get("gerber_res_mm",               0.05)),
+                "algorithm_2d":               int  (mesh_cfg.get("algorithm_2d",                   6)),
+                "algorithm_3d":               int  (mesh_cfg.get("algorithm_3d",                   1)),
+                "smoothing":                  int  (mesh_cfg.get("smoothing",                      10)),
+                "max_mesh_retries":           int  (mesh_cfg.get("max_mesh_retries",                8)),
+                "artifact_threshold_um":      float(mesh_cfg.get("artifact_threshold_um",        50.0)),
+                "char_length_max_floor_mm":   float(mesh_cfg.get("char_length_max_floor_mm",     0.15)),
+                "char_length_max_ceil_mm":    float(mesh_cfg.get("char_length_max_ceil_mm",      0.50)),
+                "char_length_max_factor":     float(mesh_cfg.get("char_length_max_factor",       0.80)),
+                "sliver_threshold_mm":        float(mesh_cfg.get("sliver_threshold_mm",          0.10)),
+                "mesh_copper_mm":             float(mesh_cfg.get("mesh_copper_mm",               0.20)),
+                "mesh_component_mm":          float(mesh_cfg.get("mesh_component_mm",            0.15)),
+                "mesh_substrate_mm":          float(mesh_cfg.get("mesh_substrate_mm",            0.40)),
+                "mesh_air_mm":                float(mesh_cfg.get("mesh_air_mm",                  2.50)),
             },
         }
 

@@ -67,7 +67,7 @@ cells_per_lambda = 10             # mesh density — increase for better accurac
 #   EMerge hint: use 20–50 (too high → GMSH edge-recovery failure; too low → coarse arcs).
 curved_boundary_resolution = 40
 
-max_mesh_size_mm            = 0     # 0 = auto
+max_mesh_size_mm            = 0     # 0 = auto (CharacteristicLengthMax used instead)
 min_mesh_size_mm            = 0     # 0 = auto
 
 # gerber_circ_segments: line segments per circle arc in layer_from_file() Gerber parsing.
@@ -81,6 +81,54 @@ gerber_circ_segments        = 64
 #   Default EMerge value 0.01 (10 µm) is very fine and creates many tiny edges that
 #   GMSH struggles to mesh. 0.05 mm (50 µm) is a good RF accuracy / stability trade-off.
 gerber_res_mm               = 0.05
+
+# ── GMSH mesher algorithm selection ────────────────────────────────────────────
+# algorithm_2d: GMSH 2D algorithm (Mesh.Algorithm)
+#   1=MeshAdapt  5=Delaunay  6=Frontal-Delaunay(recommended)  8=Frontal-quads
+algorithm_2d                = 6
+
+# algorithm_3d: GMSH 3D algorithm (Mesh.Algorithm3D)
+#   1=Delaunay(default)  4=Frontal  10=HXT(robust for slivers, use if 1 keeps failing)
+algorithm_3d                = 1
+
+# smoothing: Laplacian smoothing passes applied after mesh generation.
+smoothing                   = 10
+
+# max_mesh_retries: how many edge-recovery surface fixes to attempt before
+#   switching to the HXT fallback and ultimately giving up.
+max_mesh_retries            = 8
+
+# ── CharacteristicLengthMax auto-calculation ───────────────────────────────────
+# The global mesh size upper bound is derived from the shortest boundary curve found
+# on any "large" surface (bbox ≥ 1 mm on both X and Y axes), multiplied by
+# char_length_max_factor, then clamped to [floor, ceil].
+# Curves shorter than artifact_threshold_um are skipped as boolean-op artefacts.
+
+artifact_threshold_um       = 50    # µm — curves shorter than this skipped in scan
+char_length_max_factor      = 0.80  # CharacteristicLengthMax = min_curve_len × factor
+char_length_max_floor_mm    = 0.15  # minimum CharacteristicLengthMax (mm)
+char_length_max_ceil_mm     = 0.50  # maximum CharacteristicLengthMax (mm)
+
+# ── Sliver surface handling ────────────────────────────────────────────────────
+# Boolean CSG operations leave tiny residual "sliver" faces whose bbox diagonal
+# is smaller than sliver_threshold_mm.  These are detected and either patched
+# (forced coarse transfinite mesh) or compounded with adjacent large surfaces.
+sliver_threshold_mm         = 0.10  # mm — surfaces with bbox_diag < this are slivers
+
+# ── Per-region mesh sizes ──────────────────────────────────────────────────────
+# Override mesh element size per geometric region.  0 = inherit CharacteristicLengthMax.
+# Applied via GMSH mesh.setSize() on boundary vertices after geometry commit.
+#
+# Rule of thumb for RF signal integrity:
+#   copper traces  — at least 3 elements across the narrowest trace (e.g. 0.10 mm for 50-Ω line)
+#   components     — fine enough to resolve the lumped-element geometry (0.08–0.12 mm)
+#   substrate      — can be slightly coarser than copper (1–2× copper size)
+#   air / PML      — can be very coarse; EM fields decay rapidly in the absorbing layer
+#
+mesh_copper_mm              = 0.20  # F.Cu / B.Cu copper traces and fills
+mesh_component_mm           = 0.15  # lumped R/L/C component faces and port surfaces
+mesh_substrate_mm           = 0.40  # FR4 dielectric interior
+mesh_air_mm                 = 2.50  # PML absorbing boundary / air box
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pass/fail thresholds
@@ -106,7 +154,7 @@ return_loss_db    = 10.0  # |S11| < 10 dB return loss triggers a warning
 # ─────────────────────────────────────────────────────────────────────────────
 
 [solver]
-engine = "auto"
+engine = "cuda"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualization — show interactive 3D windows before the FEM solve starts.
@@ -136,7 +184,7 @@ show_mesh     = true  # set true only for interactive debugging (blocks pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
 [passives]
-model_passives = false  # temporarily disabled to isolate GMSH edge-recovery failure
+model_passives = true  # temporarily disabled to isolate GMSH edge-recovery failure
 skip           = []    # e.g. ["C5", "C6", "R10"] to exclude specific parts
 
 [gerber]

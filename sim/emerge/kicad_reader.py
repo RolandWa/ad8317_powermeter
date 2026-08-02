@@ -66,9 +66,9 @@ def read_pad_positions(pcb_path):
                 fp_block.group()):
             lx = float(pad_m.group(2))
             ly = float(pad_m.group(3))
-            # Rotate local pad offset by footprint angle
-            ax = fp_x + lx * math.cos(fp_a) - ly * math.sin(fp_a)
-            ay = fp_y + lx * math.sin(fp_a) + ly * math.cos(fp_a)
+            # KiCad: Y-down, clockwise-positive rotation
+            ax = fp_x + lx * math.cos(fp_a) + ly * math.sin(fp_a)
+            ay = fp_y - lx * math.sin(fp_a) + ly * math.cos(fp_a)
             pads[f"{ref}:{pad_m.group(1)}"] = (ax, ay)
 
     return pads
@@ -258,8 +258,8 @@ def read_passive_components(pcb_path):
             pnum = pad_m.group(1)
             lx   = float(pad_m.group(2))
             ly   = float(pad_m.group(3))
-            ax   = fp_x + lx * math.cos(fp_a) - ly * math.sin(fp_a)
-            ay   = fp_y + lx * math.sin(fp_a) + ly * math.cos(fp_a)
+            ax   = fp_x + lx * math.cos(fp_a) + ly * math.sin(fp_a)
+            ay   = fp_y - lx * math.sin(fp_a) + ly * math.cos(fp_a)
             # Size: search within ~300 chars following the pad keyword
             region   = blk[pad_m.start(): pad_m.start() + 350]
             size_m   = re.search(r'\(size\s+([\d.]+)\s+([\d.]+)\)', region)
