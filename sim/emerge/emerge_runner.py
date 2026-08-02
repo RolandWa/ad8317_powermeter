@@ -438,6 +438,7 @@ class EmergeModelBuilder:
                 log       = self._log,
             )
             fix_sliver_faces(sim=sim, log=self._log)
+            compound_sliver_surfaces(log=self._log)
         else:
             # Inline fallback when gerber_builder is missing
             from emerge._emerge.geo.open_region import open_pml_region
@@ -690,8 +691,10 @@ class EmergeSolver:
         import re as _re
         _MAX_MESH_RETRIES = 8
         _fixed_surfs: set[int] = set()
+        _compounded_pairs: set[tuple[int, int]] = set()
         # list of (ctag, n) pairs to re-apply after each mesh.clear()
         _extra_constraints: list[tuple[int, int]] = []
+        _hxt_fallback_used = False
 
         self._log("Generating mesh …")
         _t_mesh = time.monotonic()
@@ -711,6 +714,36 @@ class EmergeSolver:
                 break
             except Exception as _mesh_exc:
                 _mesh_msg = str(_mesh_exc)
+
+                # ── Overlapping facets: compound the two conflicting surfaces ──
+                if "overlapping facets" in _mesh_msg or "Invalid boundary mesh" in _mesh_msg:
+                    _sm2 = _re.findall(r'surface (\d+)', _mesh_msg)
+                    if len(_sm2) >= 2:
+                        _sa, _sb = int(_sm2[0]), int(_sm2[1])
+                        _pair = (min(_sa, _sb), max(_sa, _sb))
+                        if _pair not in _compounded_pairs:
+                            _compounded_pairs.add(_pair)
+                            try:
+                                _gmsh.model.mesh.setCompound(2, [_sa, _sb])
+                                self._log(f"  Overlapping facets surfaces {_sa},{_sb} "
+                                          f"→ setCompound (attempt {_attempt+1})")
+                            except Exception as _ce:
+                                self._log(f"  setCompound failed: {_ce}")
+                            continue
+                    # If we can't compound (only one surface tag or already tried),
+                    # fall back to HXT which doesn't use TetGen
+                    if not _hxt_fallback_used:
+                        _hxt_fallback_used = True
+                        try:
+                            _gmsh.option.setNumber("Mesh.Algorithm3D", 10)
+                            self._log(f"  Switching to HXT (Algorithm3D=10) after "
+                                      f"overlapping-facets failure")
+                        except Exception:
+                            pass
+                        continue
+                    self._log(f"  generate_mesh() raised: {_mesh_exc}")
+                    raise
+
                 if "Unable to recover the edge" not in _mesh_msg:
                     self._log(f"  generate_mesh() raised: {_mesh_exc}")
                     raise
