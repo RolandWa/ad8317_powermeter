@@ -1,0 +1,47 @@
+@startuml emerge_plugin_pipeline
+title EMerge FEM Plugin — KiCad Action Plugin Pipeline
+
+skinparam backgroundColor #FAFAFA
+skinparam sequence {
+    ArrowColor #444
+    ActorBorderColor #555
+    LifeLineBorderColor #888
+    ParticipantBackgroundColor #EEF4FF
+    ParticipantBorderColor #6688CC
+}
+
+actor       "Engineer"      as eng
+participant "KiCad\n(Python 3.11)"  as kicad
+participant "emerge_plugin.py"      as plugin
+participant "kicad-cli"             as cli
+participant "emerge_runner.py\n(Python 3.12)" as runner
+participant "EMerge v2.8.0\nFEM solver"       as emerge
+database    "emerge_job.json"       as job
+database    "*.s2p Touchstone"      as ts
+
+eng   -> kicad   : click toolbar icon
+kicad -> plugin  : run()
+plugin -> plugin : load emerge_config.toml
+plugin -> cli    : export Gerbers\n(F.Cu, B.Cu, Edge.Cuts)
+cli  --> plugin  : gerbers/*.gbr
+
+plugin -> job    : write emerge_job.json\n(ports, sweep, mesh params)
+plugin -> runner : subprocess --job emerge_job.json
+
+activate runner
+runner -> emerge : FileBasedPCB(\n  thickness, unit, stack)
+runner -> emerge : layer_from_file(\n  n_circ_segments=64, res_mm=0.05)
+runner -> emerge : lumped_port_pts() per port
+runner -> emerge : commit_geometry()
+runner -> emerge : generate_mesh()
+runner -> emerge : mw.run_sweep()
+emerge --> runner : S-matrix data
+runner -> ts     : generate_touchstone() → .s2p
+runner --> plugin : emerge_job.result.json
+deactivate runner
+
+plugin -> plugin : EmergeReporter\n(pass/fail thresholds)
+plugin --> kicad : show results dialog
+kicad --> eng    : violations report + .s2p path
+
+@enduml

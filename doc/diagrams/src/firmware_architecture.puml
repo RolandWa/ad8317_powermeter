@@ -1,0 +1,41 @@
+@startuml firmware_architecture
+title AD8317 Power Meter — STM32F373 Firmware Architecture
+
+skinparam packageStyle rectangle
+skinparam backgroundColor #FAFAFA
+skinparam component {
+    BackgroundColor #EEF4FF
+    BorderColor #6688CC
+}
+
+package "HAL / BSP" {
+    [ADC DMA]
+    [SPI / I2C]
+    [GPIO / Timers]
+}
+
+package "Drivers" {
+    [AD8317 driver\nadc_read(), to_dBm()]
+    [SSD1306 OLED\noled_draw_str()]
+}
+
+package "Application" {
+    [Calibration\ncal_apply()]
+    [Display manager\ndisplay_update()]
+    [Button FSM\nmode: peak/avg/hold]
+}
+
+package "Middleware" {
+    [FreeRTOS / bare-metal\ntask scheduler]
+}
+
+[ADC DMA]        --> [AD8317 driver]
+[SPI / I2C]      --> [SSD1306 OLED]
+[AD8317 driver]  --> [Calibration]
+[Calibration]    --> [Display manager]
+[Button FSM]     --> [Display manager]
+[Display manager]--> [SSD1306 OLED]
+[GPIO / Timers]  --> [Button FSM]
+[FreeRTOS / bare-metal\ntask scheduler] .> [Application]
+
+@enduml

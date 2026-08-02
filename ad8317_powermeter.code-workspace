@@ -17,9 +17,12 @@
 		},
 		{
 			"path": "../../../../AppData/Roaming/FreeCAD/v1-1/Mod/FreeCAD-OpenEMS-Export-0_7_5"
+		},
+		{
+			"path": "../HW_Test"
 		}
 	],
 	"settings": {
-		"cfs.configureWorkspace": "No"
+		"cfs.configureWorkspace": "Never"
 	}
 }

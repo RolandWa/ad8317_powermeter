@@ -1,0 +1,182 @@
+(footprint "Hammond_1590A_Board_Outline"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Mechanical PCB outline and clearance notches for Hammond 1590A enclosure (88x34mm PCB area)")
+	(tags "mechanical outline enclosure hammond 1590a")
+	(property "Reference" "REF**"
+		(at 0 -20 0)
+		(layer "F.SilkS")
+		(uuid "5e60503f-3311-4d31-97be-ace31ed3f60b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "Hammond_1590A_Outline"
+		(at 0 20 0)
+		(layer "F.SilkS")
+		(uuid "48736ca7-2fc0-4a10-a87f-9fe484102a4e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "bfa7c5cc-ab36-4401-acd0-ce094b2ca08f")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "a09224e3-ba37-44b4-8e9f-f39696ec940a")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr board_only exclude_from_pos_files exclude_from_bom)
+	(fp_line
+		(start -17 40)
+		(end -17 -40)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "e218c819-a9b5-4c1d-9a67-c5958559b8fb")
+	)
+	(fp_line
+		(start -13 -44)
+		(end 13 -44)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "eda6581b-e64b-42ca-bfe2-e76590a014dd")
+	)
+	(fp_line
+		(start 13 44)
+		(end -13 44)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "a013457d-dd76-4018-af50-476aebe7b18f")
+	)
+	(fp_line
+		(start 17 -40)
+		(end 17 40)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "bd973b7a-2cf9-4cf9-ba70-8847f5920829")
+	)
+	(fp_arc
+		(start -17 -40)
+		(mid -15.828427 -42.828427)
+		(end -13 -44)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "54cd5774-510f-4c6d-80f6-da747b26b566")
+	)
+	(fp_arc
+		(start -13 44)
+		(mid -15.828427 42.828427)
+		(end -17 40)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "0a57b073-3440-42a6-8793-e93a37ed8051")
+	)
+	(fp_arc
+		(start 13 -44)
+		(mid 15.828427 -42.828427)
+		(end 17 -40)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "1e8d9dba-8a15-4a19-831f-0efdd9c1ad56")
+	)
+	(fp_arc
+		(start 17 40)
+		(mid 15.828427 42.828427)
+		(end 13 44)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "Edge.Cuts")
+		(uuid "ecf66fd9-c4a3-41c2-856a-3135c33d3966")
+	)
+	(fp_rect
+		(start -17.25 -44.25)
+		(end 17.25 44.25)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "e06085e0-4272-4ac1-9293-4a6b3273822f")
+	)
+	(fp_line
+		(start -2 0)
+		(end 2 0)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "7841d872-dfc1-4d03-a6be-ee039616f927")
+	)
+	(fp_line
+		(start 0 -2)
+		(end 0 2)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "6a27d3a5-cb91-4c98-a0c0-6d55b146e26c")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0 1)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "8e6adc94-7e53-495d-b55b-06c74c63c31e")
+	)
+	(embedded_fonts no)
+)

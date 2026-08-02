@@ -1,0 +1,22 @@
+---
+title: AD8317 Power Meter — RF Signal Chain
+---
+flowchart LR
+    SMA["SMA Connector\nJ1 (50 Ω)"]
+    MS["Microstrip\nRF trace"]
+    MATCH["Matching\nnetwork\nC1, C2, L1"]
+    AD["AD8317\nLog-detector\nINHI / INLO"]
+    VOUT["VOUT\n0–1.8 V\n25 mV/dB"]
+    MCU["STM32F373\n12-bit ADC\n→ dBm display"]
+    DISP["OLED 128×64\nSSD1306"]
+
+    SMA --> MS --> MATCH --> AD
+    AD --> VOUT --> MCU --> DISP
+
+    classDef rf    fill:#d0e8ff,stroke:#3377bb,color:#003
+    classDef ic    fill:#ffe8cc,stroke:#cc6600,color:#330
+    classDef logic fill:#dfffdf,stroke:#339933,color:#030
+
+    class SMA,MS,MATCH rf
+    class AD,VOUT ic
+    class MCU,DISP logic
