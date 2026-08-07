@@ -64,7 +64,25 @@ try:
     import emerge
     _EMERGE_VER = getattr(emerge, "__version__", "?")
 
+    # Version-pin check: warn when installed emerge differs from requirements.txt.
+    try:
+        import importlib.metadata as _ilm
+        _installed_ver = _ilm.version("emerge")
+        _req_file = pathlib.Path(__file__).parent / "requirements.txt"
+        _req_ver  = None
+        if _req_file.exists():
+            for _rl in _req_file.read_text(encoding="utf-8").splitlines():
+                _rl = _rl.strip()
+                if _rl.startswith("emerge=="):
+                    _req_ver = _rl.split("==", 1)[1]; break
+        if _req_ver and _installed_ver != _req_ver:
+            print(f"  [WARNING] emerge version mismatch: installed={_installed_ver}  "
+                  f"required={_req_ver}  (see sim/emerge/requirements.txt)")
+    except Exception:
+        pass
+
     from emerge import Simulation
+    from emerge import lumped_element_material as _lumped_element_material
     from emerge._emerge.geo.pcb      import PCBNew, PCBLayer
     from emerge._emerge.cs           import ZAX
     from emerge._emerge.physics.microwave.touchstone import generate_touchstone
@@ -312,6 +330,8 @@ class EmergeModelBuilder:
                 "x":       x_mm * 1e-3,
                 "y":      -y_mm * 1e-3,   # KiCad Y-down → Gerber Y-up (same flip as outline)
                 "R":      float(pdef.get("R", 50.0)),
+                "C":      float(pdef.get("C") or 0.0),
+                "L":      float(pdef.get("L") or 0.0),
                 "active": bool(pdef.get("active", True)),
             })
             self._log(f"  {pname}: pad={key}  ({x_mm:.3f}, {-y_mm:.3f}) mm [Gerber Y]  "
@@ -521,6 +541,59 @@ class EmergeModelBuilder:
             for attr in ("name", "label", "_name"):
                 try:     setattr(pg, attr, p["name"]); break
                 except Exception: pass
+            # R||C load polygon — adds frequency-dependent reactive load for ports with C defined
+            if p["C"] > 0.0:
+                try:
+                    _hw   = port_half
+                    _ztop = getattr(pcb, "top", board_t)
+                    _lem  = _lumped_element_material(
+                        material_name = f"{p['name']}_RC",
+                        direction     = (0.0, 0.0, 1.0),
+                        length        = board_t,
+                        Area          = (2.0 * _hw) ** 2,
+                        R             = p["R"],
+                        C             = p["C"],
+                    )
+                    pcb.add_poly(
+                        xs = [p["x"]-_hw, p["x"]+_hw, p["x"]+_hw, p["x"]-_hw],
+                        ys = [p["y"]-_hw, p["y"]-_hw, p["y"]+_hw, p["y"]+_hw],
+                        z  = _ztop,
+                        material = _lem,
+                        name     = f"{p['name']}_RC",
+                    )
+                    self._log(f"  Port {p['name']}: added R={p['R']:.0f} Ω ∥ C={p['C']*1e12:.3g} pF load polygon")
+                except Exception as _exc:
+                    self._log(f"  WARNING: {p['name']} RC load polygon failed: {_exc}")
+            # Series R+jωL load polygon for ports with L defined
+            elif p["L"] > 0.0:
+                try:
+                    from emsutil.material import FreqDependent as _FreqDep, Material as _Mat
+                    from emsutil.lib import EPS0 as _EPS0
+                    import numpy as _np, math as _math
+                    _hw   = port_half
+                    _ztop = getattr(pcb, "top", board_t)
+                    _d    = board_t
+                    _A    = (2.0 * _hw) ** 2
+                    _R_v  = p["R"]
+                    _L_v  = p["L"]
+                    _dv   = _np.array([0.0, 0.0, 1.0])
+                    _dvout = _np.outer(_dv, _dv)
+                    def _fer_RL(f, _R=_R_v, _L=_L_v, _d=_d, _A=_A):
+                        w = 2.0 * _math.pi * f
+                        # Z = R + jωL → εr = d / (ε0·A·jω·Z)
+                        er_s = _d / (_EPS0 * _A * 1j * w * (_R + 1j * w * _L))
+                        return _dvout * (er_s - 1.0) + _np.eye(3)
+                    _lem = _Mat(er=_FreqDep(matrix=_fer_RL), name=f"{p['name']}_RL")
+                    pcb.add_poly(
+                        xs = [p["x"]-_hw, p["x"]+_hw, p["x"]+_hw, p["x"]-_hw],
+                        ys = [p["y"]-_hw, p["y"]-_hw, p["y"]+_hw, p["y"]+_hw],
+                        z  = _ztop,
+                        material = _lem,
+                        name     = f"{p['name']}_RL",
+                    )
+                    self._log(f"  Port {p['name']}: added R={p['R']:.0f} Ω + L={p['L']*1e9:.3g} nH series load polygon")
+                except Exception as _exc:
+                    self._log(f"  WARNING: {p['name']} RL load polygon failed: {_exc}")
             port_geos.append((p, pg))
             self._log(f"  Port {p['name']} at ({p['x']*1e3:.2f}, {p['y']*1e3:.2f}) mm")
 
@@ -579,6 +652,13 @@ class EmergeModelBuilder:
             except TypeError:
                 pcb_vol = pcb.generate_pcb()
             air_vol = pcb.generate_air(height=pml_h)
+            # Priority: PCB volumes win over air background
+            if isinstance(pcb_vol, list):
+                for _v in pcb_vol:
+                    _v.prio_set(1)
+            else:
+                pcb_vol.prio_set(1)
+            air_vol.prio_set(5)
             pml     = open_pml_region(pml_xy, pml_xy, pml_z)
             sim.commit_geometry(pcb_vol, air_vol, pml,
                                 *[pg for _, pg in port_geos])
@@ -1689,6 +1769,37 @@ class EmergeSolver:
 
         _t_sweep = time.monotonic()
         self._log("Running FEM sweep …")
+
+        # ── FEM heartbeat — mirrors mesh heartbeat; fires every 30 s ─────────
+        import threading as _threading_fem
+        import subprocess as _nvsmi
+
+        def _fem_heartbeat(stop_evt, log_fn, t0, interval=30.0):
+            while not stop_evt.wait(timeout=interval):
+                elapsed = time.monotonic() - t0
+                gpu_info = ""
+                try:
+                    _r = _nvsmi.run(
+                        ["nvidia-smi",
+                         "--query-gpu=utilization.gpu,memory.used,memory.total",
+                         "--format=csv,noheader,nounits"],
+                        capture_output=True, text=True, timeout=3,
+                    )
+                    if _r.returncode == 0 and _r.stdout.strip():
+                        _p = [x.strip() for x in _r.stdout.strip().split(",")]
+                        if len(_p) >= 3:
+                            gpu_info = f"  GPU {_p[0]}% util  {_p[1]}/{_p[2]} MiB"
+                except Exception:
+                    pass
+                log_fn(f"  [FEM] still running … {elapsed:.0f} s{gpu_info}")
+
+        _stop_fem_hb = _threading_fem.Event()
+        _fem_hb = _threading_fem.Thread(
+            target=_fem_heartbeat,
+            args=(_stop_fem_hb, self._log, _t_sweep),
+            daemon=True,
+        )
+        _fem_hb.start()
         try:
             mw_data = sim.mw.run_sweep()
         except Exception as _sweep_err:
@@ -1708,6 +1819,9 @@ class EmergeSolver:
                     self._log("  Fallback solver: SuperLU — success")
             else:
                 raise
+        finally:
+            _stop_fem_hb.set()
+            _fem_hb.join(timeout=2)
         self._log(f"  Sweep done.  ({time.monotonic()-_t_sweep:.1f} s)")
 
         # ── Assemble S-matrix ─────────────────────────────────────────────────
@@ -1846,6 +1960,7 @@ if __name__ == "__main__":
                 "pad":    pd["pad"],
                 "R":      float(pd.get("R", 50.0)),
                 "C":      pd.get("C"),
+                "L":      pd.get("L"),
                 "active": bool(pd.get("active", True)),
                 "dir":    pd.get("dir", "z"),
             }
