@@ -99,17 +99,20 @@ except ImportError as _e:
 try:
     from kicad_reader import (read_pad_positions, read_stackup,
                               read_passive_components,
-                              read_board_outline, point_in_board)
+                              read_board_outline, read_keepout_bbox,
+                              point_in_board)
 except ImportError:
     try:
         from .kicad_reader import (read_pad_positions, read_stackup,
                                    read_passive_components,
-                                   read_board_outline, point_in_board)
+                                   read_board_outline, read_keepout_bbox,
+                                   point_in_board)
     except ImportError as _e2:
         def read_pad_positions(p): return {}
         def read_stackup(p): return {}
         def read_passive_components(p): return []
         def read_board_outline(p): return []
+        def read_keepout_bbox(p): return None
         def point_in_board(x, y, outline): return True
         if DEBUG:
             print(f"  [DEBUG] kicad_reader not found: {_e2}")
@@ -196,6 +199,7 @@ class EmergeModelBuilder:
                  model_passives=True, skip_passives=None,
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
+                 port_focus_only=False,
                  gerber_circ_segments=64,
                  gerber_res_mm=0.05,
                  sliver_threshold_mm=0.10,
@@ -210,6 +214,7 @@ class EmergeModelBuilder:
         self.curved_boundary_resolution = int(curved_boundary_resolution)
         self.max_mesh_size_mm           = float(max_mesh_size_mm)
         self.min_mesh_size_mm           = float(min_mesh_size_mm)
+        self.port_focus_only            = bool(port_focus_only)
         self.gerber_circ_segments       = int(gerber_circ_segments)
         self.gerber_res_mm              = float(gerber_res_mm)
         self.sliver_threshold_mm        = float(sliver_threshold_mm)
@@ -221,6 +226,7 @@ class EmergeModelBuilder:
             "pcb_path", "gerber_dir", "port_defs", "show_geometry",
             "use_gerbers", "model_passives", "skip_passives",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
+            "port_focus_only",
             "gerber_circ_segments", "gerber_res_mm", "sliver_threshold_mm",
             "report_lines", "verbose",
         ]
@@ -310,26 +316,31 @@ class EmergeModelBuilder:
         # Gerber files use Y-up (negated).  Domain bounds are passed to
         # pcb.set_bounds() which works in the same coordinate system as the
         # Gerbers, so we negate Y here.
-        outline_pts = read_board_outline(self.pcb_path)
         margin = max(0.005, board_t * 3)
+        port_margin = max(0.001, board_t)
 
-        if outline_pts:
-            ol_xs = [ p[0] * 1e-3 for p in outline_pts]
-            ol_ys = [-p[1] * 1e-3 for p in outline_pts]   # KiCad Y-down → Gerber Y-up
-            xmin  = min(ol_xs) - margin;  xmax = max(ol_xs) + margin
-            ymin  = min(ol_ys) - margin;  ymax = max(ol_ys) + margin
-            bw = (max(ol_xs) - min(ol_xs)) * 1e3
-            bh = (max(ol_ys) - min(ol_ys)) * 1e3
-            self._log(f"Board outline: {len(outline_pts)} vertices  "
-                      f"({min(ol_xs)*1e3:.1f}, {min(ol_ys)*1e3:.1f}) – "
-                      f"({max(ol_xs)*1e3:.1f}, {max(ol_ys)*1e3:.1f}) mm  "
-                      f"size {bw:.1f} x {bh:.1f} mm")
-        else:
+        if self.port_focus_only:
             xs_p = [p["x"] for p in ports]
             ys_p = [p["y"] for p in ports]
-            xmin = min(xs_p) - margin;  xmax = max(xs_p) + margin
-            ymin = min(ys_p) - margin;  ymax = max(ys_p) + margin
-            self._log("Board outline: not found — using port-based bounds")
+            xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
+            ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
+            self._log("Domain source: port_focus_only=true — using port-based bounds")
+        else:
+            ko_bbox = read_keepout_bbox(self.pcb_path)
+            if ko_bbox is not None:
+                kx0, ky0, kx1, ky1 = ko_bbox
+                xmin = kx0 * 1e-3
+                xmax = kx1 * 1e-3
+                ymin = -ky1 * 1e-3  # KiCad Y-down -> Gerber Y-up
+                ymax = -ky0 * 1e-3
+                self._log(f"Domain source: keepout bbox ({kx0:.1f}, {ky0:.1f}) – "
+                          f"({kx1:.1f}, {ky1:.1f}) mm")
+            else:
+                xs_p = [p["x"] for p in ports]
+                ys_p = [p["y"] for p in ports]
+                xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
+                ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
+                self._log("Domain source: keepout not found — using port-based bounds")
 
         # Expand domain to include every port (handles off-board components)
         for p in ports:
@@ -393,7 +404,7 @@ class EmergeModelBuilder:
             self._log("")
             self._log("Loading copper layers from Gerbers ...")
             if _GERBER_BUILDER_OK:
-                load_copper_layers(
+                loaded_layers = load_copper_layers(
                     pcb        = pcb,
                     stackup    = stackup,
                     pcb_path   = self.pcb_path,
@@ -403,6 +414,35 @@ class EmergeModelBuilder:
                     sim_bounds = (xmin, ymin, xmax, ymax),
                     log        = self._log,
                 )
+                if self.port_focus_only:
+                    self._log("  Geometry scope: port_focus_only=true")
+                else:
+                    self._log("  Geometry scope: keepout-first (fallback to ports)")
+
+                # Only fail-fast when copper Gerbers are actually present but
+                # parsing/loading is incomplete. Unit tests and fallback flows
+                # may intentionally run with an empty gerber_dir.
+                pcb_stem = self.pcb_path.stem if self.pcb_path.exists() else ""
+                present_copper = 0
+                for lyr in stackup.get("layers", []):
+                    if lyr.get("type") != "copper":
+                        continue
+                    gbr_stem = str(lyr.get("name", "")).replace(".", "_")
+                    candidates = [
+                        self.gerber_dir / f"{pcb_stem}-{gbr_stem}.gbr",
+                        self.gerber_dir / f"{gbr_stem}.gbr",
+                    ]
+                    if any(p.exists() for p in candidates):
+                        present_copper += 1
+
+                if present_copper > 0 and loaded_layers < present_copper:
+                    self._log(
+                        f"ERROR: copper Gerber load incomplete "
+                        f"({loaded_layers}/{present_copper} present layers). "
+                        "Aborting before generate_pcb/commit_geometry to avoid "
+                        "invalid solids after parser failures."
+                    )
+                    return None
             else:
                 self._log("  WARNING: gerber_builder not available — "
                           "falling back to empty copper planes")
@@ -534,12 +574,12 @@ class EmergeSolver:
     """
 
     _SOLVER_MAP = {
-        "pardiso": lambda: SolverPardiso() if _EMERGE_OK else None,
-        "mumps":   lambda: SolverMUMPS()   if _EMERGE_OK else None,
-        "cuda":    lambda: SolverCuDSS("")  if _EMERGE_OK else None,
-        "cudss":   lambda: SolverCuDSS("")  if _EMERGE_OK else None,
-        "superlu": lambda: SolverSuperLU() if _EMERGE_OK else None,
-        "umfpack": lambda: SolverUMFPACK() if _EMERGE_OK else None,
+        "pardiso": lambda: SolverPardiso("") if _EMERGE_OK else None,
+        "mumps":   lambda: SolverMUMPS("")   if _EMERGE_OK else None,
+        "cuda":    lambda: SolverCuDSS("")   if _EMERGE_OK else None,
+        "cudss":   lambda: SolverCuDSS("")   if _EMERGE_OK else None,
+        "superlu": lambda: SolverSuperLU("") if _EMERGE_OK else None,
+        "umfpack": lambda: SolverUMFPACK("") if _EMERGE_OK else None,
     }
 
     def __init__(self, model, output_dir,
@@ -549,7 +589,7 @@ class EmergeSolver:
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
                  # GMSH algorithm
-                 algorithm_2d=6, algorithm_3d=1, smoothing=10,
+                 algorithm_2d=6, algorithm_3d=10, smoothing=10,
                  max_mesh_retries=8,
                  # CharacteristicLengthMax derivation
                  artifact_threshold_um=50.0,
@@ -558,6 +598,7 @@ class EmergeSolver:
                  char_length_max_factor=0.80,
                  # per-region mesh sizes (mm; 0 = inherit global CLmax)
                  mesh_copper_mm=0.10,
+                 mesh_copper_z_mm=0.05,
                  mesh_component_mm=0.10,
                  mesh_substrate_mm=0.30,
                  mesh_air_mm=1.00,
@@ -583,6 +624,7 @@ class EmergeSolver:
         self.char_length_max_ceil_mm    = float(char_length_max_ceil_mm)
         self.char_length_max_factor     = float(char_length_max_factor)
         self.mesh_copper_mm             = float(mesh_copper_mm)
+        self.mesh_copper_z_mm           = float(mesh_copper_z_mm)
         self.mesh_component_mm          = float(mesh_component_mm)
         self.mesh_substrate_mm          = float(mesh_substrate_mm)
         self.mesh_air_mm                = float(mesh_air_mm)
@@ -598,8 +640,9 @@ class EmergeSolver:
             "algorithm_2d", "algorithm_3d", "smoothing", "max_mesh_retries",
             "artifact_threshold_um", "char_length_max_floor_mm",
             "char_length_max_ceil_mm", "char_length_max_factor",
-            "mesh_copper_mm", "mesh_component_mm", "mesh_substrate_mm",
-            "mesh_air_mm", "sliver_threshold_mm", "report_lines", "verbose",
+            "mesh_copper_mm", "mesh_copper_z_mm", "mesh_component_mm",
+            "mesh_substrate_mm", "mesh_air_mm", "sliver_threshold_mm",
+            "report_lines", "verbose",
         ]
         _missing = [a for a in _REQUIRED if not hasattr(self, a)]
         if _missing:
@@ -714,6 +757,9 @@ class EmergeSolver:
                        ("Mesh.Algorithm3D",             self.algorithm_3d),
                        ("Mesh.Smoothing",               self.smoothing),
                        ("Mesh.CharacteristicLengthMax", _clmax),
+                       ("Mesh.MaxNumThreads1D",         0),   # 0 = all cores
+                       ("Mesh.MaxNumThreads2D",         0),
+                       ("Mesh.MaxNumThreads3D",         0),
                        ]:
             try:
                 _gmsh.option.setNumber(_o, _v)
@@ -729,6 +775,7 @@ class EmergeSolver:
         if _GERBER_BUILDER_OK:
             apply_region_mesh_sizes(
                 copper_mm    = self.mesh_copper_mm,
+                copper_z_mm  = self.mesh_copper_z_mm,
                 component_mm = self.mesh_component_mm,
                 substrate_mm = self.mesh_substrate_mm,
                 air_mm       = self.mesh_air_mm,
@@ -756,9 +803,11 @@ class EmergeSolver:
         _n_sl_curves = 0
         _n_sl_surfs  = 0
         _sliver_m    = self.sliver_threshold_mm * 1e-3
+        _sliver_constrained_tags: set[int] = set()   # tracks which surfaces got constraints
         try:
             for _, _stag in _gmsh.model.getEntities(2):
                 _sx = _gmsh.model.getBoundingBox(2, _stag)
+                _dz_sl = abs(_sx[5] - _sx[2])
                 if (_sx[3] - _sx[0]) < _sliver_m and (_sx[4] - _sx[1]) < _sliver_m:
                     _bcs = _gmsh.model.getBoundary([(2, _stag)], oriented=False)
                     for _, _ctag in _bcs:
@@ -768,11 +817,45 @@ class EmergeSolver:
                             _n_sl_curves += 1
                         except Exception:
                             pass
+                    _sliver_constrained_tags.add(_stag)
                     _n_sl_surfs += 1
             self._log(f"  Sliver curves constrained: "
                       f"{_n_sl_curves} curves on {_n_sl_surfs} surfaces")
         except Exception as _te:
             self._log(f"  Sliver curve setup warning: {_te}")
+
+        # ── Pre-mesh: remove Discrete ghost surfaces ──────────────────────────
+        # Gerber-derived Discrete surfaces with no adjacent volumes and Z < 10 µm
+        # are boolean-op artefacts.  TetGen / Frontal-Delaunay cannot recover their
+        # edges as PLC constraints because the zero-thickness polygon is coplanar
+        # with adjacent volume faces.  Removing them before meshing prevents the
+        # failure without switching to the much slower MeshAdapt algorithm.
+        _ghost_pre_tags: list[int] = []
+        try:
+            for _, _gptag in list(_gmsh.model.getEntities(2)):
+                try:
+                    _gpbb  = _gmsh.model.getBoundingBox(2, _gptag)
+                    _gpz   = abs(_gpbb[5] - _gpbb[2])
+                    _gpvol = _gmsh.model.getAdjacencies(2, _gptag)[0]
+                    _gptyp = _gmsh.model.getType(2, _gptag)
+                    if (_gpz < 10e-6 and len(_gpvol) == 0
+                            and "Discrete" in str(_gptyp)):
+                        try:
+                            _gmsh.model.removeEntities([(2, _gptag)], recursive=False)
+                            _ghost_pre_tags.append(_gptag)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            if _ghost_pre_tags:
+                self._log(f"  Pre-mesh ghost removal: {len(_ghost_pre_tags)} "
+                          f"Discrete orphan surface(s) removed: "
+                          f"{_ghost_pre_tags[:20]}"
+                          + (" …" if len(_ghost_pre_tags) > 20 else ""))
+            else:
+                self._log("  Pre-mesh ghost removal: none found")
+        except Exception as _gpex:
+            self._log(f"  Pre-mesh ghost scan warning: {_gpex}")
 
         # Use sim.generate_mesh() so _configure_mesh_size() runs — its background
         # Min field limits mesh size on arc pads.  If edge recovery fails on a
@@ -892,15 +975,88 @@ class EmergeSolver:
                     self._log(f"  generate_mesh() raised: {_mesh_exc}")
                     raise
 
-                if "Unable to recover the edge" not in _mesh_msg:
+                _is_edge_recovery  = "Unable to recover the edge" in _mesh_msg
+                _is_wrong_topology = "Wrong topology of boundary mesh" in _mesh_msg
+                if not (_is_edge_recovery or _is_wrong_topology):
                     self._log(f"  generate_mesh() raised: {_mesh_exc}")
                     raise
+                # ── "Wrong topology" fast path ─────────────────────────────
+                # OCC parametrisation failure: surface has degenerate/non-manifold
+                # boundary loops.  If the surface has no adjacent volumes it is safe
+                # to remove it (orphaned sliver or Discrete artefact).
+                if _is_wrong_topology:
+                    _wt_sm = _re.search(r'surface (\d+)', _mesh_msg)
+                    _wt_tag = int(_wt_sm.group(1)) if _wt_sm else None
+                    if _wt_tag is not None:
+                        try:
+                            _wt_vol = _gmsh.model.getAdjacencies(2, _wt_tag)[0]
+                            if len(_wt_vol) == 0:
+                                _gmsh.model.removeEntities([(2, _wt_tag)], recursive=False)
+                                self._log(f"  Wrong-topology orphan surface {_wt_tag} removed — retrying")
+                                continue
+                            else:
+                                self._log(
+                                    f"  Wrong-topology surface {_wt_tag} has "
+                                    f"{len(_wt_vol)} adjacent volume(s) — cannot remove")
+                        except Exception as _wte:
+                            self._log(f"  Wrong-topology removal failed ({_wte})")
+                    else:
+                        self._log(f"  Wrong-topology error (no surface tag): {_mesh_msg[:200]}")
+                    self._log(f"  generate_mesh() raised: {_mesh_exc}")
+                    raise
+                # ── "Unable to recover the edge" path ─────────────────────
                 # Parse the failing surface tag from the error message
                 _sm = _re.search(r'on surface (\d+)', _mesh_msg)
                 if not _sm:
                     self._log(f"  Edge recovery error (can't parse surface): {_mesh_msg}")
                     break
                 _fail_surf = int(_sm.group(1))
+                # On first encounter: report why this surface wasn't pre-filtered.
+                if _fail_surf not in _fixed_surfs:
+                    try:
+                        _fsbb  = _gmsh.model.getBoundingBox(2, _fail_surf)
+                        _fsdx  = abs(_fsbb[3]-_fsbb[0])*1e3
+                        _fsdy  = abs(_fsbb[4]-_fsbb[1])*1e3
+                        _fsdz  = abs(_fsbb[5]-_fsbb[2])*1e6   # µm
+                        _fsvol = _gmsh.model.getAdjacencies(2, _fail_surf)[0]
+                        _fstyp = _gmsh.model.getType(2, _fail_surf)
+                        _in_sliver = _fail_surf in _sliver_constrained_tags
+                        self._log(
+                            f"  Surface {_fail_surf} bbox: "
+                            f"({_fsbb[0]*1e3:.3f}, {_fsbb[1]*1e3:.3f}, {_fsbb[2]*1e3:.3f}) – "
+                            f"({_fsbb[3]*1e3:.3f}, {_fsbb[4]*1e3:.3f}, {_fsbb[5]*1e3:.3f}) mm  "
+                            f"size {_fsdx:.4f} x {_fsdy:.4f} x 0.{_fsdz:.4f} mm  "
+                            + ("*** ZERO-THICKNESS (coplanar) ***" if _fsdz < 1e-3 else f"dz={_fsdz:.2f} µm"))
+                        self._log(
+                            f"  Surface {_fail_surf} geometry type: {_fstyp!r}")
+                        self._log(
+                            f"  Surface {_fail_surf} adjacent volumes: {list(_fsvol)}"
+                            f"  adjacent surfaces (upward): "
+                            f"{list(_gmsh.model.getAdjacencies(2, _fail_surf)[1])[:20]}")
+                        self._log(
+                            f"  Surface {_fail_surf} pre-filter verdict: "
+                            f"sliver_transfinite={_in_sliver}  "
+                            f"no_volumes={len(_fsvol)==0}  "
+                            f"dz_um={_fsdz:.2f}  "
+                            f"xy_mm={max(_fsdx,_fsdy):.4f}  "
+                            f"threshold_mm={self.sliver_threshold_mm:.2f}  "
+                            f"ghost_z_limit_um=10.0")
+                        _fsbcs = _gmsh.model.getBoundary([(2, _fail_surf)], oriented=False)
+                        self._log(f"  Boundary curves ({len(_fsbcs)}):")
+                        for _, _fcc in _fsbcs:
+                            _fccbb = _gmsh.model.getBoundingBox(1, abs(_fcc))
+                            _fccdiag = ((_fccbb[3]-_fccbb[0])**2+(_fccbb[4]-_fccbb[1])**2+(_fccbb[5]-_fccbb[2])**2)**0.5
+                            _fcctyp  = _gmsh.model.getType(1, abs(_fcc))
+                            _fccpts  = _gmsh.model.getBoundary([(1, abs(_fcc))], oriented=False, combined=False)
+                            self._log(
+                                f"    curve {abs(_fcc)}: type={_fcctyp!r}  "
+                                f"bbox_diag={_fccdiag*1e3:.4f} mm  "
+                                f"Z=[{_fccbb[2]*1e3:.4f},{_fccbb[5]*1e3:.4f}] mm  "
+                                f"span={abs(_fccbb[5]-_fccbb[2])*1e3:.4f} mm  "
+                                f"endpoints={len(_fccpts)}")
+                    except Exception as _fde:
+                        self._log(f"  [DEBUG] surface {_fail_surf} diagnosis failed: {_fde}")
+
                 if _fail_surf in _fixed_surfs:
                     # ── Pre-escalation: remove ghost faces (no volume, Z=0) ───
                     # A 'Discrete surface' with no adjacent volumes and zero
@@ -914,23 +1070,90 @@ class EmergeSolver:
                         _ghz   = abs(_ghbb[5] - _ghbb[2])          # Z thickness (m)
                         _ghvol = _gmsh.model.getAdjacencies(2, _fail_surf)[0]
                         _ghtyp = _gmsh.model.getType(2, _fail_surf)
-                        if (_ghz < 1e-6 and len(_ghvol) == 0
+                        if (_ghz < 10e-6 and len(_ghvol) == 0
                                 and "Discrete" in str(_ghtyp)):
-                            # Neutralise with trivial transfinite mesh instead
-                            # of removeEntities() — removal corrupts OCC's
-                            # internal BVH cache causing a background SEGFAULT.
+                            # Near-ghost face: Discrete surface, no volumes, Z < 10 µm.
+                            # Strategy depends on curve count:
+                            #   ≤4 curves → setTransfiniteSurface (trivial structured mesh)
+                            #   >4 curves → setCompound with largest adjacent surface so GMSH
+                            #               parametrises it jointly (transfinite requires 3-4 corners)
                             try:
                                 _ghbcs = _gmsh.model.getBoundary(
                                     [(2, _fail_surf)], oriented=False)
+                                _n_gh_curves = len(_ghbcs)
+                                # Discrete surfaces have no CAD parametrisation —
+                                # setCompound and setTransfiniteSurface require it.
+                                # Per-curve transfinite only; MeshAdapt escalation
+                                # handles the surface meshing on next retry.
+                                _gh_is_discrete = "Discrete" in str(_ghtyp)
                                 for _, _ghc in _ghbcs:
-                                    _gmsh.model.mesh.setTransfiniteCurve(
-                                        abs(_ghc), 2)
-                                _gmsh.model.mesh.setTransfiniteSurface(_fail_surf)
-                            except Exception:
-                                pass
+                                    _gmsh.model.mesh.setTransfiniteCurve(abs(_ghc), 2)
+                                if _gh_is_discrete:
+                                    _strategy = (f"per-curve transfinite only "
+                                                 f"({_n_gh_curves} curves, Discrete — "
+                                                 f"no setCompound/setTransfinite)")
+                                elif _n_gh_curves in (3, 4):
+                                    _gmsh.model.mesh.setTransfiniteSurface(_fail_surf)
+                                    _strategy = f"transfinite ({_n_gh_curves} curves)"
+                                else:
+                                    # CAD surface with >4 curves: setCompound with
+                                    # largest adjacent non-Discrete surface
+                                    _gh_curve_set = {abs(c[1]) for c in _ghbcs}
+                                    _gh_adj_surfs: list[tuple[int, float]] = []
+                                    for _, _as in _gmsh.model.getEntities(2):
+                                        if _as == _fail_surf:
+                                            continue
+                                        try:
+                                            _as_type = _gmsh.model.getType(2, _as)
+                                        except Exception:
+                                            _as_type = ""
+                                        if "Discrete" in str(_as_type):
+                                            continue
+                                        _as_bcs = {abs(c[1]) for c in
+                                                   _gmsh.model.getBoundary([(2, _as)], oriented=False)}
+                                        if _gh_curve_set & _as_bcs:
+                                            _asbb = _gmsh.model.getBoundingBox(2, _as)
+                                            _as_area = ((_asbb[3]-_asbb[0]) *
+                                                        (_asbb[4]-_asbb[1]))
+                                            _gh_adj_surfs.append((_as, _as_area))
+                                    if _gh_adj_surfs:
+                                        _gh_anchor = max(_gh_adj_surfs, key=lambda x: x[1])[0]
+                                        _gmsh.model.mesh.setCompound(2, [_gh_anchor, _fail_surf])
+                                        _strategy = (f"setCompound with anchor {_gh_anchor} "
+                                                     f"({_n_gh_curves} curves)")
+                                    else:
+                                        _strategy = f"per-curve transfinite fallback ({_n_gh_curves} curves)"
+                            except Exception as _ghe2:
+                                _strategy = f"failed: {_ghe2}"
                             self._log(
-                                f"  Surface {_fail_surf}: ghost face (Discrete, "
-                                f"Z={_ghz*1e6:.2f} µm, no volumes) — forced trivial mesh")
+                                f"  Surface {_fail_surf}: near-ghost face (Discrete, "
+                                f"Z={_ghz*1e6:.2f} µm < 10 µm, no volumes) — {_strategy}")
+                            # For Discrete surfaces the pre-mesh scan should have
+                            # removed this surface already.  If it's still here,
+                            # try removeEntities now instead of switching global
+                            # MeshAdapt (which is catastrophically slow on large
+                            # copper planes and can loop for hours).
+                            if _gh_is_discrete:
+                                _disc_rm_ok = False
+                                try:
+                                    _gmsh.model.removeEntities(
+                                        [(2, _fail_surf)], recursive=False)
+                                    self._log(
+                                        f"  Discrete ghost surface {_fail_surf} "
+                                        f"removed mid-mesh — retrying")
+                                    _disc_rm_ok = True
+                                except Exception as _drme:
+                                    self._log(
+                                        f"  Discrete ghost removeEntities failed "
+                                        f"({_drme}) — escalating to HXT")
+                                if not _disc_rm_ok and not _hxt_fallback_used:
+                                    _hxt_fallback_used = True
+                                    try:
+                                        _gmsh.option.setNumber("Mesh.Algorithm3D", 10)
+                                        self._log(
+                                            f"  Discrete ghost → HXT (Algorithm3D=10)")
+                                    except Exception:
+                                        pass
                             _ghost_removed = True
                             continue
                     except Exception as _ghe:
@@ -1168,7 +1391,25 @@ class EmergeSolver:
 
         _t_sweep = time.monotonic()
         self._log("Running FEM sweep …")
-        mw_data = sim.mw.run_sweep()
+        try:
+            mw_data = sim.mw.run_sweep()
+        except Exception as _sweep_err:
+            _emsg = str(_sweep_err)
+            # "Allocation failed" means the FEM matrix is too large for the
+            # chosen solver.  Retry with PARDISO (CPU RAM) then SuperLU.
+            if any(k in _emsg.lower() for k in ("allocation", "too large", "memory")):
+                self._log(f"  WARNING: Solver failed ({_emsg.strip()}) — retrying with PARDISO")
+                try:
+                    sim.mw.solveroutine.set_solver(SolverPardiso(""))
+                    mw_data = sim.mw.run_sweep()
+                    self._log("  Fallback solver: PARDISO — success")
+                except Exception as _p_err:
+                    self._log(f"  WARNING: PARDISO failed ({_p_err}) — retrying with SuperLU")
+                    sim.mw.solveroutine.set_solver(SolverSuperLU(""))
+                    mw_data = sim.mw.run_sweep()
+                    self._log("  Fallback solver: SuperLU — success")
+            else:
+                raise
         self._log(f"  Sweep done.  ({time.monotonic()-_t_sweep:.1f} s)")
 
         # ── Assemble S-matrix ─────────────────────────────────────────────────
@@ -1407,11 +1648,12 @@ if __name__ == "__main__":
         cbr          = int  (mesh_cfg.get("curved_boundary_resolution",        40))
         max_mm       = float(mesh_cfg.get("max_mesh_size_mm",                   0))
         min_mm       = float(mesh_cfg.get("min_mesh_size_mm",                   0))
+        port_focus   = bool (mesh_cfg.get("port_focus_only",                False))
         circ_segs    = int  (mesh_cfg.get("gerber_circ_segments",              64))
         res_mm       = float(mesh_cfg.get("gerber_res_mm",                   0.05))
         sliver_mm    = float(mesh_cfg.get("sliver_threshold_mm",              0.10))
         algo_2d      = int  (mesh_cfg.get("algorithm_2d",                       6))
-        algo_3d      = int  (mesh_cfg.get("algorithm_3d",                       1))
+        algo_3d      = int  (mesh_cfg.get("algorithm_3d",                      10))
         smoothing    = int  (mesh_cfg.get("smoothing",                          10))
         max_retries  = int  (mesh_cfg.get("max_mesh_retries",                    8))
         art_um       = float(mesh_cfg.get("artifact_threshold_um",            50.0))
@@ -1419,6 +1661,7 @@ if __name__ == "__main__":
         cl_ceil      = float(mesh_cfg.get("char_length_max_ceil_mm",          0.50))
         cl_factor    = float(mesh_cfg.get("char_length_max_factor",           0.80))
         m_copper     = float(mesh_cfg.get("mesh_copper_mm",                   0.10))
+        m_copper_z   = float(mesh_cfg.get("mesh_copper_z_mm",                 0.05))
         m_component  = float(mesh_cfg.get("mesh_component_mm",                0.10))
         m_substrate  = float(mesh_cfg.get("mesh_substrate_mm",                0.30))
         m_air        = float(mesh_cfg.get("mesh_air_mm",                      1.00))
@@ -1439,6 +1682,7 @@ if __name__ == "__main__":
             curved_boundary_resolution = cbr,
             max_mesh_size_mm           = max_mm,
             min_mesh_size_mm           = min_mm,
+            port_focus_only            = port_focus,
             gerber_circ_segments       = circ_segs,
             gerber_res_mm              = res_mm,
             sliver_threshold_mm        = sliver_mm,
@@ -1470,6 +1714,7 @@ if __name__ == "__main__":
             char_length_max_ceil_mm    = cl_ceil,
             char_length_max_factor     = cl_factor,
             mesh_copper_mm             = m_copper,
+            mesh_copper_z_mm           = m_copper_z,
             mesh_component_mm          = m_component,
             mesh_substrate_mm          = m_substrate,
             mesh_air_mm                = m_air,

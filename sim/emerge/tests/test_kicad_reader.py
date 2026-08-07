@@ -24,6 +24,9 @@ from kicad_reader import (
     read_passive_components, read_board_outline, point_in_board,
 )
 
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+REAL_PCB = REPO_ROOT / "kicad" / "ad8317_powermeter.kicad_pcb"
+
 
 # --------------------------------------------------------------------------- #
 # Fixtures — minimal synthetic .kicad_pcb content
@@ -450,6 +453,11 @@ class TestReadBoardOutline:
         f = tmp_path / "no_outline.kicad_pcb"
         f.write_text(NO_OUTLINE_PCB, encoding="utf-8")
         assert read_board_outline(f) == []
+
+    def test_real_board_outline_found(self):
+      pts = read_board_outline(REAL_PCB)
+      assert isinstance(pts, list)
+      assert len(pts) >= 4
 
 
 # --------------------------------------------------------------------------- #

@@ -1,47 +1,30 @@
 <#
 .SYNOPSIS
-    Dev-deploy the EMerge plugin to KiCad's 3rdparty/plugins folder.
+    Dev-deploy the EMerge plugin to installed KiCad versions.
 
 .DESCRIPTION
-    Delegates to build.py --dev-deploy which:
-      • Copies source files from sim/emerge/plugin/ and sim/emerge/ to the
-        single correct install location:
-            %OneDrive%\Simulation tools\KiCad\<ver>\3rdparty\plugins\com_github_<github-user>_emerge_fem\
-      • Removes any stale files (e.g. emerge_pipeline.py) from the install dir.
-      • Removes any duplicate install from %APPDATA%\kicad\<ver>\scripting\plugins\
-        (double registration causes the toolbar icon to disappear).
-      • Clears __pycache__ so KiCad picks up fresh source on next start.
-
-    NOTE: Close KiCad before syncing — the __pycache__ folder is locked while
-    KiCad is running.  If KiCad is open, use Tools → External Plugins →
-    Refresh Plugins after the sync instead.
+    Calls build.py for one or more KiCad versions.
+    - If -KiCadVersion is provided, only that version is processed.
+    - Otherwise, the script auto-detects versions under:
+      %OneDrive%\Simulation tools\KiCad\
+      and falls back to 9.0 and 10.0 if none are found.
 
 .PARAMETER KiCadVersion
-    KiCad version folder name (default: 9.0)
+    KiCad version folder name (for example: "9.0" or "10.0").
 
 .PARAMETER Uninstall
-    Remove the plugin from KiCad's plugins directory and clean up duplicates.
-
-.EXAMPLE
-    # Install / update
-    .\sync_to_kicad.ps1
-
-    # Specify KiCad version
-    .\sync_to_kicad.ps1 -KiCadVersion "9.0"
-
-    # Remove plugin
-    .\sync_to_kicad.ps1 -Uninstall
+    Remove plugin instead of deploying it.
 #>
 
 param(
-    [string]$KiCadVersion = "9.0",
+    [string]$KiCadVersion = "",
     [switch]$Uninstall
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$scriptDir = $PSScriptRoot   # sim/emerge/plugin/
+$scriptDir = $PSScriptRoot
 $buildScript = Join-Path $scriptDir "build.py"
 
 if (-not (Test-Path $buildScript)) {
@@ -49,16 +32,53 @@ if (-not (Test-Path $buildScript)) {
     exit 1
 }
 
-Write-Host "EMerge plugin sync (KiCad $KiCadVersion)"
-Write-Host ""
-
-if ($Uninstall) {
-    python $buildScript --uninstall --kicad-version $KiCadVersion
+if ($KiCadVersion -ne "") {
+    $versions = @($KiCadVersion)
 } else {
-    python $buildScript --dev-deploy --kicad-version $KiCadVersion
+    $oneDrive = $env:OneDrive
+    if (-not $oneDrive) {
+        $oneDrive = Join-Path $env:USERPROFILE "<cloud-folder>"
+    }
+
+    $kicadRoot = Join-Path $oneDrive "Simulation tools\KiCad"
+    if (Test-Path $kicadRoot) {
+        $versions = Get-ChildItem -Path $kicadRoot -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+$' } |
+            Sort-Object Name |
+            ForEach-Object { $_.Name }
+    } else {
+        $versions = @()
+    }
+
+    if ($versions.Count -eq 0) {
+        $versions = @("9.0", "10.0")
+        Write-Host "KiCad root not found at $kicadRoot. Trying default versions: $($versions -join ', ')"
+    }
 }
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "build.py exited with code $LASTEXITCODE"
-    exit $LASTEXITCODE
+Write-Host "EMerge plugin sync"
+Write-Host "Versions to process: $($versions -join ', ')"
+Write-Host ""
+
+$anyFailed = $false
+
+foreach ($ver in $versions) {
+    Write-Host "--- KiCad $ver ---"
+    if ($Uninstall) {
+        python $buildScript --uninstall --kicad-version $ver
+    } else {
+        python $buildScript --dev-deploy --kicad-version $ver
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "WARNING: build.py exited with code $LASTEXITCODE for KiCad $ver"
+        $anyFailed = $true
+    }
+
+    Write-Host ""
+}
+
+if ($anyFailed) {
+    Write-Error "One or more versions failed. See output above."
+    exit 1
 }

@@ -40,6 +40,11 @@ class TestFindKicadCli:
         fake_cli.write_text("")
         assert _find_kicad_cli(fake_cli) == str(fake_cli)
 
+    def test_explicit_directory_without_cli_returns_none(self, tmp_path):
+        d = tmp_path / "kicad_bin"
+        d.mkdir()
+        assert _find_kicad_cli(str(d)) is None
+
     def test_empty_override_falls_through_to_candidates(self):
         # With empty override, _find_kicad_cli returns something or None —
         # just verify it doesn't raise.

@@ -10,11 +10,12 @@ Geometry (all mm):
 Targets:
   * Mesh + FEM sweep  (100 MHz - 6 GHz, 11 pts)
   * Write .s2p Touchstone
-  * Export E-field magnitude PNG (XZ slice at board Y centre)
+    * Optional field/plot exports when --plots is provided
 
 Run:
   cd <repo_root>
   python sim/emerge/test_simple_microstrip.py
+    python sim/emerge/test_simple_microstrip.py --plots
 Output: sim/emerge/results/simple_test/
 """
 
@@ -28,6 +29,9 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 _USE_ABC = "--no-abc" not in sys.argv   # pass --no-abc to disable absorbing BCs
+_PLOTS_ENABLED = "--plots" in sys.argv   # pass --plots to enable Stage 5 plotting
+_SHOW_GEOMETRY = "--show-geometry" in sys.argv
+_SHOW_MESH = "--show-mesh" in sys.argv
 
 _label  = "with_abc" if _USE_ABC else "no_abc"
 _OUTDIR = pathlib.Path(__file__).parent / "results" / "simple_test"
@@ -48,6 +52,11 @@ try:
         _CUDSS_AVAILABLE, _PARDISO_AVAILABLE,
     )
     from emerge import Material
+    try:
+        from gerber_builder import gmsh_view_geometry, gmsh_view_mesh
+    except Exception:
+        gmsh_view_geometry = None
+        gmsh_view_mesh = None
     log(f"EMerge {emerge.__version__} OK")
 except ImportError as e:
     log(f"ERROR: {e}"); sys.exit(1)
@@ -159,6 +168,13 @@ else:
 
 log(f"Geometry built  ({time.monotonic()-t0:.1f} s)")
 
+if _SHOW_GEOMETRY:
+    if gmsh_view_geometry is not None:
+        log("Showing geometry viewer — close window to continue ...")
+        gmsh_view_geometry("Geometry — close window to continue")
+    else:
+        log("Geometry viewer not available (gmsh_view_geometry import failed).")
+
 # ─────────────────────────────────────────────────────────────────────────────
 log("\n=== Stage 2: Mesh ===")
 t1 = time.monotonic()
@@ -264,6 +280,13 @@ finally:
 
 log(f"Mesh done  ({time.monotonic()-t1:.1f} s)")
 
+if _SHOW_MESH:
+    if gmsh_view_mesh is not None:
+        log("Showing mesh viewer — close window to continue ...")
+        gmsh_view_mesh("Mesh — close window to continue")
+    else:
+        log("Mesh viewer not available (gmsh_view_mesh import failed).")
+
 # ─────────────────────────────────────────────────────────────────────────────
 log("\n=== Stage 3: FEM sweep ===")
 t2 = time.monotonic()
@@ -357,6 +380,12 @@ for k, f in enumerate(freq_axis):
     z = Z0_extracted[k]
     log(f"  {f/1e9:8.3f}    {z.real:9.2f}   {z.imag:9.2f}   {abs(z):7.2f}"
         f"   {eeff_extracted[k]:8.4f}   {beta_extracted[k]:10.1f}")
+
+    if not _PLOTS_ENABLED:
+        log("\n=== Stage 5: Field plots (skipped; pass --plots to enable) ===")
+        log(f"\nDone.  Total: {time.monotonic()-t0:.1f} s")
+        log(f"Output: {_OUTDIR}")
+        sys.exit(0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 log("\n=== Stage 5: Field plots ===")
@@ -566,6 +595,87 @@ try:
         log("  Plotly not installed — pip install plotly")
     except Exception as _pe:
         log(f"  Interactive 3D skipped: {_pe}")
+
+    # ── E-field cutplane HTML (EMerge-native API, matches example style) ──────
+    # Uses MWField.cutplane() → EHField.scalar('normE','abs') → FieldPlotData.xyzf
+    # Three surface cuts (XY, XZ, YZ) rendered as Plotly Surface traces with the
+    # PCB geometry overlaid — directly mirrors the example's display.add_surf() call.
+    try:
+        import plotly.graph_objects as go
+
+        ds_cp = 0.3e-3   # cut-plane discretisation step (0.3 mm)
+
+        def _cutplane_surface(field_dataset, ds, plane, coord, name, colorscale="Hot"):
+            """Return a go.Surface trace from an EMerge cutplane, units converted to mm."""
+            kwargs = {plane: coord}
+            eh_cp = field_dataset.cutplane(ds, **kwargs)
+            pd    = eh_cp.scalar("normE", "abs")
+            X, Y, Z, F = pd.xyzf
+            F = np.nan_to_num(np.abs(F))
+            return go.Surface(
+                x=X*1e3, y=Y*1e3, z=Z*1e3,
+                surfacecolor=F,
+                colorscale=colorscale, opacity=0.75,
+                showscale=(plane == "z"),          # show colour bar once
+                colorbar=dict(title="|E| (V/m)", x=1.02) if plane == "z" else None,
+                name=name,
+                showlegend=True,
+            )
+
+        cp_traces = []
+
+        # XY cut at mid-FR4 (like example's z=0)
+        cp_traces.append(_cutplane_surface(
+            fld_mid, ds_cp, "z", BT / 2, f"XY  z={BT/2*1e3:.2f} mm (mid-FR4)"))
+
+        # XZ cut at board Y centre
+        cp_traces.append(_cutplane_surface(
+            fld_mid, ds_cp, "y", BH / 2, f"XZ  y={BH/2*1e3:.1f} mm (centre)",
+            colorscale="Plasma"))
+
+        # YZ cut at board X centre (transverse cross-section)
+        cp_traces.append(_cutplane_surface(
+            fld_mid, ds_cp, "x", BW / 2, f"YZ  x={BW/2*1e3:.1f} mm (centre)",
+            colorscale="Viridis"))
+
+        # PCB geometry overlay (same as 3D interactive plot)
+        def _pcb_layer(z_mm, color, lname, op=0.4):
+            x0, x1, y0, y1 = 0.0, BW*1e3, 0.0, BH*1e3
+            return go.Mesh3d(x=[x0,x1,x1,x0], y=[y0,y0,y1,y1], z=[z_mm]*4,
+                             i=[0,0], j=[1,2], k=[2,3],
+                             color=color, opacity=op, name=lname, showscale=False)
+
+        cp_traces.append(_pcb_layer(Z_BCU*1e3,  "#1565c0", "B.Cu (GND)", 0.5))
+        cp_traces.append(_pcb_layer(Z_FCU*1e3,  "#00e5ff", "F.Cu",       0.25))
+        TW_mm2 = TW_m * 1e3
+        ty0c, ty1c = (BH*1e3 - TW_mm2)/2, (BH*1e3 + TW_mm2)/2
+        cp_traces.append(go.Mesh3d(
+            x=[0,BW*1e3,BW*1e3,0], y=[ty0c,ty0c,ty1c,ty1c], z=[Z_TTOP*1e3]*4,
+            i=[0,0], j=[1,2], k=[2,3],
+            color="#ffd600", opacity=0.85, name="Cu trace", showscale=False,
+        ))
+
+        fig_cp = go.Figure(data=cp_traces)
+        fig_cp.update_layout(
+            title=(f"|E| cut-plane view — {mid_f/1e9:.2f} GHz  "
+                   f"({'ABC' if _USE_ABC else 'no ABC'})"),
+            scene=dict(
+                xaxis_title="X (mm)", yaxis_title="Y (mm)", zaxis_title="Z (mm)",
+                aspectmode="manual",
+                aspectratio=dict(x=BW/BH*1.5, y=1.0, z=0.8),
+                camera=dict(eye=dict(x=1.5, y=-1.8, z=1.2)),
+            ),
+            margin=dict(l=0, r=0, t=45, b=0),
+            legend=dict(x=0.01, y=0.99),
+        )
+        cp_path = _OUTDIR / "E_field_cutplane.html"
+        fig_cp.write_html(str(cp_path), include_plotlyjs="cdn")
+        log(f"  E-field cutplane HTML: {cp_path}")
+
+    except ImportError:
+        log("  Plotly not installed — pip install plotly")
+    except Exception as _cpe:
+        log(f"  Cutplane HTML skipped: {_cpe}")
 
     # ── S-param plot ──────────────────────────────────────────────────────────
     fig2, ax2 = plt.subplots(figsize=(8, 4))

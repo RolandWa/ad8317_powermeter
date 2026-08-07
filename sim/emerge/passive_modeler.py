@@ -71,6 +71,14 @@ def parse_component_value(ref: str, value_str: str):
     # Strip voltage/current rating suffix: "10uF/16V" → "10uF"
     s = _re.sub(r'[/\\][^/\\]*$', '', s).strip()
 
+    # Descriptive value strings are common in BOM-style footprints,
+    # e.g. "10k NTC Thermistor". Keep only the first numeric-like token.
+    if " " in s:
+        parts = s.split()
+        token = next((p for p in parts if _re.search(r'\d', p)), None)
+        if token:
+            s = token
+
     # Strip trailing explicit units (H, F, Ohm, Hz) — keep SI prefix
     s = _re.sub(r'(?i)(ohms?|hertz|hz)$', '', s)
     s = _re.sub(r'(?i)[HhFf]$', '', s).strip()
@@ -195,14 +203,6 @@ class PassiveElementModeler:
                 skipped += 1
                 continue
 
-            if self.outline_pts:
-                mx = (comp["pad1_xy"][0] + comp["pad2_xy"][0]) * 0.5
-                my = (comp["pad1_xy"][1] + comp["pad2_xy"][1]) * 0.5
-                if not point_in_board(mx, my, self.outline_pts):
-                    self._log(f"    {ref:<8} '{value}'  → skipped (outside board outline)")
-                    skipped += 1
-                    continue
-
             parsed = parse_component_value(ref, value)
             if parsed is None:
                 self._log(f"    {ref:<8} '{value}'  → skipped (unparseable / DNP / 0R)")
@@ -210,6 +210,25 @@ class PassiveElementModeler:
                 continue
 
             comp_type, value_si = parsed
+
+            # Parse first, then apply domain filter so descriptive strings
+            # (e.g. "10k NTC Thermistor") are still recognized in logs.
+            if self.outline_pts:
+                mx = (comp["pad1_xy"][0] + comp["pad2_xy"][0]) * 0.5
+                my = (comp["pad1_xy"][1] + comp["pad2_xy"][1]) * 0.5
+                if not point_in_board(mx, my, self.outline_pts):
+                    if comp_type == "R":
+                        if value_si >= 1e3:
+                            parsed_str = f"{value_si/1e3:.3g} kΩ"
+                        else:
+                            parsed_str = f"{value_si:.3g} Ω"
+                    elif comp_type == "C":
+                        parsed_str = f"{value_si:.3g} F"
+                    else:
+                        parsed_str = f"{value_si:.3g} H"
+                    self._log(f"    {ref:<8} '{value}'  → skipped (outside board outline, parsed {comp_type} {parsed_str})")
+                    skipped += 1
+                    continue
 
             x1, y1 = comp["pad1_xy"][0] * 1e-3, comp["pad1_xy"][1] * 1e-3
             x2, y2 = comp["pad2_xy"][0] * 1e-3, comp["pad2_xy"][1] * 1e-3

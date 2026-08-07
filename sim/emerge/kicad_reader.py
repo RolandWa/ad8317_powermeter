@@ -292,8 +292,11 @@ def read_board_outline(pcb_path):
     of (x_mm, y_mm) vertices (closed polygon).
 
     Handles gr_line, gr_arc (approximated as straight chord), gr_rect, and
-    gr_poly elements on the "Edge.Cuts" layer.  Returns [] when no Edge.Cuts
-    geometry is found.
+    gr_poly elements on the "Edge.Cuts" layer. Also handles footprint-level
+    primitives (fp_line/fp_arc) on Edge.Cuts, which are common when the board
+    perimeter is authored as a reusable outline footprint.
+
+    Returns [] when no Edge.Cuts geometry is found.
 
     Args:
         pcb_path: Path to .kicad_pcb
@@ -304,8 +307,24 @@ def read_board_outline(pcb_path):
     content = pathlib.Path(pcb_path).read_text(encoding="utf-8")
     segments = []   # raw (x1, y1, x2, y2) line segments in mm
 
-    # Regex that handles up to 2 levels of nesting inside ( ... )
-    _blk = r'(?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*'
+    def _extract_block(text: str, start: int) -> str | None:
+        """Return the parenthesized block starting at *start*, or None."""
+        depth = 0
+        in_string = False
+        i = start
+        while i < len(text):
+            ch = text[i]
+            if ch == '"' and (i == 0 or text[i - 1] != "\\"):
+                in_string = not in_string
+            elif not in_string:
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:i + 1]
+            i += 1
+        return None
 
     def _is_edge_cuts(blk):
         return '"Edge.Cuts"' in blk or "'Edge.Cuts'" in blk
@@ -318,9 +337,47 @@ def read_board_outline(pcb_path):
                     float(e.group(1)), float(e.group(2)))
         return None
 
+    def _iter_blocks(kind: str):
+        token = f"({kind}"
+        idx = 0
+        while True:
+            start = content.find(token, idx)
+            if start == -1:
+                return
+            blk = _extract_block(content, start)
+            idx = start + 1
+            if blk is None:
+                continue
+            yield blk
+
+    def _transform_local_xy(x, y, ox, oy, ang_deg):
+        """KiCad local->board transform used for footprint primitives."""
+        a = math.radians(ang_deg)
+        return (
+            ox + x * math.cos(a) + y * math.sin(a),
+            oy - x * math.sin(a) + y * math.cos(a),
+        )
+
+    def _iter_footprint_blocks():
+        # KiCad 6/7/8/9/10 use (footprint ...); older files may use (module ...)
+        for kind in ("footprint", "module"):
+            for blk in _iter_blocks(kind):
+                yield blk
+
+    def _footprint_transform(fp_blk):
+        # Only inspect the footprint header region before the first fp_* entity.
+        # This avoids matching local '(at ...)' fields inside fp_text/pad blocks.
+        header = fp_blk.split("(fp_", 1)[0]
+        at = re.search(r'\(at\s+([\d.\-]+)\s+([\d.\-]+)(?:\s+([\d.\-]+))?\)', header)
+        if not at:
+            return 0.0, 0.0, 0.0
+        ox = float(at.group(1))
+        oy = float(at.group(2))
+        ang = float(at.group(3) or 0.0)
+        return ox, oy, ang
+
     # gr_line — direct start→end segment
-    for m in re.finditer(r'\(gr_line\b' + _blk + r'\)', content, re.DOTALL):
-        blk = m.group()
+    for blk in _iter_blocks("gr_line"):
         if not _is_edge_cuts(blk):
             continue
         seg = _start_end(blk)
@@ -328,8 +385,7 @@ def read_board_outline(pcb_path):
             segments.append(seg)
 
     # gr_arc — approximate as chord from start to end
-    for m in re.finditer(r'\(gr_arc\b' + _blk + r'\)', content, re.DOTALL):
-        blk = m.group()
+    for blk in _iter_blocks("gr_arc"):
         if not _is_edge_cuts(blk):
             continue
         seg = _start_end(blk)
@@ -337,8 +393,7 @@ def read_board_outline(pcb_path):
             segments.append(seg)
 
     # gr_rect — expand to 4 segments
-    for m in re.finditer(r'\(gr_rect\b' + _blk + r'\)', content, re.DOTALL):
-        blk = m.group()
+    for blk in _iter_blocks("gr_rect"):
         if not _is_edge_cuts(blk):
             continue
         seg = _start_end(blk)
@@ -352,8 +407,7 @@ def read_board_outline(pcb_path):
             ])
 
     # gr_poly — extract vertices directly
-    for m in re.finditer(r'\(gr_poly\b' + _blk + r'\)', content, re.DOTALL):
-        blk = m.group()
+    for blk in _iter_blocks("gr_poly"):
         if not _is_edge_cuts(blk):
             continue
         pts_m = re.search(r'\(pts(.*?)\)', blk, re.DOTALL)
@@ -367,10 +421,93 @@ def read_board_outline(pcb_path):
                 x2, y2 = coords[(i + 1) % len(coords)]
                 segments.append((x1, y1, x2, y2))
 
+    # fp_line / fp_arc inside footprint/module blocks on Edge.Cuts
+    for fp_blk in _iter_footprint_blocks():
+        ox, oy, ang = _footprint_transform(fp_blk)
+
+        # Local helper to iterate fp_* blocks from this footprint only
+        def _iter_fp(kind: str):
+            token = f"({kind}"
+            idx = 0
+            while True:
+                start = fp_blk.find(token, idx)
+                if start == -1:
+                    return
+                blk = _extract_block(fp_blk, start)
+                idx = start + 1
+                if blk is None:
+                    continue
+                yield blk
+
+        for kind in ("fp_line", "fp_arc"):
+            for blk in _iter_fp(kind):
+                if not _is_edge_cuts(blk):
+                    continue
+                seg = _start_end(blk)
+                if not seg:
+                    continue
+                x1, y1, x2, y2 = seg
+                ax1, ay1 = _transform_local_xy(x1, y1, ox, oy, ang)
+                ax2, ay2 = _transform_local_xy(x2, y2, ox, oy, ang)
+                segments.append((ax1, ay1, ax2, ay2))
+
     if not segments:
         return []
 
     return _chain_outline(segments)
+
+
+def read_keepout_bbox(pcb_path):
+    """
+    Return keepout bounding box from zone keepout polygons in a .kicad_pcb.
+
+    The returned coordinates are in KiCad board coordinates (mm, Y-down):
+        (xmin_mm, ymin_mm, xmax_mm, ymax_mm)
+
+    Returns None when no keepout zone with polygon points is found.
+    """
+    content = pathlib.Path(pcb_path).read_text(encoding="utf-8")
+
+    def _extract_block(text: str, start: int):
+        depth = 0
+        in_string = False
+        i = start
+        while i < len(text):
+            ch = text[i]
+            if ch == '"' and (i == 0 or text[i - 1] != "\\"):
+                in_string = not in_string
+            elif not in_string:
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:i + 1]
+            i += 1
+        return None
+
+    pts = []
+    token = "(zone"
+    idx = 0
+    while True:
+        start = content.find(token, idx)
+        if start == -1:
+            break
+        blk = _extract_block(content, start)
+        idx = start + 1
+        if not blk:
+            continue
+        if "(keepout" not in blk:
+            continue
+        for xm, ym in re.findall(r'\(xy\s+([\d.\-]+)\s+([\d.\-]+)\)', blk):
+            pts.append((float(xm), float(ym)))
+
+    if not pts:
+        return None
+
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return (min(xs), min(ys), max(xs), max(ys))
 
 
 def _chain_outline(segments, tol=0.02):

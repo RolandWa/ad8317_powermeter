@@ -499,6 +499,7 @@ class EmergePlugin(pcbnew.ActionPlugin):
                 "curved_boundary_resolution": int  (mesh_cfg.get("curved_boundary_resolution",    40)),
                 "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm",               0)),
                 "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm",               0)),
+                "port_focus_only":            bool (mesh_cfg.get("port_focus_only",            False)),
                 "gerber_circ_segments":       int  (mesh_cfg.get("gerber_circ_segments",          64)),
                 "gerber_res_mm":              float(mesh_cfg.get("gerber_res_mm",               0.05)),
                 "algorithm_2d":               int  (mesh_cfg.get("algorithm_2d",                   6)),
@@ -511,6 +512,7 @@ class EmergePlugin(pcbnew.ActionPlugin):
                 "char_length_max_factor":     float(mesh_cfg.get("char_length_max_factor",       0.80)),
                 "sliver_threshold_mm":        float(mesh_cfg.get("sliver_threshold_mm",          0.10)),
                 "mesh_copper_mm":             float(mesh_cfg.get("mesh_copper_mm",               0.20)),
+                "mesh_copper_z_mm":           float(mesh_cfg.get("mesh_copper_z_mm",             0.05)),
                 "mesh_component_mm":          float(mesh_cfg.get("mesh_component_mm",            0.15)),
                 "mesh_substrate_mm":          float(mesh_cfg.get("mesh_substrate_mm",            0.40)),
                 "mesh_air_mm":                float(mesh_cfg.get("mesh_air_mm",                  2.50)),
@@ -551,8 +553,26 @@ class EmergePlugin(pcbnew.ActionPlugin):
 
         ger_report: list[str] = []
         from gerber_exporter import GerberExporter
+        # Prefer kicad-cli from the same KiCad installation that is running now.
+        # sys.executable = C:\Program Files\KiCad\10.0\bin\kicad.exe — pass the
+        # bin/ directory so _find_kicad_cli() resolves kicad-cli.exe from there.
+        # Falls back to newest installed version if the exe isn't found there.
+        _kicad_bin_dir = str(pathlib.Path(sys.executable).parent)
+        # Build full copper-layer list from the open board so inner layers are
+        # exported on 4-layer (and 6-layer, etc.) boards.
+        try:
+            _board = pcbnew.GetBoard()
+            _n_cu = _board.GetCopperLayerCount()
+            _copper_layers = ["F.Cu"]
+            for _i in range(1, _n_cu - 1):
+                _copper_layers.append(f"In{_i}.Cu")
+            _copper_layers.append("B.Cu")
+        except Exception:
+            _copper_layers = None  # GerberExporter will use default ["F.Cu","B.Cu"]
         exporter = GerberExporter(
             pcb_path=pcb_path, output_dir=gerber_dir,
+            kicad_cli=_kicad_bin_dir,
+            copper_layers=_copper_layers,
             report_lines=ger_report, verbose=True)
         gerber_ok = exporter.run()
 

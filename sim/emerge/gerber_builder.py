@@ -266,9 +266,30 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             _log(f"  [{idx}] {name}: done  ({time.monotonic()-t0:.1f} s)")
             loaded += 1
         except Exception as exc:
-            _log(f"  [{idx}] {name}: FAILED — {exc}")
-            if log:
-                traceback.print_exc()
+            # Cropped Gerbers can occasionally produce parser edge-cases on
+            # complex copper fills. Retry once with the original full Gerber
+            # to keep the pipeline moving.
+            retried = False
+            if sim_bounds and load_path != gbr and gbr.exists():
+                retried = True
+                _log(f"  [{idx}] {name}: cropped parse failed — retrying full Gerber ({gbr.name})")
+                t1 = time.monotonic()
+                try:
+                    pcb.layer_from_file(idx, str(gbr),
+                                        res_mm=res_mm,
+                                        n_circ_segments=circ_segs)
+                    _log(f"  [{idx}] {name}: done (full Gerber fallback)  ({time.monotonic()-t1:.1f} s)")
+                    loaded += 1
+                    continue
+                except Exception as exc2:
+                    _log(f"  [{idx}] {name}: FAILED on full Gerber fallback — {exc2}")
+                    if log:
+                        traceback.print_exc()
+
+            if not retried:
+                _log(f"  [{idx}] {name}: FAILED — {exc}")
+                if log:
+                    traceback.print_exc()
 
     return loaded
 
@@ -332,8 +353,23 @@ def build_and_commit(sim, pcb, board_t: float,
 
     _log("  commit_geometry() — fusing CAD solids ...")
     t2 = time.monotonic()
-    sim.commit_geometry(pcb_vol, air_vol, pml, *port_geos)
-    _log(f"    done  ({time.monotonic()-t2:.1f} s)")
+    try:
+        sim.commit_geometry(pcb_vol, air_vol, pml, *port_geos)
+    except Exception as exc:
+        _log(f"  commit_geometry failed after {time.monotonic()-t2:.1f} s: {exc}")
+        try:
+            g = _gmsh()
+            if g.isInitialized():
+                n_surfs = len(g.model.getEntities(2))
+                n_vols  = len(g.model.getEntities(3))
+                _log(f"  GMSH entities after failure: {n_surfs} surfaces, {n_vols} volumes")
+        except Exception:
+            pass
+        if log:
+            traceback.print_exc()
+        raise
+    else:
+        _log(f"    done  ({time.monotonic()-t2:.1f} s)")
 
     return pcb_vol, air_vol
 
@@ -375,15 +411,26 @@ def compound_sliver_surfaces(gmsh_module=None, threshold_m: float = 0.1e-3,
 
     all_surf_tags = [tag for _, tag in g.model.getEntities(2)]
 
-    # Identify slivers
+    # Identify slivers — skip Discrete surfaces: they have no CAD parametrisation
+    # and cannot be jointly parametrised with CAD surfaces in a compound group.
+    # Discrete surfaces are handled separately by remove_ghost_faces().
     sliver_set: set[int] = set()
+    n_discrete_skipped = 0
     for tag in all_surf_tags:
         x0, y0, z0, x1, y1, z1 = g.model.getBoundingBox(2, tag)
         if (x1 - x0) < threshold_m and (y1 - y0) < threshold_m:
+            try:
+                _stype = g.model.getType(2, tag)
+            except Exception:
+                _stype = ""
+            if "Discrete" in str(_stype):
+                n_discrete_skipped += 1
+                continue
             sliver_set.add(tag)
 
     if not sliver_set:
-        _log(f"  Compound sliver surfaces: 0  (no slivers < {threshold_m*1e3:.2f} mm)")
+        _log(f"  Compound sliver surfaces: 0  (no slivers < {threshold_m*1e3:.2f} mm)"
+             + (f"  [{n_discrete_skipped} Discrete skipped]" if n_discrete_skipped else ""))
         return 0
 
     # Build curve → surface adjacency map
@@ -434,7 +481,8 @@ def compound_sliver_surfaces(gmsh_module=None, threshold_m: float = 0.1e-3,
             g.model.mesh.setCompound(2, [anchor] + slivers)
             n_compounded += len(slivers)
         _log(f"  Compound sliver surfaces: {n_compounded} in {len(anchor_to_slivers)} "
-             f"groups  (threshold {threshold_m*1e3:.2f} mm)")
+             f"groups  (threshold {threshold_m*1e3:.2f} mm)"
+             + (f"  [{n_discrete_skipped} Discrete skipped]" if n_discrete_skipped else ""))
         if isolated_slivers:
             _log(f"  WARNING: {len(isolated_slivers)} isolated sliver(s) with no adjacent "
                  f"surface — cannot compound; should have been removed by "
@@ -566,13 +614,28 @@ def remove_ghost_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
 
     g = gmsh_module
     neutralised = 0
+    # near_ghost_z_threshold: surfaces thinner than this (in m) with no parent
+    # volume are treated as ghost faces.  OCC boolean results on curved copper
+    # can produce faces with Z spans of 2-5 µm — well above 1 µm but still
+    # coplanar in practice.  10 µm catches these without false-positives on
+    # real substrate surfaces (which are ≥35 µm thick).
+    _Z_THRESHOLD = 10e-6   # 10 µm
+    near_ghost_candidates: list[tuple[int, float, float]] = []  # (tag, dz_um, diag_mm)
 
     try:
         for _, stag in g.model.getEntities(2):
             x0, y0, z0, x1, y1, z1 = g.model.getBoundingBox(2, stag)
             dz   = abs(z1 - z0)
             diag = ((x1-x0)**2 + (y1-y0)**2) ** 0.5
-            if dz > 1e-6 or diag >= threshold_m:
+            if dz > _Z_THRESHOLD or diag >= threshold_m:
+                # Track surfaces that are volumeless + small XY but dz just over 1 µm
+                if dz <= _Z_THRESHOLD * 5 and diag < threshold_m:
+                    try:
+                        _vcheck = g.model.getAdjacencies(2, stag)[0]
+                        if len(_vcheck) == 0:
+                            near_ghost_candidates.append((stag, dz * 1e6, diag * 1e3))
+                    except Exception:
+                        pass
                 continue
             try:
                 vols = g.model.getAdjacencies(2, stag)[0]
@@ -582,8 +645,19 @@ def remove_ghost_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
                 continue
 
             # Neutralise: force 2 nodes on every boundary curve so TetGen
-            # recovers trivial 1-segment edges.  Then set transfinite surface
-            # so GMSH meshes it with the minimum possible element count.
+            # recovers trivial 1-segment edges.
+            #
+            # Discrete surfaces have no CAD parametrisation — setCompound and
+            # setTransfiniteSurface both require parametric surfaces to work.
+            # For Discrete surfaces: per-curve transfinite constraints only.
+            # For CAD surfaces:
+            #   3-4 curves → setTransfiniteSurface (structured trivial mesh)
+            #   other count → setCompound with largest adjacent CAD surface
+            try:
+                surf_type = g.model.getType(2, stag)
+            except Exception:
+                surf_type = ""
+            is_discrete = "Discrete" in str(surf_type)
             try:
                 bcs = g.model.getBoundary([(2, stag)], oriented=False)
                 for _, ctag in bcs:
@@ -591,7 +665,32 @@ def remove_ghost_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
                         g.model.mesh.setTransfiniteCurve(abs(ctag), 2)
                     except Exception:
                         pass
-                g.model.mesh.setTransfiniteSurface(stag)
+                if not is_discrete:
+                    if len(bcs) in (3, 4):
+                        g.model.mesh.setTransfiniteSurface(stag)
+                    else:
+                        # Find largest adjacent CAD surface as compound anchor
+                        _bc_set = {abs(c[1]) for c in bcs}
+                        _best_anchor, _best_area = None, -1.0
+                        for _, _as in g.model.getEntities(2):
+                            if _as == stag:
+                                continue
+                            try:
+                                _as_type = g.model.getType(2, _as)
+                            except Exception:
+                                _as_type = ""
+                            if "Discrete" in str(_as_type):
+                                continue  # don't compound Discrete→Discrete
+                            _as_bcs = {abs(c[1]) for c in
+                                       g.model.getBoundary([(2, _as)], oriented=False)}
+                            if _bc_set & _as_bcs:
+                                _bb = g.model.getBoundingBox(2, _as)
+                                _area = (_bb[3]-_bb[0]) * (_bb[4]-_bb[1])
+                                if _area > _best_area:
+                                    _best_area = _area
+                                    _best_anchor = _as
+                        if _best_anchor is not None:
+                            g.model.mesh.setCompound(2, [_best_anchor, stag])
                 neutralised += 1
             except Exception as exc:
                 _log(f"  Ghost face {stag}: neutralise failed: {exc}")
@@ -599,9 +698,21 @@ def remove_ghost_faces(gmsh_module=None, threshold_m: float = 0.1e-3,
         if neutralised:
             _log(f"  Ghost faces neutralised: {neutralised}  "
                  f"(coplanar faces with no parent volume forced to trivial mesh, "
-                 f"threshold {threshold_m*1e3:.2f} mm)")
+                 f"threshold {threshold_m*1e3:.2f} mm, Z<{_Z_THRESHOLD*1e6:.0f} µm)")
         else:
             _log(f"  Ghost faces neutralised: 0  (none found)")
+
+        # Report near-ghost surfaces that had dz just above 1 µm — these are
+        # candidates for future mesh failures.
+        if near_ghost_candidates:
+            _log(f"  Near-ghost surfaces (no volume, XY<{threshold_m*1e3:.2f} mm, "
+                 f"dz 1–{_Z_THRESHOLD*1e6*5:.0f} µm — neutralised by transfinite): "
+                 f"{len(near_ghost_candidates)}")
+            for _ng_tag, _ng_dz, _ng_diag in near_ghost_candidates[:20]:
+                _log(f"    surface {_ng_tag}: dz={_ng_dz:.2f} µm  diag={_ng_diag:.4f} mm")
+            if len(near_ghost_candidates) > 20:
+                _log(f"    ... +{len(near_ghost_candidates)-20} more")
+
     except Exception as exc:
         _log(f"  Ghost face neutralisation error: {exc}")
 
@@ -734,7 +845,8 @@ def color_geometry():
 def apply_region_mesh_sizes(copper_mm: float = 0.10,
                              component_mm: float = 0.10,
                              air_mm: float = 1.00,
-                             substrate_mm: float = 0.30):
+                             substrate_mm: float = 0.30,
+                             copper_z_mm: float = 0.05):
     """
     Apply per-region mesh size constraints to the current GMSH model.
 
@@ -747,6 +859,9 @@ def apply_region_mesh_sizes(copper_mm: float = 0.10,
     Sizes are applied via gmsh.model.mesh.setSize() on boundary vertices.
     A size of 0 for any region means that region is left at the global
     CharacteristicLengthMax (no per-region override).
+
+    copper_z_mm adds a GMSH Box field centred on each copper Z-band to force
+    finer Z-direction elements (anisotropic refinement).  Set to 0 to disable.
     """
     g = _gmsh()
     if not g.isInitialized():
@@ -840,6 +955,67 @@ def apply_region_mesh_sizes(copper_mm: float = 0.10,
         print(f"  Region mesh sizes applied: {n_applied} vertices "
               f"(Cu={copper_mm:.2f} Comp={component_mm:.2f} "
               f"Sub={substrate_mm:.2f} Air={air_mm:.2f} mm)", flush=True)
+
+        # ── Anisotropic Z refinement on copper layers via GMSH Box fields ────
+        # setSize() is isotropic; a Box field with VIn=copper_z_mm and a tight
+        # Z thickness forces the mesher to place fine elements through the copper
+        # layer depth while the XY size is already handled by the vertex sizes above.
+        if copper_z_mm > 0 and copper_mm > 0:
+            try:
+                # Identify unique copper Z-band centres (surfaces already
+                # classified as copper_mm above)
+                cu_z_bands: set[tuple[float, float]] = set()
+                for tag, bb in surf_bb.items():
+                    z_ctr = (bb[2] + bb[5]) * 0.5
+                    if z_ctr > z_hi - z_tol or z_ctr < z_lo + z_tol:
+                        xy_area = (bb[3] - bb[0]) * (bb[4] - bb[1]) * 1e6
+                        if xy_area >= _PORT_AREA_MM2:
+                            # Round to 4 decimal places to deduplicate layers
+                            cu_z_bands.add((round(bb[2], 4), round(bb[5], 4)))
+
+                x_lo = min(bb[0] for bb in surf_bb.values())
+                x_hi = max(bb[3] for bb in surf_bb.values())
+                y_lo = min(bb[1] for bb in surf_bb.values())
+                y_hi = max(bb[4] for bb in surf_bb.values())
+                # Expand XY box 5 % beyond board edges so it fully covers fills
+                dx = (x_hi - x_lo) * 0.05; dy = (y_hi - y_lo) * 0.05
+                x0 = x_lo - dx; x1 = x_hi + dx
+                y0 = y_lo - dy; y1 = y_hi + dy
+
+                # VOut must be large (≥ air_mm) so the Box field does NOT
+                # constrain element size outside the copper Z band — outside
+                # the box GMSH takes the minimum of all active sizes, and a
+                # tight VOut would force fine elements across the whole volume.
+                v_out = max(air_mm, substrate_mm) * 1e-3  # relax outside box
+
+                field_ids = []
+                for z_bot, z_top in cu_z_bands:
+                    # Pad Z band slightly so tetrahedra straddling the copper
+                    # top/bottom faces also get the fine Z size.
+                    pad = copper_z_mm * 0.5e-3
+                    fid = g.model.mesh.field.add("Box")
+                    g.model.mesh.field.setNumber(fid, "VIn",  copper_z_mm * 1e-3)
+                    g.model.mesh.field.setNumber(fid, "VOut", v_out)
+                    g.model.mesh.field.setNumber(fid, "XMin", x0)
+                    g.model.mesh.field.setNumber(fid, "XMax", x1)
+                    g.model.mesh.field.setNumber(fid, "YMin", y0)
+                    g.model.mesh.field.setNumber(fid, "YMax", y1)
+                    g.model.mesh.field.setNumber(fid, "ZMin", z_bot - pad)
+                    g.model.mesh.field.setNumber(fid, "ZMax", z_top + pad)
+                    field_ids.append(fid)
+
+                if field_ids:
+                    # Set as background mesh so GMSH applies it in addition to
+                    # the vertex sizes already set above.  GMSH takes the
+                    # minimum of the background field and vertex-prescribed sizes.
+                    min_fid = g.model.mesh.field.add("Min")
+                    g.model.mesh.field.setNumbers(min_fid, "FieldsList", field_ids)
+                    g.model.mesh.field.setAsBackgroundMesh(min_fid)
+                    print(f"  Copper Z-refinement: {len(cu_z_bands)} layer(s), "
+                          f"VIn={copper_z_mm:.3f} mm  VOut={v_out*1e3:.2f} mm  "
+                          f"(Box fields: {field_ids})", flush=True)
+            except Exception as _ze:
+                print(f"  Copper Z-refinement warning: {_ze}", flush=True)
 
     except Exception as exc:
         print(f"  apply_region_mesh_sizes warning: {exc}")

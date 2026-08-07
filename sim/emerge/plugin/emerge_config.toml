@@ -47,8 +47,8 @@ dir    = "z"
 [sweep]
 start_hz         = 100_000_000    # 100 MHz
 stop_hz          = 6_000_000_000  # 6 GHz
-steps            = 21             # keep low for test runs; increase to 101+ for production
-cells_per_lambda = 10             # mesh density — increase for better accuracy (15+ for production)
+steps            = 15             # faster iteration profile; raise again for final signoff
+cells_per_lambda = 8              # coarser mesh for speed (use 10-15 for higher accuracy)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Mesh settings
@@ -65,10 +65,15 @@ cells_per_lambda = 10             # mesh density — increase for better accurac
 [mesh]
 # curved_boundary_resolution: EMerge/GMSH arc meshing density for curved surfaces.
 #   EMerge hint: use 20–50 (too high → GMSH edge-recovery failure; too low → coarse arcs).
-curved_boundary_resolution = 40
+curved_boundary_resolution = 30
 
 max_mesh_size_mm            = 0     # 0 = auto (CharacteristicLengthMax used instead)
 min_mesh_size_mm            = 0     # 0 = auto
+
+# Geometry scope control:
+#   port_focus_only = true  -> use only a port-focused simulation/crop region
+#   port_focus_only = false -> use keepout bbox if defined; otherwise port-focused fallback
+port_focus_only            = false
 
 # gerber_circ_segments: line segments per circle arc in layer_from_file() Gerber parsing.
 #   EMerge default is 8 — too coarse; polygon vertices land on flat board-outline faces
@@ -80,7 +85,7 @@ gerber_circ_segments        = 64
 #   Smaller = more detailed copper trace geometry; larger = faster, less detail.
 #   Default EMerge value 0.01 (10 µm) is very fine and creates many tiny edges that
 #   GMSH struggles to mesh. 0.05 mm (50 µm) is a good RF accuracy / stability trade-off.
-gerber_res_mm               = 0.05
+gerber_res_mm               = 0.08
 
 # ── GMSH mesher algorithm selection ────────────────────────────────────────────
 # algorithm_2d: GMSH 2D algorithm (Mesh.Algorithm)
@@ -88,8 +93,9 @@ gerber_res_mm               = 0.05
 algorithm_2d                = 6
 
 # algorithm_3d: GMSH 3D algorithm (Mesh.Algorithm3D)
-#   1=Delaunay(default)  4=Frontal  10=HXT(robust for slivers, use if 1 keeps failing)
-algorithm_3d                = 1
+#   1=Delaunay/TetGen (single-threaded, strict edge recovery — fails on Discrete slivers)
+#   4=Frontal  10=HXT (multi-threaded OpenMP, no strict edge recovery — recommended)
+algorithm_3d                = 10
 
 # smoothing: Laplacian smoothing passes applied after mesh generation.
 smoothing                   = 10
@@ -104,10 +110,10 @@ max_mesh_retries            = 8
 # char_length_max_factor, then clamped to [floor, ceil].
 # Curves shorter than artifact_threshold_um are skipped as boolean-op artefacts.
 
-artifact_threshold_um       = 50    # µm — curves shorter than this skipped in scan
+artifact_threshold_um       = 80    # µm — skip more micro-artifact curves for faster meshing
 char_length_max_factor      = 0.80  # CharacteristicLengthMax = min_curve_len × factor
-char_length_max_floor_mm    = 0.15  # minimum CharacteristicLengthMax (mm)
-char_length_max_ceil_mm     = 0.50  # maximum CharacteristicLengthMax (mm)
+char_length_max_floor_mm    = 0.20  # faster baseline mesh size
+char_length_max_ceil_mm     = 4.00  # maximum CharacteristicLengthMax (mm) — must be ≥ mesh_air_mm
 
 # ── Sliver surface handling ────────────────────────────────────────────────────
 # Boolean CSG operations leave tiny residual "sliver" faces whose bbox diagonal
@@ -125,10 +131,11 @@ sliver_threshold_mm         = 0.10  # mm — surfaces with bbox_diag < this are 
 #   substrate      — can be slightly coarser than copper (1–2× copper size)
 #   air / PML      — can be very coarse; EM fields decay rapidly in the absorbing layer
 #
-mesh_copper_mm              = 0.20  # F.Cu / B.Cu copper traces and fills
-mesh_component_mm           = 0.15  # lumped R/L/C component faces and port surfaces
-mesh_substrate_mm           = 0.40  # FR4 dielectric interior
-mesh_air_mm                 = 2.50  # PML absorbing boundary / air box
+mesh_copper_mm              = 0.12  # slightly coarser copper XY mesh for speed
+mesh_copper_z_mm            = 0.08  # reduced Z refinement cost
+mesh_component_mm           = 0.20  # coarser component region mesh
+mesh_substrate_mm           = 0.60  # coarser FR4 mesh
+mesh_air_mm                 = 4.00  # PML absorbing boundary / air box
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pass/fail thresholds
@@ -154,7 +161,7 @@ return_loss_db    = 10.0  # |S11| < 10 dB return loss triggers a warning
 # ─────────────────────────────────────────────────────────────────────────────
 
 [solver]
-engine = "cuda"
+engine = "auto"  # let EMerge choose the best available solver backend
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualization — show interactive 3D windows before the FEM solve starts.
@@ -164,8 +171,8 @@ engine = "cuda"
 # ─────────────────────────────────────────────────────────────────────────────
 
 [visualization]
-show_geometry = true  # set true only for interactive debugging (blocks pipeline)
-show_mesh     = true  # set true only for interactive debugging (blocks pipeline)
+show_geometry = true  # opens interactive geometry viewer before solve (blocking)
+show_mesh     = true  # opens interactive mesh viewer before solve (blocking)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gerber export settings (used by GerberExporter stage)
@@ -209,8 +216,10 @@ use_gerbers = true
 python_exe = "C:\\Users\\<user>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
 
 [gerber.layers]
-# Layers to export — names must match those in the .kicad_pcb stackup
-copper  = ["F.Cu", "B.Cu"]
+# Layers to export — names must match those in the .kicad_pcb stackup.
+# The plugin auto-detects inner layers from the open board (pcbnew), so this
+# list is only used when running emerge_runner.py standalone (without KiCad).
+copper  = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
 mask    = ["F.Mask", "B.Mask"]
 silk    = ["F.Silkscreen", "B.Silkscreen"]
 edge    = ["Edge.Cuts"]
