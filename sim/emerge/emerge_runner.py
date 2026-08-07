@@ -200,8 +200,19 @@ class EmergeModelBuilder:
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
                  port_focus_only=False,
+                 domain_margin_mm=0.0,
+                 port_focus_margin_mm=0.0,
+                 simplify_geometry=False,
+                 simplify_factor=1.0,
+                 pcb_split_z=True,
+                 pcb_merge=True,
                  gerber_circ_segments=64,
+                 gerber_min_circ_segments=24,
                  gerber_res_mm=0.05,
+                 gerber_min_segment_um=0.0,
+                 gerber_drop_zero_segments=True,
+                 gerber_simplify_regions=False,
+                 gerber_region_min_segment_um=0.0,
                  sliver_threshold_mm=0.10,
                  report_lines=None, verbose=True):
         self.pcb_path                   = pathlib.Path(pcb_path)
@@ -215,8 +226,19 @@ class EmergeModelBuilder:
         self.max_mesh_size_mm           = float(max_mesh_size_mm)
         self.min_mesh_size_mm           = float(min_mesh_size_mm)
         self.port_focus_only            = bool(port_focus_only)
+        self.domain_margin_mm           = float(domain_margin_mm)
+        self.port_focus_margin_mm       = float(port_focus_margin_mm)
+        self.simplify_geometry          = bool(simplify_geometry)
+        self.simplify_factor            = max(1.0, float(simplify_factor))
+        self.pcb_split_z                = bool(pcb_split_z)
+        self.pcb_merge                  = bool(pcb_merge)
         self.gerber_circ_segments       = int(gerber_circ_segments)
+        self.gerber_min_circ_segments   = max(4, int(gerber_min_circ_segments))
         self.gerber_res_mm              = float(gerber_res_mm)
+        self.gerber_min_segment_um      = max(0.0, float(gerber_min_segment_um))
+        self.gerber_drop_zero_segments  = bool(gerber_drop_zero_segments)
+        self.gerber_simplify_regions    = bool(gerber_simplify_regions)
+        self.gerber_region_min_segment_um = max(0.0, float(gerber_region_min_segment_um))
         self.sliver_threshold_mm        = float(sliver_threshold_mm)
         self.report_lines               = report_lines if report_lines is not None else []
         self.verbose                    = verbose
@@ -227,7 +249,13 @@ class EmergeModelBuilder:
             "use_gerbers", "model_passives", "skip_passives",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
             "port_focus_only",
-            "gerber_circ_segments", "gerber_res_mm", "sliver_threshold_mm",
+            "domain_margin_mm", "port_focus_margin_mm",
+            "simplify_geometry", "simplify_factor",
+            "pcb_split_z", "pcb_merge",
+            "gerber_circ_segments", "gerber_min_circ_segments", "gerber_res_mm",
+            "gerber_min_segment_um", "gerber_drop_zero_segments",
+            "gerber_simplify_regions", "gerber_region_min_segment_um",
+            "sliver_threshold_mm",
             "report_lines", "verbose",
         ]
         _missing = [a for a in _REQUIRED if not hasattr(self, a)]
@@ -316,8 +344,17 @@ class EmergeModelBuilder:
         # Gerber files use Y-up (negated).  Domain bounds are passed to
         # pcb.set_bounds() which works in the same coordinate system as the
         # Gerbers, so we negate Y here.
-        margin = max(0.005, board_t * 3)
-        port_margin = max(0.001, board_t)
+        _auto_margin = max(0.005, board_t * 3)
+        _auto_port_margin = max(0.001, board_t)
+        margin = (self.domain_margin_mm * 1e-3) if self.domain_margin_mm > 0 else _auto_margin
+        port_margin = (self.port_focus_margin_mm * 1e-3) if self.port_focus_margin_mm > 0 else _auto_port_margin
+
+        self._log(
+            f"Domain margins: global={margin*1e3:.1f} mm "
+            f"(cfg={self.domain_margin_mm:.1f})  "
+            f"port_focus={port_margin*1e3:.1f} mm "
+            f"(cfg={self.port_focus_margin_mm:.1f})"
+        )
 
         if self.port_focus_only:
             xs_p = [p["x"] for p in ports]
@@ -404,13 +441,31 @@ class EmergeModelBuilder:
             self._log("")
             self._log("Loading copper layers from Gerbers ...")
             if _GERBER_BUILDER_OK:
+                _eff_circ = self.gerber_circ_segments
+                _eff_res = self.gerber_res_mm
+                if self.simplify_geometry:
+                    _eff_circ = max(self.gerber_min_circ_segments,
+                                    int(round(self.gerber_circ_segments / self.simplify_factor)))
+                    _eff_res = self.gerber_res_mm * self.simplify_factor
+                    self._log(
+                        f"  Geometry simplification: ON  factor={self.simplify_factor:.2f}  "
+                        f"circ_segs {self.gerber_circ_segments}->{_eff_circ}  "
+                        f"res_mm {self.gerber_res_mm:.3f}->{_eff_res:.3f}"
+                    )
+                else:
+                    self._log("  Geometry simplification: OFF")
+
                 loaded_layers = load_copper_layers(
                     pcb        = pcb,
                     stackup    = stackup,
                     pcb_path   = self.pcb_path,
                     gerber_dir = self.gerber_dir,
-                    circ_segs  = self.gerber_circ_segments,
-                    res_mm     = self.gerber_res_mm,
+                    circ_segs  = _eff_circ,
+                    res_mm     = _eff_res,
+                    min_seg_um = self.gerber_min_segment_um,
+                    drop_zero_segments = self.gerber_drop_zero_segments,
+                    simplify_regions = self.gerber_simplify_regions,
+                    region_min_seg_um = self.gerber_region_min_segment_um,
                     sim_bounds = (xmin, ymin, xmax, ymax),
                     log        = self._log,
                 )
@@ -496,6 +551,8 @@ class EmergeModelBuilder:
                 board_t   = board_t,
                 xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax,
                 port_geos = tuple(pg for _, pg in port_geos),
+                split_z   = self.pcb_split_z,
+                merge     = self.pcb_merge,
                 log       = self._log,
             )
             _sliver_m = self.sliver_threshold_mm * 1e-3
@@ -516,8 +573,9 @@ class EmergeModelBuilder:
             pml_h   = board_t * 4
             pml_xy  = max(0.005, min(board_w, board_h) * 0.15)
             pml_z   = max(0.005, pml_h * 0.5)
+            self._log(f"  PCB solid build: split_z={self.pcb_split_z}  merge={self.pcb_merge}")
             try:
-                pcb_vol = pcb.generate_pcb(split_z=True, merge=True)
+                pcb_vol = pcb.generate_pcb(split_z=self.pcb_split_z, merge=self.pcb_merge)
             except TypeError:
                 pcb_vol = pcb.generate_pcb()
             air_vol = pcb.generate_air(height=pml_h)
@@ -727,14 +785,19 @@ class EmergeSolver:
         _cl_factor = self.char_length_max_factor
         _min_tiny_len = 1.0  # m
         _n_skipped_artifact = 0
+        _n_large_surfaces_scanned = 0
+        _n_boundary_curves_scanned = 0
+        _n_boundary_curves_used = 0
         try:
             # NOTE: do NOT call occ.synchronize() here.
             for _, _stag in _gmsh.model.getEntities(2):
                 _sx = _gmsh.model.getBoundingBox(2, _stag)
                 if (_sx[3]-_sx[0]) < 1e-3 or (_sx[4]-_sx[1]) < 1e-3:
                     continue
+                _n_large_surfaces_scanned += 1
                 for _, _ct in _gmsh.model.getBoundary(
                         [(2, _stag)], oriented=False):
+                    _n_boundary_curves_scanned += 1
                     _cbb = _gmsh.model.getBoundingBox(1, abs(_ct))
                     _clen = ((_cbb[3]-_cbb[0])**2 +
                              (_cbb[4]-_cbb[1])**2 +
@@ -742,10 +805,15 @@ class EmergeSolver:
                     if _clen < _ARTIFACT_THRESHOLD:
                         _n_skipped_artifact += 1
                         continue
+                    _n_boundary_curves_used += 1
                     if _clen < _min_tiny_len:
                         _min_tiny_len = _clen
         except Exception as _se:
             self._log(f"  Tiny-curve scan warning: {_se}")
+        self._log(
+            f"  CL scan coverage: large_surfaces={_n_large_surfaces_scanned}  "
+            f"boundary_curves={_n_boundary_curves_scanned}  used={_n_boundary_curves_used}"
+        )
         if _n_skipped_artifact:
             self._log(f"  Skipped {_n_skipped_artifact} artifact curves "
                       f"< {_ARTIFACT_THRESHOLD*1e6:.0f} µm in mesh size scan")
@@ -873,39 +941,190 @@ class EmergeSolver:
         _extra_constraints: list[tuple[int, int]] = []
         _meshadapt_used  = False   # Mesh.Algorithm → 1 (MeshAdapt)
         _hxt_fallback_used = False # Mesh.Algorithm3D → 10 (HXT)
+        _oom_backoff_used = False
 
         self._log("Generating mesh …")
         _t_mesh = time.monotonic()
         _mesh_ok = False
 
+        def _log_pre_mesh_diagnostics():
+            """Emit mesh-complexity diagnostics before mesh generation starts."""
+            try:
+                x0, y0, z0, x1, y1, z1 = _gmsh.model.getBoundingBox(-1, -1)
+                self._log(
+                    "  Model bbox: "
+                    f"({x0*1e3:.2f}, {y0*1e3:.2f}, {z0*1e3:.2f}) – "
+                    f"({x1*1e3:.2f}, {y1*1e3:.2f}, {z1*1e3:.2f}) mm  "
+                    f"size {(x1-x0)*1e3:.2f} x {(y1-y0)*1e3:.2f} x {(z1-z0)*1e3:.2f} mm"
+                )
+            except Exception:
+                pass
+
+            try:
+                n_pts   = len(_gmsh.model.getEntities(0))
+                n_cur   = len(_gmsh.model.getEntities(1))
+                n_surf  = len(_gmsh.model.getEntities(2))
+                n_vol   = len(_gmsh.model.getEntities(3))
+                self._log(f"  Entities: points={n_pts}  curves={n_cur}  surfaces={n_surf}  volumes={n_vol}")
+            except Exception:
+                pass
+
+            try:
+                orphan_surfs = 0
+                discrete_surfs = 0
+                for _, stag in _gmsh.model.getEntities(2):
+                    try:
+                        if "Discrete" in str(_gmsh.model.getType(2, stag)):
+                            discrete_surfs += 1
+                    except Exception:
+                        pass
+                    try:
+                        if len(_gmsh.model.getAdjacencies(2, stag)[0]) == 0:
+                            orphan_surfs += 1
+                    except Exception:
+                        pass
+                self._log(f"  Surface diagnostics: discrete={discrete_surfs}  orphan(no-volume)={orphan_surfs}")
+            except Exception:
+                pass
+
+            try:
+                _bg_fields = _gmsh.model.mesh.field.list()
+                self._log(f"  Mesh fields configured: {len(_bg_fields)}")
+            except Exception:
+                pass
+
+        def _log_post_mesh_diagnostics():
+            """Emit mesh-size diagnostics after successful mesh generation."""
+            try:
+                _node_tags, _node_xyz, _node_params = _gmsh.model.mesh.getNodes()
+                n_nodes = len(_node_tags)
+                self._log(f"  Mesh nodes: {n_nodes}")
+            except Exception:
+                pass
+
+            try:
+                et2, etags2, enodes2 = _gmsh.model.mesh.getElements(2)
+                n_el2 = sum(len(tags) for tags in etags2)
+                et3, etags3, enodes3 = _gmsh.model.mesh.getElements(3)
+                n_el3 = sum(len(tags) for tags in etags3)
+                self._log(f"  Mesh elements: 2D={n_el2}  3D={n_el3}")
+            except Exception:
+                pass
+
+        def _log_mesh_focus_diagnostics(max_surfaces: int = 8):
+            """Report surfaces likely to dominate meshing effort."""
+            try:
+                _focus = []
+                _tiny_total = 0
+                for _, _stag in _gmsh.model.getEntities(2):
+                    try:
+                        _bcs = _gmsh.model.getBoundary([ (2, _stag) ], oriented=False)
+                    except Exception:
+                        continue
+                    try:
+                        _sbb = _gmsh.model.getBoundingBox(2, _stag)
+                    except Exception:
+                        _sbb = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                    try:
+                        _stype = str(_gmsh.model.getType(2, _stag))
+                    except Exception:
+                        _stype = "?"
+                    try:
+                        _adj_vols = _gmsh.model.getAdjacencies(2, _stag)[0]
+                        _adj_vol_count = len(_adj_vols)
+                    except Exception:
+                        _adj_vol_count = -1
+                    _n_bc = len(_bcs)
+                    _min_bc_len = float("inf")
+                    _tiny_here = 0
+                    for _, _ct in _bcs:
+                        try:
+                            _cbb = _gmsh.model.getBoundingBox(1, abs(_ct))
+                            _clen = ((_cbb[3]-_cbb[0])**2 + (_cbb[4]-_cbb[1])**2 + (_cbb[5]-_cbb[2])**2) ** 0.5
+                            if _clen < _ARTIFACT_THRESHOLD:
+                                _tiny_here += 1
+                            if _clen < _min_bc_len:
+                                _min_bc_len = _clen
+                        except Exception:
+                            pass
+                    if _min_bc_len == float("inf"):
+                        _min_bc_len = 0.0
+                    _tiny_total += _tiny_here
+                    _focus.append((
+                        _n_bc,
+                        -_tiny_here,
+                        _min_bc_len,
+                        _stag,
+                        _tiny_here,
+                        _sbb,
+                        _stype,
+                        _adj_vol_count,
+                    ))
+
+                _focus.sort(reverse=True)
+                self._log(
+                    f"  Mesh focus: top {min(max_surfaces, len(_focus))} surfaces by boundary complexity"
+                )
+                for _n_bc, _neg_tiny, _min_bc_len, _stag, _tiny_here, _sbb, _stype, _adj_vol_count in _focus[:max_surfaces]:
+                    _sx = (_sbb[3] - _sbb[0]) * 1e3
+                    _sy = (_sbb[4] - _sbb[1]) * 1e3
+                    _sz = (_sbb[5] - _sbb[2]) * 1e3
+                    _zc = ((_sbb[2] + _sbb[5]) * 0.5) * 1e3
+                    self._log(
+                        f"    surf {_stag}: boundary_curves={_n_bc}  "
+                        f"tiny(<{_ARTIFACT_THRESHOLD*1e6:.0f}µm)={_tiny_here}  "
+                        f"min_curve={_min_bc_len*1e3:.4f} mm  "
+                        f"bbox={_sx:.2f}x{_sy:.2f}x{_sz:.4f} mm  zc={_zc:.3f} mm  "
+                        f"adj_vols={_adj_vol_count}  type={_stype}"
+                    )
+                self._log(
+                    f"  Mesh focus summary: surfaces={len(_focus)}  "
+                    f"tiny_boundary_curves_total={_tiny_total}"
+                )
+            except Exception as _mfd_exc:
+                self._log(f"  Mesh focus diagnostics warning: {_mfd_exc}")
+
+        _log_pre_mesh_diagnostics()
+        _log_mesh_focus_diagnostics()
+
         # ── Heartbeat helper — runs in a daemon thread during each mesh attempt ──
         import threading as _threading
 
         def _mesh_heartbeat(stop_evt: _threading.Event, log_fn, t0: float,
-                            interval: float = 30.0):
+                            attempt_idx: int, interval: float = 30.0):
             """Print elapsed time + latest GMSH log line every `interval` seconds."""
             try:
                 _gmsh.logger.start()
             except Exception:
                 pass
+            _last_msg = ""
+            _seen_msgs = 0
             while not stop_evt.wait(timeout=interval):
                 elapsed = time.monotonic() - t0
                 # Grab the most recent GMSH internal log message (if any)
                 try:
                     msgs = _gmsh.logger.get()
-                    last_msg = msgs[-1].strip() if msgs else ""
+                    _clean = [m.strip() for m in msgs if str(m).strip()]
+                    if _clean:
+                        _seen_msgs += len(_clean)
+                        _last_msg = _clean[-1]
                 except Exception:
-                    last_msg = ""
-                if last_msg:
-                    log_fn(f"  [mesh] still running … {elapsed:.0f} s  | {last_msg[:120]}")
+                    pass
+                if _last_msg:
+                    log_fn(
+                        f"  [mesh a{attempt_idx}] still running … {elapsed:.0f} s  "
+                        f"| gmsh_msgs={_seen_msgs}  | {_last_msg[:120]}"
+                    )
                 else:
-                    log_fn(f"  [mesh] still running … {elapsed:.0f} s")
+                    log_fn(f"  [mesh a{attempt_idx}] still running … {elapsed:.0f} s")
             try:
                 _gmsh.logger.stop()
             except Exception:
                 pass
 
         for _attempt in range(_MAX_MESH_RETRIES + 1):
+            _attempt_t0 = time.monotonic()
+            self._log(f"  Mesh attempt {_attempt+1}/{_MAX_MESH_RETRIES+1}")
             # Re-apply any accumulated surface-fix constraints after clear
             _gmsh.model.mesh.clear()
             for _ec_tag, _ec_n in _extra_constraints:
@@ -916,7 +1135,7 @@ class EmergeSolver:
             _stop_hb = _threading.Event()
             _hb_thread = _threading.Thread(
                 target=_mesh_heartbeat,
-                args=(_stop_hb, self._log, _t_mesh),
+                args=(_stop_hb, self._log, _t_mesh, _attempt + 1),
                 daemon=True,
             )
             _hb_thread.start()
@@ -924,13 +1143,92 @@ class EmergeSolver:
                 sim.generate_mesh()
                 _stop_hb.set()
                 _hb_thread.join(timeout=2)
-                self._log(f"  Mesh done.  ({time.monotonic()-_t_mesh:.1f} s)")
+                self._log(
+                    f"  Mesh done. total={time.monotonic()-_t_mesh:.1f} s  "
+                    f"attempt={time.monotonic()-_attempt_t0:.1f} s"
+                )
+                _log_post_mesh_diagnostics()
                 _mesh_ok = True
                 break
             except Exception as _mesh_exc:
                 _stop_hb.set()
                 _hb_thread.join(timeout=2)
                 _mesh_msg = str(_mesh_exc)
+                self._log(
+                    f"  Mesh attempt {_attempt+1} failed after "
+                    f"{time.monotonic()-_attempt_t0:.1f} s"
+                )
+
+                _is_oom = (
+                    "Unable to allocate" in _mesh_msg
+                    or "bad_alloc" in _mesh_msg
+                    or "MemoryError" in _mesh_msg
+                    or "Out of memory" in _mesh_msg
+                )
+                if _is_oom:
+                    self._log("  Mesh memory exhaustion detected.")
+                    try:
+                        _n_pts = len(_gmsh.model.getEntities(0))
+                        _n_cur = len(_gmsh.model.getEntities(1))
+                        _n_sur = len(_gmsh.model.getEntities(2))
+                        _n_vol = len(_gmsh.model.getEntities(3))
+                        self._log(
+                            f"  Geometry at failure: points={_n_pts}  curves={_n_cur}  "
+                            f"surfaces={_n_sur}  volumes={_n_vol}"
+                        )
+                    except Exception:
+                        pass
+
+                    if not _oom_backoff_used:
+                        _oom_backoff_used = True
+                        _oom_scale = 1.8
+                        self._log(
+                            "  Retrying once with coarse OOM backoff "
+                            f"(region sizes x{_oom_scale:.1f}, CharacteristicLengthMax x2)."
+                        )
+                        try:
+                            _oom_clmax = _gmsh.option.getNumber("Mesh.CharacteristicLengthMax")
+                            _oom_clmax_new = min(_cl_ceil, max(_cl_floor, _oom_clmax * 2.0))
+                            _gmsh.option.setNumber("Mesh.CharacteristicLengthMax", _oom_clmax_new)
+                            self._log(
+                                "    OOM backoff: Mesh.CharacteristicLengthMax "
+                                f"{_oom_clmax*1e3:.4f} → {_oom_clmax_new*1e3:.4f} mm"
+                            )
+                        except Exception as _oom_opt_exc:
+                            self._log(f"    OOM backoff warning (CharacteristicLengthMax): {_oom_opt_exc}")
+
+                        if _GERBER_BUILDER_OK:
+                            try:
+                                apply_region_mesh_sizes(
+                                    copper_mm    = self.mesh_copper_mm * _oom_scale,
+                                    copper_z_mm  = self.mesh_copper_z_mm * _oom_scale,
+                                    component_mm = self.mesh_component_mm * _oom_scale,
+                                    substrate_mm = self.mesh_substrate_mm * _oom_scale,
+                                    air_mm       = self.mesh_air_mm * _oom_scale,
+                                )
+                                self._log(
+                                    "    OOM backoff regions: "
+                                    f"Cu={self.mesh_copper_mm*_oom_scale:.2f} "
+                                    f"Comp={self.mesh_component_mm*_oom_scale:.2f} "
+                                    f"Sub={self.mesh_substrate_mm*_oom_scale:.2f} "
+                                    f"Air={self.mesh_air_mm*_oom_scale:.2f} mm"
+                                )
+                            except Exception as _oom_reg_exc:
+                                self._log(f"    OOM backoff warning (region sizing): {_oom_reg_exc}")
+                        continue
+
+                    self._log("  Mesh OOM persisted after coarse retry.")
+                    self._log("  Suggested [mesh] TOML adjustments for this design:")
+                    self._log(f"    cells_per_lambda = {max(6, min(self.cells_per_lambda, 6))}")
+                    self._log(f"    mesh_copper_mm = {max(self.mesh_copper_mm, 0.20):.2f}")
+                    self._log(f"    mesh_copper_z_mm = {max(self.mesh_copper_z_mm, 0.16):.2f}")
+                    self._log(f"    mesh_component_mm = {max(self.mesh_component_mm, 0.30):.2f}")
+                    self._log(f"    mesh_substrate_mm = {max(self.mesh_substrate_mm, 0.80):.2f}")
+                    self._log(f"    mesh_air_mm = {max(self.mesh_air_mm, 6.0):.1f}")
+                    self._log(f"    char_length_max_factor = {max(self.char_length_max_factor, 3.5):.1f}")
+                    self._log(f"    artifact_threshold_um = {max(self.artifact_threshold_um, 150.0):.0f}")
+                    self._log(f"  generate_mesh() raised: {_mesh_exc}")
+                    raise
 
                 # ── Overlapping facets: compound the two conflicting surfaces ──
                 if "overlapping facets" in _mesh_msg or "Invalid boundary mesh" in _mesh_msg:
@@ -1649,8 +1947,19 @@ if __name__ == "__main__":
         max_mm       = float(mesh_cfg.get("max_mesh_size_mm",                   0))
         min_mm       = float(mesh_cfg.get("min_mesh_size_mm",                   0))
         port_focus   = bool (mesh_cfg.get("port_focus_only",                False))
+        dom_margin   = float(mesh_cfg.get("domain_margin_mm",                   0))
+        port_margin  = float(mesh_cfg.get("port_focus_margin_mm",               0))
+        simplify_geo = bool (mesh_cfg.get("simplify_geometry",              False))
+        simplify_k   = float(mesh_cfg.get("simplify_factor",                  1.0))
+        pcb_split_z  = bool (mesh_cfg.get("pcb_split_z",                    True))
+        pcb_merge    = bool (mesh_cfg.get("pcb_merge",                      True))
         circ_segs    = int  (mesh_cfg.get("gerber_circ_segments",              64))
+        min_circ_segs = int (mesh_cfg.get("gerber_min_circ_segments",          24))
         res_mm       = float(mesh_cfg.get("gerber_res_mm",                   0.05))
+        min_seg_um   = float(mesh_cfg.get("gerber_min_segment_um",            0.0))
+        drop_zero_segs = bool(mesh_cfg.get("gerber_drop_zero_segments",      True))
+        simplify_regions = bool(mesh_cfg.get("gerber_simplify_regions",     False))
+        region_min_seg_um = float(mesh_cfg.get("gerber_region_min_segment_um", 0.0))
         sliver_mm    = float(mesh_cfg.get("sliver_threshold_mm",              0.10))
         algo_2d      = int  (mesh_cfg.get("algorithm_2d",                       6))
         algo_3d      = int  (mesh_cfg.get("algorithm_3d",                      10))
@@ -1683,8 +1992,19 @@ if __name__ == "__main__":
             max_mesh_size_mm           = max_mm,
             min_mesh_size_mm           = min_mm,
             port_focus_only            = port_focus,
+            domain_margin_mm           = dom_margin,
+            port_focus_margin_mm       = port_margin,
+            simplify_geometry          = simplify_geo,
+            simplify_factor            = simplify_k,
+            pcb_split_z                = pcb_split_z,
+            pcb_merge                  = pcb_merge,
             gerber_circ_segments       = circ_segs,
+            gerber_min_circ_segments   = min_circ_segs,
             gerber_res_mm              = res_mm,
+            gerber_min_segment_um      = min_seg_um,
+            gerber_drop_zero_segments  = drop_zero_segs,
+            gerber_simplify_regions    = simplify_regions,
+            gerber_region_min_segment_um = region_min_seg_um,
             sliver_threshold_mm        = sliver_mm,
             report_lines               = report_lines,
             verbose                    = True,

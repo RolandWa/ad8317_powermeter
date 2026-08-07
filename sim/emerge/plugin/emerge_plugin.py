@@ -31,6 +31,7 @@ import json
 import os
 import pathlib
 import queue
+import re
 import subprocess
 import sys
 import tempfile
@@ -255,6 +256,13 @@ class EmergeLogDialog(wx.Dialog):
         (3, ("Running FEM sweep",)),
         (4, ("Touchstone written", "S21:", "S11:", "Total violations")),
     ]
+    _STAGE_LABELS = {
+        0: "Exporting Gerbers …",
+        1: "Building FEM model …",
+        2: "Mesh generation …",
+        3: "Running FEM sweep …",
+        4: "Finalizing report …",
+    }
 
     def __init__(self, parent):
         wx.Dialog.__init__(
@@ -342,10 +350,27 @@ class EmergeLogDialog(wx.Dialog):
     # ── internals ─────────────────────────────────────────────────────────────
 
     def _maybe_advance_stage(self, line: str):
+        # Prefer explicit stage headers when available, e.g.:
+        #   Stage 3 / 5 — Mesh generation
+        #   Stage 2-5 / 5 — EMerge FEM solver (system Python)
+        _m = re.match(r"^\s*Stage\s+(\d+)(?:-\d+)?\s*/\s*\d+\s*[—-]\s*(.+?)\s*$", line)
+        if _m:
+            _stage_idx = max(0, min(self.N_STAGES - 1, int(_m.group(1)) - 1))
+            if _stage_idx > self._stage:
+                self._stage = _stage_idx
+                self._gauge.SetValue(self._stage)
+            _title = _m.group(2).strip()
+            if _title:
+                self._label.SetLabel(f"Stage {_stage_idx + 1}/{self.N_STAGES} — {_title}")
+            return
+
         for idx, keywords in self._STAGE_KEYWORDS:
             if idx > self._stage and any(k in line for k in keywords):
                 self._stage = idx
                 self._gauge.SetValue(self._stage)
+                self._label.SetLabel(
+                    f"Stage {idx + 1}/{self.N_STAGES} — {self._STAGE_LABELS.get(idx, 'Running …')}"
+                )
                 break
 
     def _on_copy(self, _event):
@@ -500,8 +525,19 @@ class EmergePlugin(pcbnew.ActionPlugin):
                 "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm",               0)),
                 "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm",               0)),
                 "port_focus_only":            bool (mesh_cfg.get("port_focus_only",            False)),
+                "domain_margin_mm":           float(mesh_cfg.get("domain_margin_mm",               0)),
+                "port_focus_margin_mm":       float(mesh_cfg.get("port_focus_margin_mm",           0)),
+                "simplify_geometry":          bool (mesh_cfg.get("simplify_geometry",          False)),
+                "simplify_factor":            float(mesh_cfg.get("simplify_factor",              1.0)),
+                "pcb_split_z":               bool (mesh_cfg.get("pcb_split_z",                 True)),
+                "pcb_merge":                 bool (mesh_cfg.get("pcb_merge",                   True)),
                 "gerber_circ_segments":       int  (mesh_cfg.get("gerber_circ_segments",          64)),
+                "gerber_min_circ_segments":   int  (mesh_cfg.get("gerber_min_circ_segments",      24)),
                 "gerber_res_mm":              float(mesh_cfg.get("gerber_res_mm",               0.05)),
+                "gerber_min_segment_um":      float(mesh_cfg.get("gerber_min_segment_um",       0.0)),
+                "gerber_drop_zero_segments":  bool (mesh_cfg.get("gerber_drop_zero_segments",  True)),
+                "gerber_simplify_regions":    bool (mesh_cfg.get("gerber_simplify_regions",    False)),
+                "gerber_region_min_segment_um": float(mesh_cfg.get("gerber_region_min_segment_um", 0.0)),
                 "algorithm_2d":               int  (mesh_cfg.get("algorithm_2d",                   6)),
                 "algorithm_3d":               int  (mesh_cfg.get("algorithm_3d",                   1)),
                 "smoothing":                  int  (mesh_cfg.get("smoothing",                      10)),

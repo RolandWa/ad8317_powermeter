@@ -47,8 +47,8 @@ dir    = "z"
 [sweep]
 start_hz         = 100_000_000    # 100 MHz
 stop_hz          = 6_000_000_000  # 6 GHz
-steps            = 15             # faster iteration profile; raise again for final signoff
-cells_per_lambda = 8              # coarser mesh for speed (use 10-15 for higher accuracy)
+steps            = 9              # fast-iteration profile; raise for final signoff
+cells_per_lambda = 5              # very coarse for quick mesh/solve turnaround
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Mesh settings
@@ -65,7 +65,7 @@ cells_per_lambda = 8              # coarser mesh for speed (use 10-15 for higher
 [mesh]
 # curved_boundary_resolution: EMerge/GMSH arc meshing density for curved surfaces.
 #   EMerge hint: use 20–50 (too high → GMSH edge-recovery failure; too low → coarse arcs).
-curved_boundary_resolution = 30
+curved_boundary_resolution = 20
 
 max_mesh_size_mm            = 0     # 0 = auto (CharacteristicLengthMax used instead)
 min_mesh_size_mm            = 0     # 0 = auto
@@ -73,7 +73,28 @@ min_mesh_size_mm            = 0     # 0 = auto
 # Geometry scope control:
 #   port_focus_only = true  -> use only a port-focused simulation/crop region
 #   port_focus_only = false -> use keepout bbox if defined; otherwise port-focused fallback
-port_focus_only            = false
+port_focus_only            = true
+
+# Domain expansion (controls the red simulation rectangle / Gerber pre-crop area)
+#   domain_margin_mm      = global expansion around all resolved ports (0 = auto)
+#   port_focus_margin_mm  = initial port-bounds expansion before global margin (0 = auto)
+domain_margin_mm          = 4.0
+port_focus_margin_mm      = 2.0
+
+# Geometry simplification before meshing (Gerber import stage):
+#   simplify_geometry = true  -> reduce arc segmentation + coarsen parser resolution
+#   simplify_factor   = 1.0   -> off (no change)
+#   simplify_factor   = 1.5   -> moderate simplification (recommended)
+#   simplify_factor   = 2.0   -> aggressive simplification
+simplify_geometry         = true
+simplify_factor           = 2.5
+
+# PCB solid build controls before meshing:
+#   pcb_split_z = true  -> split solids along Z interfaces (more surfaces, more detail)
+#   pcb_split_z = false -> fewer interface surfaces, faster/safer meshing
+#   pcb_merge   = true  -> merge touching solids before commit (usually keep true)
+pcb_split_z             = false
+pcb_merge               = false
 
 # gerber_circ_segments: line segments per circle arc in layer_from_file() Gerber parsing.
 #   EMerge default is 8 — too coarse; polygon vertices land on flat board-outline faces
@@ -81,11 +102,30 @@ port_focus_only            = false
 #   64 creates smooth circular pads without degenerate tiny edges.
 gerber_circ_segments        = 64
 
+# Lower bound for circle segmentation after simplify_factor scaling.
+#   Example with simplify_factor=2.0:
+#     64 -> 32 (if min is 24)
+#     64 -> 16 (if min is 8)
+gerber_min_circ_segments    = 6
+
 # gerber_res_mm: geometry resolution passed to layer_from_file() as res_mm.
 #   Smaller = more detailed copper trace geometry; larger = faster, less detail.
 #   Default EMerge value 0.01 (10 µm) is very fine and creates many tiny edges that
 #   GMSH struggles to mesh. 0.05 mm (50 µm) is a good RF accuracy / stability trade-off.
-gerber_res_mm               = 0.08
+gerber_res_mm               = 0.20
+
+# Tiny segment filtering in Gerber draw commands (pre-import sanitation):
+#   gerber_min_segment_um      = 0    -> disabled (except optional zero-length drop)
+#   gerber_min_segment_um      = 20   -> downgrade <20 µm D01 segments to D02 moves
+#   gerber_drop_zero_segments  = true -> always remove zero-length draws
+gerber_min_segment_um        = 20.0
+gerber_drop_zero_segments    = true
+
+# Region polygon simplification (G36/G37):
+#   gerber_simplify_regions = true  -> drop tiny in-region D01 vertex steps
+#   gerber_region_min_segment_um controls the in-region tiny threshold
+gerber_simplify_regions      = true
+gerber_region_min_segment_um = 120.0
 
 # ── GMSH mesher algorithm selection ────────────────────────────────────────────
 # algorithm_2d: GMSH 2D algorithm (Mesh.Algorithm)
@@ -102,7 +142,7 @@ smoothing                   = 10
 
 # max_mesh_retries: how many edge-recovery surface fixes to attempt before
 #   switching to the HXT fallback and ultimately giving up.
-max_mesh_retries            = 8
+max_mesh_retries            = 2
 
 # ── CharacteristicLengthMax auto-calculation ───────────────────────────────────
 # The global mesh size upper bound is derived from the shortest boundary curve found
@@ -110,10 +150,10 @@ max_mesh_retries            = 8
 # char_length_max_factor, then clamped to [floor, ceil].
 # Curves shorter than artifact_threshold_um are skipped as boolean-op artefacts.
 
-artifact_threshold_um       = 80    # µm — skip more micro-artifact curves for faster meshing
-char_length_max_factor      = 0.80  # CharacteristicLengthMax = min_curve_len × factor
-char_length_max_floor_mm    = 0.20  # faster baseline mesh size
-char_length_max_ceil_mm     = 4.00  # maximum CharacteristicLengthMax (mm) — must be ≥ mesh_air_mm
+artifact_threshold_um       = 200   # µm — skip more tiny curves in CL scan
+char_length_max_factor      = 2.50  # stronger coarsening from shortest valid curve
+char_length_max_floor_mm    = 0.80  # coarser baseline CL max for faster meshing
+char_length_max_ceil_mm     = 8.00  # allow coarse cap for speed testing
 
 # ── Sliver surface handling ────────────────────────────────────────────────────
 # Boolean CSG operations leave tiny residual "sliver" faces whose bbox diagonal
@@ -131,11 +171,11 @@ sliver_threshold_mm         = 0.10  # mm — surfaces with bbox_diag < this are 
 #   substrate      — can be slightly coarser than copper (1–2× copper size)
 #   air / PML      — can be very coarse; EM fields decay rapidly in the absorbing layer
 #
-mesh_copper_mm              = 0.12  # slightly coarser copper XY mesh for speed
-mesh_copper_z_mm            = 0.08  # reduced Z refinement cost
-mesh_component_mm           = 0.20  # coarser component region mesh
-mesh_substrate_mm           = 0.60  # coarser FR4 mesh
-mesh_air_mm                 = 4.00  # PML absorbing boundary / air box
+mesh_copper_mm              = 0.60  # aggressive debug mesh
+mesh_copper_z_mm            = 0.35  # reduce copper-through-thickness load
+mesh_component_mm           = 0.90  # coarse component-region mesh
+mesh_substrate_mm           = 2.00  # coarse FR4 mesh
+mesh_air_mm                 = 10.00 # very coarse air/PML for speed
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pass/fail thresholds
@@ -171,8 +211,8 @@ engine = "auto"  # let EMerge choose the best available solver backend
 # ─────────────────────────────────────────────────────────────────────────────
 
 [visualization]
-show_geometry = true  # opens interactive geometry viewer before solve (blocking)
-show_mesh     = true  # opens interactive mesh viewer before solve (blocking)
+show_geometry = false # disable blocking viewer in fast-iteration runs
+show_mesh     = false # disable blocking viewer in fast-iteration runs
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gerber export settings (used by GerberExporter stage)
@@ -191,7 +231,7 @@ show_mesh     = true  # opens interactive mesh viewer before solve (blocking)
 # ─────────────────────────────────────────────────────────────────────────────
 
 [passives]
-model_passives = true  # temporarily disabled to isolate GMSH edge-recovery failure
+model_passives = false # temporarily disabled to isolate GMSH edge-recovery failure
 skip           = []    # e.g. ["C5", "C6", "R10"] to exclude specific parts
 
 [gerber]

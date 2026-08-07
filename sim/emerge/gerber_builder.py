@@ -178,6 +178,135 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
         return False
 
 
+def sanitize_gerber_tiny_segments(src: pathlib.Path, dst: pathlib.Path,
+                                  min_seg_um: float = 0.0,
+                                  drop_zero_segments: bool = True,
+                                  simplify_regions: bool = False,
+                                  region_min_seg_um: float = 0.0,
+                                  log=None) -> tuple[bool, int]:
+    """
+    Re-write a Gerber file while downgrading tiny D01 draw segments to D02 moves.
+
+    This keeps pen position continuity (critical for following segments) while
+    removing micro-segments that create dense CAD boundaries and slow meshing.
+
+    Args:
+        src, dst            : input/output Gerber files
+        min_seg_um          : draw segments shorter than this are downgraded
+                              from D01 to D02 (0 disables threshold filtering)
+        drop_zero_segments  : when True, zero-length D01 draws are downgraded
+        simplify_regions    : when True, also simplify tiny D01 edges inside
+                      G36/G37 regions by dropping tiny vertex steps
+        region_min_seg_um   : threshold used for in-region tiny-step filtering
+                      (0 -> use min_seg_um when simplify_regions=True)
+        log                 : optional logger callable
+
+    Returns:
+        (ok, converted_count)
+    """
+    def _log(msg):
+        if log:
+            log(msg)
+
+    if min_seg_um <= 0 and not drop_zero_segments and not simplify_regions:
+        # No-op mode: caller can skip this function, but keep a safe fast-path.
+        try:
+            dst.write_text(src.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+            return True, 0
+        except Exception as exc:
+            _log(f"  sanitize_gerber: copy failed for {src.name}: {exc}")
+            return False, 0
+
+    try:
+        text = src.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        _log(f"  sanitize_gerber: cannot read {src.name}: {exc}")
+        return False, 0
+
+    fmt_m = _re.search(r'%FS[LT]A[XY](\d)(\d)[XY]\d\d', text)
+    frac_d = int(fmt_m.group(2)) if fmt_m else 6
+    scale = 10.0 ** frac_d
+    min_seg_mm = max(0.0, float(min_seg_um)) * 1e-3
+    region_min_seg_mm = max(0.0, float(region_min_seg_um)) * 1e-3
+    if simplify_regions and region_min_seg_mm <= 0:
+        region_min_seg_mm = min_seg_mm
+
+    coord_re = _re.compile(r'(?:X(-?\d+))?(?:Y(-?\d+))?D0*([123])\*')
+    in_region = False
+    out_lines: list[str] = []
+    converted = 0
+
+    cur_x = 0.0
+    cur_y = 0.0
+    eps = 1e-12
+
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.strip()
+
+        if line == "G36*":
+            in_region = True
+            out_lines.append(raw_line)
+            continue
+        if line == "G37*":
+            in_region = False
+            out_lines.append(raw_line)
+            continue
+
+        m = coord_re.search(line)
+        if not m:
+            out_lines.append(raw_line)
+            continue
+
+        raw_x, raw_y, d = m.group(1), m.group(2), m.group(3)
+        next_x = cur_x if raw_x is None else (int(raw_x) / scale)
+        next_y = cur_y if raw_y is None else (int(raw_y) / scale)
+
+        # Never touch arc-interpolation lines (I/J terms) or non-draw commands.
+        if "I" in line or "J" in line or d != "1":
+            out_lines.append(raw_line)
+            cur_x, cur_y = next_x, next_y
+            continue
+
+        dx = next_x - cur_x
+        dy = next_y - cur_y
+        seg_len_mm = (dx * dx + dy * dy) ** 0.5
+        is_zero = abs(dx) <= eps and abs(dy) <= eps
+        # Region and non-region can use different thresholds.
+        _thr_mm = region_min_seg_mm if in_region else min_seg_mm
+        is_tiny = _thr_mm > 0 and seg_len_mm < _thr_mm
+
+        if in_region:
+            if (drop_zero_segments and is_zero) or (simplify_regions and is_tiny):
+                # Inside regions, drop tiny vertex steps instead of emitting D02.
+                # This keeps region semantics valid while collapsing micro-edges.
+                converted += 1
+                continue
+            out_lines.append(raw_line)
+            cur_x, cur_y = next_x, next_y
+            continue
+
+        if (drop_zero_segments and is_zero) or is_tiny:
+            # Keep coordinate state update but avoid creating a tiny edge.
+            new_line = _re.sub(r'D0*1\*', 'D02*', raw_line, count=1)
+            out_lines.append(new_line if new_line != raw_line else raw_line)
+            converted += 1
+        else:
+            out_lines.append(raw_line)
+
+        cur_x, cur_y = next_x, next_y
+
+    try:
+        dst.write_text("".join(out_lines), encoding="utf-8")
+    except Exception as exc:
+        _log(f"  sanitize_gerber: cannot write {dst}: {exc}")
+        return False, converted
+
+        _log(f"  Gerber sanitize {src.name}: converted {converted} tiny D01 segment(s) "
+            f"(min={min_seg_um:.1f} um, drop_zero={drop_zero_segments}, "
+            f"simplify_regions={simplify_regions}, region_min={region_min_seg_um:.1f} um)")
+    return True, converted
+
+
 # ── lazy gmsh import (available after emerge initialises GMSH) ────────────────
 
 def _gmsh():
@@ -192,6 +321,10 @@ def _gmsh():
 def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
                        gerber_dir: pathlib.Path,
                        circ_segs: int = 64, res_mm: float = 0.05,
+                       min_seg_um: float = 0.0,
+                       drop_zero_segments: bool = True,
+                       simplify_regions: bool = False,
+                       region_min_seg_um: float = 0.0,
                        sim_bounds: tuple | None = None,
                        log=None) -> int:
     """
@@ -224,13 +357,19 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
     suffix = ", pre-crop=ON)" if sim_bounds else ")"
     _log(f"Loading {len(cu_layers)} copper layer(s) "
          f"(n_circ={circ_segs}, res_mm={res_mm}{suffix}")
+    _log(f"  Gerber tiny-segment filter: min_seg_um={min_seg_um:.1f}  "
+            f"drop_zero_segments={drop_zero_segments}  "
+            f"simplify_regions={simplify_regions}  region_min_seg_um={region_min_seg_um:.1f}")
 
     pcb_stem = pcb_path.stem if (pcb_path and pcb_path.exists()) else ""
     loaded   = 0
 
     crop_dir = gerber_dir / "_cropped"
+    sanitize_dir = gerber_dir / "_sanitized"
     if sim_bounds:
         crop_dir.mkdir(parents=True, exist_ok=True)
+    if min_seg_um > 0 or drop_zero_segments:
+        sanitize_dir.mkdir(parents=True, exist_ok=True)
 
     for idx, layer in enumerate(cu_layers):
         name     = layer["name"]
@@ -255,6 +394,19 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             load_path = cropped if ok else gbr
         else:
             load_path = gbr
+
+        if min_seg_um > 0 or drop_zero_segments:
+            sanitized = sanitize_dir / load_path.name
+            ok_san, _ = sanitize_gerber_tiny_segments(
+                load_path, sanitized,
+                min_seg_um=min_seg_um,
+                drop_zero_segments=drop_zero_segments,
+                simplify_regions=simplify_regions,
+                region_min_seg_um=region_min_seg_um,
+                log=_log,
+            )
+            if ok_san:
+                load_path = sanitized
 
         size_kb = load_path.stat().st_size / 1024
         _log(f"  [{idx}] {name}: {load_path.name}  ({size_kb:.0f} kB)  parsing ...")
@@ -302,6 +454,8 @@ def build_and_commit(sim, pcb, board_t: float,
                      xmin: float, ymin: float,
                      xmax: float, ymax: float,
                      port_geos: tuple = (),
+                     split_z: bool = True,
+                     merge: bool = True,
                      pml_scale_xy: float = 0.15,
                      pml_scale_z:  float = 0.5,
                      log=None):
@@ -336,10 +490,10 @@ def build_and_commit(sim, pcb, board_t: float,
     _log(f"  PML: xy={pml_xy*1e3:.1f} mm  z={pml_z*1e3:.1f} mm  "
          f"air_h={air_height*1e3:.1f} mm")
 
-    _log("  generate_pcb(split_z=True, merge=True) ...")
+    _log(f"  generate_pcb(split_z={split_z}, merge={merge}) ...")
     t0 = time.monotonic()
     try:
-        pcb_vol = pcb.generate_pcb(split_z=True, merge=True)
+        pcb_vol = pcb.generate_pcb(split_z=split_z, merge=merge)
     except TypeError:
         pcb_vol = pcb.generate_pcb()
     _log(f"    done  ({time.monotonic()-t0:.1f} s)")
