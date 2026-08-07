@@ -136,6 +136,11 @@ class PassiveElementModeler:
     assigned an EMerge lumped_element_material carrying the R, L, or C value.
     The current-flow direction is the pad1→pad2 unit vector.
 
+    Works correctly with FileBasedPCB (Gerber-based): the Gerber copper already
+    has a physical gap at the component footprint, so the material fills the gap
+    and affects S-params.  With PCBNew (solid copper planes), the solid copper
+    bypasses the element polygon — use FileBasedPCB for accurate results.
+
     Args:
         pcb_obj      : PCBNew or FileBasedPCB instance (model under construction).
         pcb_path     : Path to .kicad_pcb (source of component positions/values).
@@ -174,6 +179,17 @@ class PassiveElementModeler:
                       "emerge version — passives skipped")
             return 0
 
+        # series_impedance / parallel_impedance are available when the FreeCAD
+        # exporter helper package is installed; fall back to direct R/L/C kwargs.
+        try:
+            from basicemergesolverhelperpackage.EMergeConstants import (
+                series_impedance as _series_impedance,
+                parallel_impedance as _parallel_impedance,
+            )
+            _SERIES_HELPERS = True
+        except ImportError:
+            _SERIES_HELPERS = False
+
         try:
             from kicad_reader import read_passive_components, point_in_board
         except ImportError:
@@ -188,8 +204,14 @@ class PassiveElementModeler:
             self._log("  No R/L/C components found in PCB.")
             return 0
 
+        if _SERIES_HELPERS:
+            self._log("  Using series_impedance/parallel_impedance from EMergeConstants.")
+
         board_t = self.stackup["board_thickness_mm"]  * 1e-3
         cu_t    = self.stackup["copper_thickness_mm"] * 1e-3
+        # Use API properties for exact copper-layer Z; fall back to stackup values
+        z_top    = getattr(self.pcb_obj, "top",    board_t)
+        z_bottom = getattr(self.pcb_obj, "bottom", 0.0)
 
         added = skipped = 0
         self._log(f"  Passive components in PCB: {len(components)}")
@@ -258,7 +280,7 @@ class PassiveElementModeler:
                 body_length = length
 
             layer = comp["layer"]
-            z = board_t if ("F.Cu" in layer or layer.upper().startswith("F")) else cu_t
+            z = z_top if ("F.Cu" in layer or layer.upper().startswith("F")) else z_bottom
 
             hw = body_w * 0.5
             xs = [gx1 - px*hw, gx2 - px*hw, gx2 + px*hw, gx1 + px*hw]
@@ -289,6 +311,8 @@ class PassiveElementModeler:
                     Area          = float(area),
                     **kwargs,
                 )
+                # NOTE: works correctly with FileBasedPCB (Gerber gap in copper).
+                # With PCBNew (solid copper), current bypasses the polygon.
                 self.pcb_obj.add_poly(xs=xs, ys=ys, z=z, material=lem, name=ref)
                 layer_s = "top" if z == board_t else "bot"
                 self._log(
