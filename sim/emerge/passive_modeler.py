@@ -317,7 +317,8 @@ class PassiveElementModeler:
                            f"{value_si*1e6:.3g} µH")
 
             try:
-                mat_name = f"{ref}_{comp_type}{value_si:.3g}"
+                # Keep model entity names aligned with PCB/schematic refdes.
+                mat_name = ref
                 dir_vec = (float(ux), float(uy), 0.0)
 
                 # Prefer the stripline-style path API when the PCB object
@@ -344,10 +345,30 @@ class PassiveElementModeler:
                             new_kwargs["z"] = z
 
                         lead_length = max(0.0, 0.5 * (float(length) - float(body_length)))
+                        _le_count_before = len(getattr(self.pcb_obj, "lumped_elements", []) or [])
+
                         path = self.pcb_obj.new(x1, y1, body_w, (ux, uy), **new_kwargs)
                         path = path.straight(lead_length)
                         path = path.lumped_element(z_func, size=(float(body_length), body_w))
                         path = path.straight(lead_length)
+
+                        # Tag the path object for viewer-friendly naming.
+                        for _attr in ("name", "label", "_name"):
+                            try:
+                                setattr(path, _attr, ref)
+                            except Exception:
+                                pass
+
+                        # Tag any newly created lumped element(s) with the same refdes.
+                        _le_list = getattr(self.pcb_obj, "lumped_elements", None)
+                        if isinstance(_le_list, list):
+                            for _le in _le_list[_le_count_before:]:
+                                for _attr in ("name", "label", "_name"):
+                                    try:
+                                        setattr(_le, _attr, ref)
+                                    except Exception:
+                                        pass
+
                         if hasattr(path, "prio_set"):
                             path.prio_set(0)
                         path_model_used = True

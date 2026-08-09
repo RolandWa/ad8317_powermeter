@@ -206,14 +206,16 @@ class TestGerberLayerIndexMapping:
         (gerber_dir / f"{pcb_file.stem}-NPTH.drl").write_text("M48\nM30\n", encoding="utf-8")
 
         fake = _FakePCB()
-        loaded = load_vias_from_drills(
+        stats = load_vias_from_drills(
             pcb=fake,
             gerber_dir=gerber_dir,
             pcb_path=pcb_file,
             log=None,
         )
 
-        assert loaded == 2
+        assert stats["loaded_files"] == 2
+        assert stats["drill_size_count"] == 0
+        assert stats["total_holes"] == 0
         assert fake.via_calls == [f"{pcb_file.stem}-NPTH.drl", f"{pcb_file.stem}-PTH.drl"]
 
     def test_emerge_version_set(self):

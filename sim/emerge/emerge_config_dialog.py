@@ -209,14 +209,14 @@ class EmergeConfigDialog(wx.Dialog):
             panel,
             "Start frequency (Hz)",
             self._start_hz,
-            lambda: self._frequency_help_text("Start", self._start_hz.GetValue()),
+            lambda: self._frequency_help_text("Start"),
         )
         self._add_row(
             grid,
             panel,
             "Stop frequency (Hz)",
             self._stop_hz,
-            lambda: self._frequency_help_text("Stop", self._stop_hz.GetValue()),
+            lambda: self._frequency_help_text("Stop"),
         )
         self._add_row(grid, panel, "Simulation steps", self._steps, "Number of frequency points in the sweep.")
         self._add_row(grid, panel, "cells_per_lambda", self._cells_per_lambda, "Mesh density target used by EMerge.")
@@ -363,21 +363,41 @@ class EmergeConfigDialog(wx.Dialog):
         panel.SetSizer(root)
         return panel
 
-    def _frequency_help_text(self, label: str, raw_value: str) -> str:
-        txt = str(raw_value or "").strip().replace("_", "").replace(",", "")
-        try:
-            hz = float(txt)
-        except Exception:
+    def _frequency_help_text(self, focus_label: str) -> str:
+        def _parse_hz(raw: str) -> float | None:
+            txt = str(raw or "").strip().replace("_", "").replace(",", "")
+            try:
+                return float(txt)
+            except Exception:
+                return None
+
+        start_hz = _parse_hz(self._start_hz.GetValue())
+        stop_hz = _parse_hz(self._stop_hz.GetValue())
+
+        if start_hz is None and stop_hz is None:
             return (
-                f"{label}: enter frequency in Hz. Example: 9000000000 = 9 GHz = 9000 MHz = 9000000 KHz"
+                "Enter frequencies in Hz. Example: 9000000000 = 9 GHz = 9000 MHz = 9000000 kHz"
             )
 
-        ghz = hz / 1e9
-        mhz = hz / 1e6
-        khz = hz / 1e3
-        return (
-            f"{label}: {hz:,.0f} Hz = {ghz:,.6g} GHz = {mhz:,.6g} MHz = {khz:,.6g} KHz"
-        )
+        def _fmt(label: str, hz_val: float | None) -> str:
+            if hz_val is None:
+                return f"{label}: invalid"
+            ghz = hz_val / 1e9
+            mhz = hz_val / 1e6
+            khz = hz_val / 1e3
+            return (
+                f"{label}: {hz_val:,.0f} Hz | {khz:,.6g} kHz | {mhz:,.6g} MHz | {ghz:,.6g} GHz"
+            )
+
+        lines = [f"{focus_label} frequency details"]
+        lines.append(_fmt("Start", start_hz))
+        lines.append(_fmt("Stop", stop_hz))
+
+        if start_hz is not None and stop_hz is not None:
+            span_hz = abs(stop_hz - start_hz)
+            lines.append(_fmt("Range", span_hz))
+
+        return " ; ".join(lines)
 
     def _resolve_help_text(self, help_text: Union[str, Callable[[], str]]) -> str:
         if callable(help_text):

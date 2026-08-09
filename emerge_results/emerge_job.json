@@ -30,8 +30,8 @@
   },
   "sweep": {
     "start_hz": 100000000.0,
-    "stop_hz": 100000000.0,
-    "steps": 1,
+    "stop_hz": 6000000000.0,
+    "steps": 9,
     "cells_per_lambda": 5
   },
   "thresholds": {
@@ -46,7 +46,7 @@
     "show_mesh": true,
     "geometry_viewer": "emerge",
     "mesh_viewer": "emerge",
-    "show_field_animation": true,
+    "show_field_animation": false,
     "field_component": "Ez",
     "field_animation_freq_hz": 0.0
   },

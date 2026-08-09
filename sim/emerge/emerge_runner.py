@@ -581,14 +581,19 @@ class EmergeModelBuilder:
                     )
                     return None
 
-                loaded_drills = load_vias_from_drills(
+                drill_stats = load_vias_from_drills(
                     pcb=pcb,
                     gerber_dir=self.gerber_dir,
                     pcb_path=self.pcb_path,
                     log=self._log,
                 )
-                if loaded_drills > 0:
-                    self._log(f"  Drill/via files loaded: {loaded_drills}")
+                if drill_stats.get("loaded_files", 0) > 0:
+                    self._log(
+                        "  Drill/via files loaded: "
+                        f"{drill_stats.get('loaded_files', 0)}; "
+                        f"drill sizes: {drill_stats.get('drill_size_count', 0)}; "
+                        f"total holes: {drill_stats.get('total_holes', 0)}"
+                    )
             else:
                 self._log("  WARNING: gerber_builder not available — "
                           "falling back to empty copper planes")
@@ -751,11 +756,43 @@ class EmergeModelBuilder:
 
         # ── Wire up lumped port boundary conditions ────────────────────────────
         for port_num, (p, port_geo) in enumerate(port_geos, start=1):
-            sim.mw.bc.LumpedPort(
-                face        = port_geo,
-                port_number = port_num,
-                Z0          = p["R"],
-            )
+            lp_name = f"LumpedPort_{port_num}"
+            port_name = str(p.get("name", f"PORT{port_num}"))
+
+            # Keep port geometry tied to user-facing port names (PORT1/PORT2/...).
+            for attr in ("name", "label", "_name"):
+                try:
+                    setattr(port_geo, attr, port_name)
+                except Exception:
+                    pass
+
+            lp_kwargs = {
+                "face": port_geo,
+                "port_number": port_num,
+                "Z0": p["R"],
+            }
+
+            # EMerge pybind often reports LumpedPort(*args, **kwargs), so
+            # signature probing is unreliable. Try explicit naming kwargs in order.
+            lp_bc = None
+            for _k in ("name", "label"):
+                try:
+                    _kw = dict(lp_kwargs)
+                    _kw[_k] = lp_name
+                    lp_bc = sim.mw.bc.LumpedPort(**_kw)
+                    break
+                except TypeError:
+                    continue
+                except Exception:
+                    continue
+            if lp_bc is None:
+                lp_bc = sim.mw.bc.LumpedPort(**lp_kwargs)
+
+            for attr in ("name", "label", "_name"):
+                try:
+                    setattr(lp_bc, attr, lp_name)
+                except Exception:
+                    pass
 
         self._log(f"Model built successfully.  ({time.monotonic()-_t0:.1f} s)")
 
@@ -777,7 +814,7 @@ class EmergeModelBuilder:
 
             if allow_emerge and (mode != "auto" or not shown):
                 try:
-                    _sim_view(sim, plot_mesh=False, labels=True, bc=True)
+                    _sim_view(sim, plot_mesh=False, labels=True, bc=False)
                     shown = True
                 except Exception as exc:
                     emerge_failed = True
@@ -1934,7 +1971,7 @@ class EmergeSolver:
 
             if allow_emerge and (mode != "auto" or not shown):
                 try:
-                    _sim_view(sim, plot_mesh=True)
+                    _sim_view(sim, plot_mesh=True, labels=False, bc=False)
                     shown = True
                 except Exception as exc:
                     emerge_failed = True

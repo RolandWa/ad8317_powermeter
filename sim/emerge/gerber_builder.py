@@ -473,7 +473,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
 
 def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
                           pcb_path: pathlib.Path | None = None,
-                          log=None) -> int:
+                          log=None) -> dict:
     """
     Load drill/via definitions from Excellon drill files into *pcb*.
 
@@ -481,7 +481,7 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
     geometry so vertical current paths exist in the 3D model.
 
     Returns:
-        Number of drill files successfully loaded via vias_from_file().
+        Summary dict with loaded file count, drill size count, and hole count.
     """
     def _log(msg):
         if log:
@@ -489,7 +489,12 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
 
     if not gerber_dir.is_dir():
         _log("  Drill import skipped: Gerber directory missing")
-        return 0
+        return {
+            "loaded_files": 0,
+            "total_holes": 0,
+            "drill_size_count": 0,
+            "drill_sizes_mm": [],
+        }
 
     pcb_stem = pcb_path.stem if (pcb_path and pcb_path.exists()) else ""
     drill_files = []
@@ -509,9 +514,67 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
 
     if not ordered:
         _log("  Drill import: no .drl files found")
-        return 0
+        return {
+            "loaded_files": 0,
+            "total_holes": 0,
+            "drill_size_count": 0,
+            "drill_sizes_mm": [],
+        }
+
+    def _parse_excellon_stats(drl_path: pathlib.Path) -> tuple[int, set[float]]:
+        """
+        Parse Excellon drill file and estimate:
+          - number of hole hits (coordinate commands)
+          - set of tool diameters used in the body
+        """
+        tool_diam_mm: dict[str, float] = {}
+        used_sizes: set[float] = set()
+        holes = 0
+        current_tool: str | None = None
+        in_header = True
+
+        try:
+            lines = drl_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception:
+            return 0, set()
+
+        tool_def_re = _re.compile(r"^T(\d+)C([0-9]*\.?[0-9]+)$")
+        tool_sel_re = _re.compile(r"^T(\d+)$")
+
+        for raw in lines:
+            line = raw.strip().upper()
+            if not line:
+                continue
+
+            if line == "%":
+                in_header = False
+                continue
+
+            mdef = tool_def_re.match(line)
+            if mdef:
+                tool_diam_mm[mdef.group(1)] = float(mdef.group(2))
+                continue
+
+            msel = tool_sel_re.match(line)
+            if msel:
+                current_tool = msel.group(1)
+                continue
+
+            if in_header:
+                continue
+
+            # Hole/plunge commands in Excellon bodies are coordinate lines.
+            # Count lines that contain at least one axis coordinate.
+            if _re.search(r"[XY]-?\d+", line):
+                holes += 1
+                if current_tool is not None and current_tool in tool_diam_mm:
+                    used_sizes.add(tool_diam_mm[current_tool])
+
+        return holes, used_sizes
 
     loaded = 0
+    total_holes = 0
+    drill_sizes_mm: set[float] = set()
     _log(f"Loading drill files ({len(ordered)}) ...")
     for drl in ordered:
         size_kb = drl.stat().st_size / 1024
@@ -519,12 +582,23 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
         t0 = time.monotonic()
         try:
             pcb.vias_from_file(str(drl))
-            _log(f"  drill: {drl.name}: done  ({time.monotonic()-t0:.1f} s)")
+            holes, used_sizes = _parse_excellon_stats(drl)
+            total_holes += holes
+            drill_sizes_mm.update(used_sizes)
+            _log(
+                f"  drill: {drl.name}: done  ({time.monotonic()-t0:.1f} s)"
+                f"  holes={holes}  sizes={len(used_sizes)}"
+            )
             loaded += 1
         except Exception as exc:
             _log(f"  WARNING: vias_from_file failed for {drl.name}: {exc}")
 
-    return loaded
+    return {
+        "loaded_files": loaded,
+        "total_holes": total_holes,
+        "drill_size_count": len(drill_sizes_mm),
+        "drill_sizes_mm": sorted(drill_sizes_mm),
+    }
 
 
 # =============================================================================
@@ -974,7 +1048,7 @@ def color_geometry():
       • Top copper    (F.Cu)  — near board top   → orange  (255,140,  0)
       • Bottom copper (B.Cu)  — near board bottom → blue    ( 30,144,255)
       • Substrate / core       — mid-Z            → tan     (180,140, 80)
-      • Port surfaces          — small area, any Z → lime   ( 50,220, 50)
+    • Port/Lumped surfaces   — by name or small area      → green shades
 
     Volumes:
       • Largest volume (air box) → very transparent white
@@ -1022,6 +1096,7 @@ def color_geometry():
         COPPER_BOT    = ( 30, 144, 255, 255)   # dodger-blue
         SUBSTRATE     = (160, 120,  60, 200)   # tan
         PORT_COL      = ( 50, 240,  50, 255)   # bright lime
+        LUMPED_COL    = ( 40, 190,  60, 255)   # strong green
         AIR_SURF      = (200, 200, 200,  20)   # near-invisible
 
         # "Port surfaces" heuristic: very small XY footprint (< 2 mm²)
@@ -1036,10 +1111,24 @@ def color_geometry():
         if vol_bb:
             air_tag = max(vol_bb, key=lambda t: _vol_extent(vol_bb[t]))
 
+        def _entity_name(dim: int, tag: int) -> str:
+            try:
+                return str(g.model.getEntityName(dim, tag) or "")
+            except Exception:
+                return ""
+
         for tag, bb in surf_bb.items():
             z_ctr = (bb[2] + bb[5]) * 0.5
             area  = _xy_area(bb)
-            if area < 2.0:                          # tiny surface → port
+            name_u = _entity_name(2, tag).upper()
+            is_named_port = ("PORT" in name_u) or ("LUMPEDPORT" in name_u)
+            is_lumped = ("_RC" in name_u) or ("_RL" in name_u) or ("LUMPED" in name_u)
+
+            if is_lumped:
+                col = LUMPED_COL
+            elif is_named_port:
+                col = PORT_COL
+            elif area < 2.0:                          # tiny surface → likely port
                 col = PORT_COL
             elif z_ctr > z_hi - z_tol:             # near top → F.Cu
                 col = COPPER_TOP
@@ -1054,6 +1143,13 @@ def color_geometry():
 
         # ── volume colours ────────────────────────────────────────────────────
         for tag in vol_bb:
+            vname_u = _entity_name(3, tag).upper()
+            if ("_RC" in vname_u) or ("_RL" in vname_u) or ("LUMPED" in vname_u):
+                try:
+                    g.model.setColor([(3, tag)], *LUMPED_COL)
+                    continue
+                except Exception:
+                    pass
             if tag == air_tag:
                 try:
                     g.model.setColor([(3, tag)], 200, 200, 255, 8)   # very transparent
@@ -1334,8 +1430,8 @@ def gmsh_view_mesh(title: str = "Mesh — close window to continue"):
 # sim.view() wrapper
 # =============================================================================
 
-def sim_view(sim, plot_mesh: bool = False, labels: bool = True,
-             bc: bool = True, off_screen: bool = False,
+def sim_view(sim, plot_mesh: bool = False, labels: bool = False,
+             bc: bool = False, off_screen: bool = False,
              screenshot=None):
     """
     Call sim.view() with only the keyword arguments that the installed

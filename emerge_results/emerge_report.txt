@@ -1,4 +1,4 @@
-EMerge Plugin v1.2.0 — 2026-08-09 23:04:24
+EMerge Plugin v1.2.0 — 2026-08-10 00:33:17
 PCB:          C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
 emerge:       2.8.1  (C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe)
 KiCad Python: C:\Program Files\KiCad\10.0\bin\kicad.exe
@@ -7,22 +7,25 @@ KiCad Python: C:\Program Files\KiCad\10.0\bin\kicad.exe
   Output dir : C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers
   kicad-cli  : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe
   Layers     : F.Cu, In1.Cu, In2.Cu, B.Cu, F.Mask, B.Mask, F.Silkscreen, B.Silkscreen, Edge.Cuts
-  PCB size   : 372 kB
+  PCB size   : 374 kB
   Command    : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe pcb export gerbers --output C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge.Cuts --no-x2 --no-netlist --disable-aperture-macros --no-protel-ext C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
-  Exported 9 file(s):
-    ad8317_powermeter-B_Cu.gbr                             2.2 kB
+  Drill cmd  : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe pcb export drill --output C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers --format excellon --drill-origin absolute --excellon-units mm --excellon-separate-th C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
+  Exported 11 file(s):
+    ad8317_powermeter-B_Cu.gbr                             2.5 kB
     ad8317_powermeter-B_Mask.gbr                           1.5 kB
     ad8317_powermeter-B_Silkscreen.gbr                     0.5 kB
     ad8317_powermeter-Edge_Cuts.gbr                        1.1 kB
-    ad8317_powermeter-F_Cu.gbr                            96.1 kB
+    ad8317_powermeter-F_Cu.gbr                            96.4 kB
     ad8317_powermeter-F_Mask.gbr                          78.3 kB
     ad8317_powermeter-F_Silkscreen.gbr                   120.6 kB
-    ad8317_powermeter-In1_Cu.gbr                           1.9 kB
-    ad8317_powermeter-In2_Cu.gbr                           1.9 kB
+    ad8317_powermeter-In1_Cu.gbr                           2.3 kB
+    ad8317_powermeter-In2_Cu.gbr                           2.3 kB
+    ad8317_powermeter-NPTH.drl                             0.4 kB
+    ad8317_powermeter-PTH.drl                              1.0 kB
 Gerbers: C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers
 Debug:  ON
 Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Users\<user>\<cloud-folder>\Simulation tools\KiCad\10.0\3rdparty\plugins\com_github_<github-user>_emerge_fem\emerge_runner.py --job C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\emerge_job.json --debug
-  solver: 0:00:00.002011  INFO   : EMerge v2.8.1
+  solver: 0:00:00.003589  INFO   : EMerge v2.8.1
   solver: [DEBUG] emerge_runner ['C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\KiCad\\10.0\\3rdparty\\plugins\\com_github_<github-user>_emerge_fem\\emerge_runner.py', '--job', 'C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\GitHub\\ad8317_powermeter\\emerge_results\\emerge_job.json', '--debug']
   solver: [DEBUG] Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
   solver: [DEBUG] emerge ok=True  ver=2.8.1  err=''
@@ -45,19 +48,25 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   Geometry simplification: ON  factor=2.50  circ_segs 64->26  res_mm 0.200->0.500
   solver: Loading 4 copper layer(s) (n_circ=26, res_mm=0.5, pre-crop=ON)
   solver:   Gerber tiny-segment filter: min_seg_um=20.0  drop_zero_segments=True  simplify_regions=True  region_min_seg_um=120.0
-  solver:   Gerber crop ad8317_powermeter-F_Cu.gbr: 376 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
+  solver:   Gerber crop ad8317_powermeter-F_Cu.gbr: 383 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [0] F.Cu (layer=-1): ad8317_powermeter-F_Cu.gbr  (43 kB)  parsing ...
-  solver:   [0] F.Cu (layer=-1): done  (3.2 s)
-  solver:   Gerber crop ad8317_powermeter-In1_Cu.gbr: 3 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
+  solver:   [0] F.Cu (layer=-1): done  (4.2 s)
+  solver:   Gerber crop ad8317_powermeter-In1_Cu.gbr: 10 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [1] In1.Cu (layer=1): ad8317_powermeter-In1_Cu.gbr  (1 kB)  parsing ...
-  solver:   [1] In1.Cu (layer=1): done  (0.1 s)
-  solver:   Gerber crop ad8317_powermeter-In2_Cu.gbr: 3 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
+  solver:   [1] In1.Cu (layer=1): done  (0.2 s)
+  solver:   Gerber crop ad8317_powermeter-In2_Cu.gbr: 10 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [2] In2.Cu (layer=2): ad8317_powermeter-In2_Cu.gbr  (1 kB)  parsing ...
-  solver:   [2] In2.Cu (layer=2): done  (0.1 s)
-  solver:   Gerber crop ad8317_powermeter-B_Cu.gbr: 5 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
+  solver:   [2] In2.Cu (layer=2): done  (0.2 s)
+  solver:   Gerber crop ad8317_powermeter-B_Cu.gbr: 12 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [3] B.Cu (layer=0): ad8317_powermeter-B_Cu.gbr  (2 kB)  parsing ...
-  solver:   [3] B.Cu (layer=0): done  (0.2 s)
+  solver:   [3] B.Cu (layer=0): done  (0.3 s)
   solver:   Geometry scope: port_focus_only=true
+  solver: Loading drill files (2) ...
+  solver:   drill: ad8317_powermeter-NPTH.drl  (0.4 kB)  parsing ...
+  solver:   drill: ad8317_powermeter-NPTH.drl: done  (0.0 s)  holes=3  sizes=2
+  solver:   drill: ad8317_powermeter-PTH.drl  (1.0 kB)  parsing ...
+  solver:   drill: ad8317_powermeter-PTH.drl: done  (0.0 s)  holes=31  sizes=4
+  solver:   Drill/via files loaded: 2; drill sizes: 6; total holes: 34
   solver:   Port PORT1 at (137.70, -85.00) mm
   solver:   Port PORT2: added R=200 Ω ∥ C=2 pF load polygon
   solver:   Port PORT2 at (146.74, -85.41) mm
@@ -122,16 +131,16 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver: Building 3D geometry ...
   solver:   PML: xy=5.0 mm  z=5.0 mm  air_h=6.4 mm
   solver:   generate_pcb(split_z=False, merge=False) ...
-  solver:     done  (0.2 s)
+  solver:     done  (0.3 s)
   solver:   generate_air() ...
   solver:     done  (0.0 s)
   solver:   commit_geometry() — fusing CAD solids ...
-  solver:     done  (0.6 s)
+  solver:     done  (1.5 s)
   solver:   Ghost faces neutralised: 0  (none found)
   solver:   Sliver surfaces patched: 2  (threshold 0.10 mm)
   solver:   Compound sliver surfaces: disabled (set EMERGE_ENABLE_COMPOUND_SLIVERS=1 to enable)
   solver:   Curved boundary resolution: 20 (post-commit)
-  solver: Model built successfully.  (9.7 s)
+  solver: Model built successfully.  (11.9 s)
   solver: Showing 3D geometry — close the viewer window to continue ...
   solver: 
   solver: ────────────────────────────────────────────────────────────
@@ -140,8 +149,8 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   Cells/lambda : 5
   solver:   Solver       : AUTO
   solver:   Curved boundary resolution: 20
-  solver:   CL scan coverage: large_surfaces=20  boundary_curves=1120  used=271
-  solver:   Skipped 849 artifact curves < 200 µm in mesh size scan
+  solver:   CL scan coverage: large_surfaces=20  boundary_curves=2016  used=287
+  solver:   Skipped 1729 artifact curves < 200 µm in mesh size scan
   solver:   Shortest large-surface curve: 0.2002 mm  → CharacteristicLengthMax = 0.8000 mm
   solver:   GMSH option Mesh.Algorithm = 6
   solver:   GMSH option Mesh.Algorithm3D = 10
@@ -150,57 +159,40 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   GMSH option Mesh.MaxNumThreads1D = 0
   solver:   GMSH option Mesh.MaxNumThreads2D = 0
   solver:   GMSH option Mesh.MaxNumThreads3D = 0
-  solver:   Region mesh sizes applied: 1037 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
+  solver:   Region mesh sizes applied: 1693 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
   solver:   Copper Z-refinement: 2 layer(s), VIn=0.350 mm  VOut=10.00 mm  (Box fields: [7, 8])
   solver:   Sliver curves constrained: 15 curves on 2 surfaces
   solver:   Pre-mesh ghost removal: none found
   solver: Generating mesh …
   solver:   Model bbox: (128.70, -95.00, -6.60) – (156.11, -73.92, 11.40) mm  size 27.41 x 21.09 x 18.00 mm
-  solver:   Entities: points=1037  curves=1190  surfaces=178  volumes=11
+  solver:   Entities: points=1693  curves=1846  surfaces=194  volumes=11
   solver:   Surface diagnostics: discrete=0  orphan(no-volume)=8
   solver:   Mesh fields configured: 9
   solver:   Mesh focus: top 8 surfaces by boundary complexity
-  solver:     surf 219: boundary_curves=469  tiny(<200µm)=353  min_curve=0.0023 mm  bbox=17.04x9.92x0.0007 mm  zc=0.000 mm  adj_vols=2  type=Plane
-  solver:     surf 164: boundary_curves=101  tiny(<200µm)=86  min_curve=0.0023 mm  bbox=2.15x1.56x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
-  solver:     surf 112: boundary_curves=90  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-  solver:     surf 124: boundary_curves=82  tiny(<200µm)=59  min_curve=0.0024 mm  bbox=8.92x4.17x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
-  solver:     surf 212: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
-  solver:     surf 211: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
-  solver:     surf 119: boundary_curves=53  tiny(<200µm)=34  min_curve=0.0061 mm  bbox=8.90x1.15x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
-  solver:     surf 143: boundary_curves=47  tiny(<200µm)=36  min_curve=0.0024 mm  bbox=2.31x2.24x0.0006 mm  zc=0.000 mm  adj_vols=2  type=Plane
-  solver:   Mesh focus summary: surfaces=178  tiny_boundary_curves_total=1711
+  solver:     surf 255: boundary_curves=615  tiny(<200µm)=495  min_curve=0.0023 mm  bbox=17.04x9.92x0.0007 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  solver:     surf 248: boundary_curves=264  tiny(<200µm)=260  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
+  solver:     surf 247: boundary_curves=264  tiny(<200µm)=260  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
+  solver:     surf 148: boundary_curves=236  tiny(<200µm)=220  min_curve=0.0258 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
+  solver:     surf 160: boundary_curves=202  tiny(<200µm)=175  min_curve=0.0024 mm  bbox=9.00x4.59x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  solver:     surf 64: boundary_curves=124  tiny(<200µm)=116  min_curve=0.0258 mm  bbox=5.17x1.93x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
+  solver:     surf 200: boundary_curves=101  tiny(<200µm)=86  min_curve=0.0023 mm  bbox=2.15x1.56x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  solver:     surf 155: boundary_curves=53  tiny(<200µm)=34  min_curve=0.0061 mm  bbox=8.90x1.15x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  solver:   Mesh focus summary: surfaces=194  tiny_boundary_curves_total=3007
   solver:   Mesh attempt 1/3
-  solver:   [mesh a1] still running … 30 s  | gmsh_msgs=1458  | Info: Improving      24604 tet. on   1 thrd (GSC)
-  solver:   Mesh done. total=42.5 s  attempt=42.5 s
-  solver:   Mesh nodes: 25550
-  solver:   Mesh elements: 2D=26572  3D=136001
+  solver:   [mesh a1] still running … 30 s  | gmsh_msgs=2122  | Info: Improving      28355 tet. on   1 thrd (GSC)
+  solver:   [mesh a1] still running … 60 s  | gmsh_msgs=4262  | Info: Improving      28306 tet. on   1 thrd (GSC)
+  solver:   Mesh done. total=70.2 s  attempt=70.2 s
+  solver:   Mesh nodes: 26889
+  solver:   Mesh elements: 2D=28268  3D=143408
   solver: Showing 3D mesh — close the viewer window to continue ...
   solver: 
   solver: ────────────────────────────────────────────────────────────
   solver: Stage 4 / 5 — Running FEM sweep
   solver: ────────────────────────────────────────────────────────────
-  solver:   Frequency: 100 MHz – 0.1 GHz  (1 points)
+  solver:   Frequency: 100 MHz – 6.0 GHz  (9 points)
   solver: Running FEM sweep …
-  solver:   [FEM] still running … 30 s  CPU 71%  MEM 93% 29852/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 60 s  CPU 42%  MEM 97% 31221/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 90 s  CPU 53%  MEM 90% 28859/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 121 s  CPU 54%  MEM 92% 29784/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 151 s  CPU 39%  MEM 93% 30100/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 181 s  CPU 52%  MEM 99% 31868/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 211 s  CPU 68%  MEM 90% 28909/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 241 s  CPU 52%  MEM 86% 27829/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 271 s  CPU 40%  MEM 85% 27381/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 301 s  CPU 44%  MEM 100% 32156/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 332 s  CPU 49%  MEM 95% 30493/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   Sweep done.  (339.3 s)
-  solver: 
-  solver: ────────────────────────────────────────────────────────────
-  solver: Stage 5 / 5 — Results
-  solver: ────────────────────────────────────────────────────────────
-  solver: Touchstone written: C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\touchstone\ad8317_powermeter.s2p
-  solver: 
-  solver: ────────────────────────────────────────────────────────────
-  solver: Stage 6 / 6 — Field animation
-  solver: ────────────────────────────────────────────────────────────
-  solver:   Field component: Ez  freq: 0.1 GHz
+  solver:   [FEM] still running … 30 s  CPU 0%  MEM 84% 27050/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 60 s  CPU 34%  MEM 92% 29539/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 90 s  CPU 49%  MEM 100% 32153/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 121 s  CPU 52%  MEM 92% 29712/32213 MiB  GPU 0% util  5/6113 MiB
 FATAL: No result file produced by solver.
