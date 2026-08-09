@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pathlib
 import wx
+from typing import Callable, Union
 
 try:
     import tomllib as _toml_read
@@ -203,8 +204,20 @@ class EmergeConfigDialog(wx.Dialog):
         self._mesh_viewer = wx.Choice(panel, -1, choices=["auto", "gmsh", "emerge", "both"])
 
         self._add_row(grid, panel, "Debug", self._debug, "Global debug switch. Long press for help.")
-        self._add_row(grid, panel, "Start frequency (Hz)", self._start_hz, "Sweep start frequency in Hz.")
-        self._add_row(grid, panel, "Stop frequency (Hz)", self._stop_hz, "Sweep stop frequency in Hz.")
+        self._add_row(
+            grid,
+            panel,
+            "Start frequency (Hz)",
+            self._start_hz,
+            lambda: self._frequency_help_text("Start", self._start_hz.GetValue()),
+        )
+        self._add_row(
+            grid,
+            panel,
+            "Stop frequency (Hz)",
+            self._stop_hz,
+            lambda: self._frequency_help_text("Stop", self._stop_hz.GetValue()),
+        )
         self._add_row(grid, panel, "Simulation steps", self._steps, "Number of frequency points in the sweep.")
         self._add_row(grid, panel, "cells_per_lambda", self._cells_per_lambda, "Mesh density target used by EMerge.")
         self._add_row(grid, panel, "Solver engine", self._solver_engine, "Linear solver backend. List is intentionally limited.")
@@ -350,12 +363,37 @@ class EmergeConfigDialog(wx.Dialog):
         panel.SetSizer(root)
         return panel
 
+    def _frequency_help_text(self, label: str, raw_value: str) -> str:
+        txt = str(raw_value or "").strip().replace("_", "").replace(",", "")
+        try:
+            hz = float(txt)
+        except Exception:
+            return (
+                f"{label}: enter frequency in Hz. Example: 9000000000 = 9 GHz = 9000 MHz = 9000000 KHz"
+            )
+
+        ghz = hz / 1e9
+        mhz = hz / 1e6
+        khz = hz / 1e3
+        return (
+            f"{label}: {hz:,.0f} Hz = {ghz:,.6g} GHz = {mhz:,.6g} MHz = {khz:,.6g} KHz"
+        )
+
+    def _resolve_help_text(self, help_text: Union[str, Callable[[], str]]) -> str:
+        if callable(help_text):
+            try:
+                return str(help_text())
+            except Exception:
+                return "Help unavailable."
+        return str(help_text)
+
     def _add_row(self, grid, panel, label_text, ctrl, help_text):
         label = wx.StaticText(panel, -1, label_text)
         self._bind_hold_help(label, help_text)
         self._bind_hold_help(ctrl, help_text)
-        label.SetToolTip(help_text)
-        ctrl.SetToolTip(help_text)
+        tip = self._resolve_help_text(help_text)
+        label.SetToolTip(tip)
+        ctrl.SetToolTip(tip)
 
         grid.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
         grid.Add(ctrl, 1, wx.EXPAND)
@@ -367,7 +405,7 @@ class EmergeConfigDialog(wx.Dialog):
         else:
             ctrl.Bind(wx.EVT_TEXT, self._on_any_edit)
 
-    def _bind_hold_help(self, widget, help_text: str):
+    def _bind_hold_help(self, widget, help_text):
         timer = wx.Timer(self)
         self._help_timers.append(timer)
 
@@ -393,7 +431,7 @@ class EmergeConfigDialog(wx.Dialog):
 
         def on_timer(_event):
             if state["inside"]:
-                self._help_hint_label.SetLabel(f"Hint: {help_text}")
+                self._help_hint_label.SetLabel(f"Hint: {self._resolve_help_text(help_text)}")
 
         widget.Bind(wx.EVT_ENTER_WINDOW, on_enter)
         widget.Bind(wx.EVT_MOTION, on_motion)

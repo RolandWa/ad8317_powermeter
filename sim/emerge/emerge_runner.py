@@ -185,6 +185,7 @@ except ImportError:
 try:
     from gerber_builder import (
         load_copper_layers,
+        load_vias_from_drills,
         build_and_commit,
         fix_sliver_faces,
         compound_sliver_surfaces,
@@ -579,6 +580,15 @@ class EmergeModelBuilder:
                         "invalid solids after parser failures."
                     )
                     return None
+
+                loaded_drills = load_vias_from_drills(
+                    pcb=pcb,
+                    gerber_dir=self.gerber_dir,
+                    pcb_path=self.pcb_path,
+                    log=self._log,
+                )
+                if loaded_drills > 0:
+                    self._log(f"  Drill/via files loaded: {loaded_drills}")
             else:
                 self._log("  WARNING: gerber_builder not available — "
                           "falling back to empty copper planes")
@@ -698,7 +708,14 @@ class EmergeModelBuilder:
             #  3. Compound remaining slivers with adjacent valid surfaces.
             remove_ghost_faces(threshold_m=_sliver_m, log=self._log)
             fix_sliver_faces(sim=sim, threshold_m=_sliver_m, log=self._log)
-            compound_sliver_surfaces(threshold_m=_sliver_m, log=self._log)
+            # setCompound-based sliver grouping can create virtual OCC surfaces
+            # that become stale after ghost-face cleanup on some boards.
+            # Keep this opt-in for stability.
+            _enable_compound = os.environ.get("EMERGE_ENABLE_COMPOUND_SLIVERS", "0").strip() in ("1", "true", "yes", "on")
+            if _enable_compound:
+                compound_sliver_surfaces(threshold_m=_sliver_m, log=self._log)
+            else:
+                self._log("  Compound sliver surfaces: disabled (set EMERGE_ENABLE_COMPOUND_SLIVERS=1 to enable)")
         else:
             # Inline fallback when gerber_builder is missing
             from emerge._emerge.geo.open_region import open_pml_region
@@ -749,6 +766,7 @@ class EmergeModelBuilder:
             allow_gmsh = mode in ("auto", "gmsh", "both")
             allow_emerge = mode in ("auto", "emerge", "native", "both")
             shown = False
+            emerge_failed = False
 
             if allow_gmsh and _GERBER_BUILDER_OK:
                 try:
@@ -762,7 +780,17 @@ class EmergeModelBuilder:
                     _sim_view(sim, plot_mesh=False, labels=True, bc=True)
                     shown = True
                 except Exception as exc:
+                    emerge_failed = True
                     self._log(f"WARNING: EMerge geometry viewer failed: {exc}")
+
+            # Fallback: if EMerge viewer was selected and failed, try GMSH.
+            if (not shown) and emerge_failed and _GERBER_BUILDER_OK:
+                try:
+                    self._log("  Falling back to GMSH geometry viewer ...")
+                    gmsh_view_geometry("Geometry (fallback) — close window to continue")
+                    shown = True
+                except Exception as exc:
+                    self._log(f"WARNING: GMSH geometry fallback failed: {exc}")
 
             if not shown:
                 self._log("WARNING: no geometry viewer backend available")
@@ -1106,6 +1134,7 @@ class EmergeSolver:
         _meshadapt_used  = False   # Mesh.Algorithm → 1 (MeshAdapt)
         _hxt_fallback_used = False # Mesh.Algorithm3D → 10 (HXT)
         _oom_backoff_used = False
+        _hxt_recovery_steps = 0
 
         self._log("Generating mesh …")
         _t_mesh = time.monotonic()
@@ -1425,6 +1454,24 @@ class EmergeSolver:
 
                 # ── OCC virtual entity (high tag after setCompound): go to HXT ──
                 if "Unknown OpenCASCADE entity" in _mesh_msg:
+                    _unknown_fixed = False
+                    _um = _re.search(r"dimension\s+(\d+)\s+with\s+tag\s+(\d+)", _mesh_msg)
+                    if _um and _attempt < _MAX_MESH_RETRIES:
+                        _udim = int(_um.group(1))
+                        _utag = int(_um.group(2))
+                        try:
+                            if _udim == 2:
+                                _adj = _gmsh.model.getAdjacencies(2, _utag)[0]
+                                if len(_adj) == 0:
+                                    _gmsh.model.removeEntities([(2, _utag)], recursive=False)
+                                    self._log(f"  Removed orphan OCC surface {_utag} after unknown-entity error — retrying")
+                                    _unknown_fixed = True
+                        except Exception as _uexc:
+                            self._log(f"  Unknown-entity cleanup warning: {_uexc}")
+
+                    if _unknown_fixed:
+                        continue
+
                     if not _hxt_fallback_used:
                         _hxt_fallback_used = True
                         try:
@@ -1436,6 +1483,42 @@ class EmergeSolver:
                         continue
                     self._log(f"  generate_mesh() raised: {_mesh_exc}")
                     raise
+
+                # Generic HXT failures can hide an edge-recovery root cause.
+                # Apply automatic conservative tuning and retry before aborting.
+                _is_generic_hxt_fail = (
+                    "HXT 3D mesh failed" in _mesh_msg
+                    or "GMSH Mesh error detected" in _mesh_msg
+                )
+                if _is_generic_hxt_fail and _attempt < _MAX_MESH_RETRIES and _hxt_recovery_steps < 2:
+                    _hxt_recovery_steps += 1
+                    try:
+                        _cl_cur = _gmsh.option.getNumber("Mesh.CharacteristicLengthMax")
+                    except Exception:
+                        _cl_cur = _clmax
+
+                    # Recovery must be able to tighten CLmax even when the user
+                    # has floor==ceil (speed profile). Use an absolute lower
+                    # bound only for recovery attempts.
+                    _cl_abs_min = 0.05e-3  # 0.05 mm
+                    _cl_new = max(_cl_abs_min, _cl_cur * 0.65)
+                    try:
+                        _gmsh.option.setNumber("Mesh.CharacteristicLengthMax", _cl_new)
+                    except Exception:
+                        pass
+
+                    _cbr_new = min(80, int(self.curved_boundary_resolution * (1.0 + 0.5 * _hxt_recovery_steps)))
+                    try:
+                        sim.mesher.set_curved_boundary_meshing(_cbr_new)
+                    except Exception:
+                        pass
+
+                    self._log(
+                        f"  Generic HXT recovery step {_hxt_recovery_steps}: "
+                        f"CLmax {_cl_cur*1e3:.4f} -> {_cl_new*1e3:.4f} mm, "
+                        f"curved_boundary {_cbr_new}"
+                    )
+                    continue
 
                 _is_edge_recovery  = "Unable to recover the edge" in _mesh_msg
                 _is_wrong_topology = "Wrong topology of boundary mesh" in _mesh_msg
@@ -1840,6 +1923,7 @@ class EmergeSolver:
             allow_gmsh = mode in ("auto", "gmsh", "both")
             allow_emerge = mode in ("auto", "emerge", "native", "both")
             shown = False
+            emerge_failed = False
 
             if allow_gmsh and _GERBER_BUILDER_OK:
                 try:
@@ -1853,7 +1937,17 @@ class EmergeSolver:
                     _sim_view(sim, plot_mesh=True)
                     shown = True
                 except Exception as exc:
+                    emerge_failed = True
                     self._log(f"WARNING: EMerge mesh viewer failed: {exc}")
+
+            # Fallback: if EMerge viewer was selected and failed, try GMSH.
+            if (not shown) and emerge_failed and _GERBER_BUILDER_OK:
+                try:
+                    self._log("  Falling back to GMSH mesh viewer ...")
+                    gmsh_view_mesh("Mesh (fallback) — close window to continue")
+                    shown = True
+                except Exception as exc:
+                    self._log(f"WARNING: GMSH mesh fallback failed: {exc}")
 
             if not shown:
                 self._log("WARNING: no mesh viewer backend available")

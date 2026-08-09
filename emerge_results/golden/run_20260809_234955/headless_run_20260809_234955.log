@@ -1,9 +1,9 @@
   PCB file   : C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
-  Output dir : C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers
+  Output dir : C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\golden\run_20260809_234955\gerbers
   kicad-cli  : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe
   Layers     : F.Cu, In1.Cu, In2.Cu, B.Cu, F.Mask, B.Mask, F.Silkscreen, B.Silkscreen, Edge.Cuts
   PCB size   : 372 kB
-  Command    : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe pcb export gerbers --output C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge.Cuts --no-x2 --no-netlist --disable-aperture-macros --no-protel-ext C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
+  Command    : C:\Program Files\KiCad\10.0\bin\kicad-cli.exe pcb export gerbers --output C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\golden\run_20260809_234955\gerbers --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge.Cuts --no-x2 --no-netlist --disable-aperture-macros --no-protel-ext C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
   Exported 9 file(s):
     ad8317_powermeter-B_Cu.gbr                             2.2 kB
     ad8317_powermeter-B_Mask.gbr                           1.5 kB
@@ -14,8 +14,8 @@
     ad8317_powermeter-F_Silkscreen.gbr                   120.6 kB
     ad8317_powermeter-In1_Cu.gbr                           1.9 kB
     ad8317_powermeter-In2_Cu.gbr                           1.9 kB
-0:00:00.001987  INFO   : EMerge v2.8.1
-[DEBUG] emerge_runner ['C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\GitHub\\ad8317_powermeter\\sim\\emerge\\emerge_runner.py', '--job', 'C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\GitHub\\ad8317_powermeter\\emerge_results\\emerge_job.json', '--debug']
+0:00:00.008403  INFO   : EMerge v2.8.1
+[DEBUG] emerge_runner ['C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\GitHub\\ad8317_powermeter\\sim\\emerge\\emerge_runner.py', '--job', 'C:\\Users\\<user>\\<cloud-folder>\\Simulation tools\\GitHub\\ad8317_powermeter\\emerge_results\\golden\\run_20260809_234955\\emerge_job.json', '--debug']
 [DEBUG] Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
 [DEBUG] emerge ok=True  ver=2.8.1  err=''
 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -31,24 +31,24 @@ Domain source: port_focus_only=true ΓÇö using port-based bounds
 Simulation domain: (133.7, -89.4) ΓÇô (150.7, -79.5) mm  margin=4.0 mm
 Passive filter bbox (KiCad mm): (133.7, 79.5) ΓÇô (150.7, 89.4)
 Creating Simulation 'ad8317_powermeter' (loglevel=WARNING)
-PCB geometry: FileBasedPCB (Gerbers from C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\gerbers)
+PCB geometry: FileBasedPCB (Gerbers from C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\emerge_results\golden\run_20260809_234955\gerbers)
 
 Loading copper layers from Gerbers ...
   Geometry simplification: ON  factor=2.50  circ_segs 64->26  res_mm 0.200->0.500
 Loading 4 copper layer(s) (n_circ=26, res_mm=0.5, pre-crop=ON)
   Gerber tiny-segment filter: min_seg_um=20.0  drop_zero_segments=True  simplify_regions=True  region_min_seg_um=120.0
   Gerber crop ad8317_powermeter-F_Cu.gbr: 376 features in bbox (133.7,-89.4)ΓÇô(150.7,-79.5) mm
-  [0] F.Cu: ad8317_powermeter-F_Cu.gbr  (43 kB)  parsing ...
-  [0] F.Cu: done  (3.1 s)
+  [0] F.Cu (layer=-1): ad8317_powermeter-F_Cu.gbr  (43 kB)  parsing ...
+  [0] F.Cu (layer=-1): done  (4.0 s)
   Gerber crop ad8317_powermeter-In1_Cu.gbr: 3 features in bbox (133.7,-89.4)ΓÇô(150.7,-79.5) mm
-  [1] In1.Cu: ad8317_powermeter-In1_Cu.gbr  (1 kB)  parsing ...
-  [1] In1.Cu: done  (0.1 s)
+  [1] In1.Cu (layer=1): ad8317_powermeter-In1_Cu.gbr  (1 kB)  parsing ...
+  [1] In1.Cu (layer=1): done  (0.2 s)
   Gerber crop ad8317_powermeter-In2_Cu.gbr: 3 features in bbox (133.7,-89.4)ΓÇô(150.7,-79.5) mm
-  [2] In2.Cu: ad8317_powermeter-In2_Cu.gbr  (1 kB)  parsing ...
-  [2] In2.Cu: done  (0.1 s)
+  [2] In2.Cu (layer=2): ad8317_powermeter-In2_Cu.gbr  (1 kB)  parsing ...
+  [2] In2.Cu (layer=2): done  (0.2 s)
   Gerber crop ad8317_powermeter-B_Cu.gbr: 5 features in bbox (133.7,-89.4)ΓÇô(150.7,-79.5) mm
-  [3] B.Cu: ad8317_powermeter-B_Cu.gbr  (2 kB)  parsing ...
-  [3] B.Cu: done  (0.2 s)
+  [3] B.Cu (layer=0): ad8317_powermeter-B_Cu.gbr  (2 kB)  parsing ...
+  [3] B.Cu (layer=0): done  (0.2 s)
   Geometry scope: port_focus_only=true
   Port PORT1 at (137.70, -85.00) mm
   Port PORT2: added R=200 ╬⌐ ΓêÑ C=2 pF load polygon
@@ -118,12 +118,12 @@ Building 3D geometry ...
   generate_air() ...
     done  (0.0 s)
   commit_geometry() ΓÇö fusing CAD solids ...
-    done  (0.5 s)
+    done  (0.8 s)
   Ghost faces neutralised: 0  (none found)
-  Sliver surfaces patched: 0  (threshold 0.10 mm)
-  Compound sliver surfaces: 0  (no slivers < 0.10 mm)
+  Sliver surfaces patched: 2  (threshold 0.10 mm)
+  Compound sliver surfaces: disabled (set EMERGE_ENABLE_COMPOUND_SLIVERS=1 to enable)
   Curved boundary resolution: 20 (post-commit)
-Model built successfully.  (8.1 s)
+Model built successfully.  (12.3 s)
 
 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 Stage 3 / 5 ΓÇö Mesh generation
@@ -131,8 +131,8 @@ Stage 3 / 5 ΓÇö Mesh generation
   Cells/lambda : 5
   Solver       : AUTO
   Curved boundary resolution: 20
-  CL scan coverage: large_surfaces=19  boundary_curves=1286  used=386
-  Skipped 900 artifact curves < 200 ┬╡m in mesh size scan
+  CL scan coverage: large_surfaces=20  boundary_curves=1120  used=271
+  Skipped 849 artifact curves < 200 ┬╡m in mesh size scan
   Shortest large-surface curve: 0.2002 mm  ΓåÆ CharacteristicLengthMax = 0.8000 mm
   GMSH option Mesh.Algorithm = 6
   GMSH option Mesh.Algorithm3D = 10
@@ -141,56 +141,45 @@ Stage 3 / 5 ΓÇö Mesh generation
   GMSH option Mesh.MaxNumThreads1D = 0
   GMSH option Mesh.MaxNumThreads2D = 0
   GMSH option Mesh.MaxNumThreads3D = 0
-  Region mesh sizes applied: 992 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
-  Copper Z-refinement: 2 layer(s), VIn=0.350 mm  VOut=10.00 mm  (Box fields: [1, 2])
-  Sliver curves constrained: 0 curves on 0 surfaces
+  Region mesh sizes applied: 1037 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
+  Copper Z-refinement: 2 layer(s), VIn=0.350 mm  VOut=10.00 mm  (Box fields: [5, 6])
+  Sliver curves constrained: 15 curves on 2 surfaces
   Pre-mesh ghost removal: none found
 Generating mesh ΓÇª
-  Model bbox: (128.70, -95.00, -6.60) ΓÇô (156.11, -73.91, 11.40) mm  size 27.41 x 21.09 x 18.00 mm
-  Entities: points=992  curves=1070  surfaces=127  volumes=11
+  Model bbox: (128.70, -95.00, -6.60) ΓÇô (156.11, -73.92, 11.40) mm  size 27.41 x 21.09 x 18.00 mm
+  Entities: points=1037  curves=1190  surfaces=178  volumes=11
   Surface diagnostics: discrete=0  orphan(no-volume)=8
-  Mesh fields configured: 3
+  Mesh fields configured: 7
   Mesh focus: top 8 surfaces by boundary complexity
-    surf 80: boundary_curves=574  tiny(<200┬╡m)=423  min_curve=0.0023 mm  bbox=17.04x9.92x0.0007 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-    surf 26: boundary_curves=112  tiny(<200┬╡m)=100  min_curve=0.0023 mm  bbox=2.15x1.56x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-    surf 142: boundary_curves=102  tiny(<200┬╡m)=4  min_curve=0.1802 mm  bbox=17.04x9.92x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
-    surf 136: boundary_curves=90  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.455 mm  adj_vols=2  type=Plane
-    surf 135: boundary_curves=82  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
-    surf 134: boundary_curves=82  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
-    surf 2: boundary_curves=80  tiny(<200┬╡m)=55  min_curve=0.0024 mm  bbox=9.20x4.25x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-    surf 18: boundary_curves=52  tiny(<200┬╡m)=44  min_curve=0.0023 mm  bbox=0.65x3.36x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-  Mesh focus summary: surfaces=127  tiny_boundary_curves_total=1401
+    surf 219: boundary_curves=469  tiny(<200┬╡m)=353  min_curve=0.0023 mm  bbox=17.04x9.92x0.0007 mm  zc=0.000 mm  adj_vols=2  type=Plane
+    surf 164: boundary_curves=101  tiny(<200┬╡m)=86  min_curve=0.0023 mm  bbox=2.15x1.56x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+    surf 112: boundary_curves=90  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
+    surf 124: boundary_curves=82  tiny(<200┬╡m)=59  min_curve=0.0024 mm  bbox=8.92x4.17x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+    surf 212: boundary_curves=82  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
+    surf 211: boundary_curves=82  tiny(<200┬╡m)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
+    surf 119: boundary_curves=53  tiny(<200┬╡m)=34  min_curve=0.0061 mm  bbox=8.90x1.15x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+    surf 143: boundary_curves=47  tiny(<200┬╡m)=36  min_curve=0.0024 mm  bbox=2.31x2.24x0.0006 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  Mesh focus summary: surfaces=178  tiny_boundary_curves_total=1711
   Mesh attempt 1/3
-  [mesh a1] still running ΓÇª 30 s  | gmsh_msgs=1284  | Info: Improving      24030 tet. on   1 thrd (GSC)
-  Mesh done. total=49.3 s  attempt=49.3 s
-  Mesh nodes: 26090
-  Mesh elements: 2D=26511  3D=139395
+  [mesh a1] still running ΓÇª 30 s  | gmsh_msgs=1455  | Info: Improving      24615 tet. on   1 thrd (GSC)
+  Mesh done. total=43.3 s  attempt=43.3 s
+  Mesh nodes: 25550
+  Mesh elements: 2D=26572  3D=136001
 
 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 Stage 4 / 5 ΓÇö Running FEM sweep
 ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   Frequency: 100 MHz ΓÇô 6.0 GHz  (9 points)
 Running FEM sweep ΓÇª
-  [FEM] still running ΓÇª 30 s  CPU 0%  MEM 66% 21133/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 60 s  CPU 24%  MEM 95% 30608/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 90 s  CPU 51%  MEM 96% 30922/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 120 s  CPU 39%  MEM 98% 31531/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 151 s  CPU 38%  MEM 96% 30831/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 181 s  CPU 38%  MEM 98% 31674/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 211 s  CPU 36%  MEM 98% 31509/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 241 s  CPU 37%  MEM 99% 31856/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 271 s  CPU 36%  MEM 100% 32046/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 301 s  CPU 42%  MEM 69% 22126/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 331 s  CPU 41%  MEM 83% 26600/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 362 s  CPU 38%  MEM 89% 28769/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 392 s  CPU 38%  MEM 95% 30681/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 422 s  CPU 34%  MEM 98% 31509/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 452 s  CPU 37%  MEM 99% 31914/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 482 s  CPU 38%  MEM 98% 31572/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 512 s  CPU 38%  MEM 65% 21082/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 542 s  CPU 38%  MEM 81% 25978/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 573 s  CPU 40%  MEM 89% 28767/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 603 s  CPU 39%  MEM 88% 28341/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 633 s  CPU 35%  MEM 93% 29840/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 663 s  CPU 36%  MEM 96% 30780/32213 MiB  GPU 0% util  5/6113 MiB
-  [FEM] still running ΓÇª 693 s  CPU 37%  MEM 97% 31248/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 30 s  CPU 0%  MEM 75% 24290/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 60 s  CPU 27%  MEM 85% 27460/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 90 s  CPU 39%  MEM 93% 29976/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 121 s  CPU 42%  MEM 98% 31658/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 151 s  CPU 40%  MEM 96% 30889/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 181 s  CPU 40%  MEM 99% 31844/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 211 s  CPU 44%  MEM 96% 31049/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 241 s  CPU 43%  MEM 96% 30828/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 271 s  CPU 41%  MEM 88% 28396/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 302 s  CPU 40%  MEM 96% 30773/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 332 s  CPU 39%  MEM 38% 12310/32213 MiB  GPU 0% util  5/6113 MiB
+  [FEM] still running ΓÇª 362 s  CPU 43%  MEM 75% 24059/32213 MiB  GPU 0% util  5/6113 MiB

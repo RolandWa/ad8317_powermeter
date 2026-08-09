@@ -18,6 +18,7 @@ import sys
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
+from gerber_builder import load_copper_layers, load_vias_from_drills
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import emerge_runner as er
@@ -138,6 +139,82 @@ class TestModuleState:
     def test_emerge_ok(self):
         assert er._EMERGE_OK is True, (
             f"emerge mock not loaded: {er._EMERGE_ERR}")
+
+
+class TestGerberLayerIndexMapping:
+
+    def test_filebasedpcb_layer_indices_follow_emerge_convention(self, tmp_path, pcb_file):
+        class _FakePCB:
+            def __init__(self):
+                self.calls = []
+
+            def layer_from_file(self, layer, filename, **kw):
+                self.calls.append((layer, pathlib.Path(filename).name))
+                return object()
+
+        gerber_dir = tmp_path / "gerbers"
+        gerber_dir.mkdir(parents=True, exist_ok=True)
+
+        # Minimal valid Gerber body for loader path.
+        gbr_text = "%FSLAX46Y46*%\nG01*\nX000000Y000000D02*\nM02*\n"
+        for name in ("F_Cu", "In1_Cu", "In2_Cu", "B_Cu"):
+            (gerber_dir / f"{pcb_file.stem}-{name}.gbr").write_text(gbr_text, encoding="utf-8")
+
+        stackup = {
+            "layers": [
+                {"name": "F.Cu", "type": "copper", "thick": 0.035, "er": None, "tand": None},
+                {"name": "In1.Cu", "type": "copper", "thick": 0.035, "er": None, "tand": None},
+                {"name": "In2.Cu", "type": "copper", "thick": 0.035, "er": None, "tand": None},
+                {"name": "B.Cu", "type": "copper", "thick": 0.035, "er": None, "tand": None},
+            ]
+        }
+
+        fake = _FakePCB()
+        loaded = load_copper_layers(
+            pcb=fake,
+            stackup=stackup,
+            pcb_path=pcb_file,
+            gerber_dir=gerber_dir,
+            circ_segs=16,
+            res_mm=0.2,
+            min_seg_um=0.0,
+            drop_zero_segments=False,
+            simplify_regions=False,
+            region_min_seg_um=0.0,
+            sim_bounds=None,
+            log=None,
+        )
+
+        assert loaded == 4
+        # FileBasedPCB mapping convention:
+        # F.Cu=-1, In1=1, In2=2, B.Cu=0
+        assert [c[0] for c in fake.calls] == [-1, 1, 2, 0]
+
+    def test_load_vias_from_drills_calls_vias_from_file(self, tmp_path, pcb_file):
+        class _FakePCB:
+            def __init__(self):
+                self.via_calls = []
+
+            def vias_from_file(self, filename, **kw):
+                self.via_calls.append(pathlib.Path(filename).name)
+
+        gerber_dir = tmp_path / "gerbers"
+        gerber_dir.mkdir(parents=True, exist_ok=True)
+
+        # Typical KiCad separate TH naming.
+        (gerber_dir / f"{pcb_file.stem}-PTH.drl").write_text("M48\nM30\n", encoding="utf-8")
+        (gerber_dir / f"{pcb_file.stem}-NPTH.drl").write_text("M48\nM30\n", encoding="utf-8")
+
+        fake = _FakePCB()
+        loaded = load_vias_from_drills(
+            pcb=fake,
+            gerber_dir=gerber_dir,
+            pcb_path=pcb_file,
+            log=None,
+        )
+
+        assert loaded == 2
+        assert fake.via_calls == [f"{pcb_file.stem}-NPTH.drl", f"{pcb_file.stem}-PTH.drl"]
 
     def test_emerge_version_set(self):
         assert er._EMERGE_VER != ""

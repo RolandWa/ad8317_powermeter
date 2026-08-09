@@ -182,6 +182,35 @@ class GerberExporter:
                     self._log(result.stderr.strip())
                 return []
 
+            # Also export Excellon drills so vias/PTH holes can be reconstructed.
+            drill_cmd = [
+                self.kicad_cli, "pcb", "export", "drill",
+                "--output", str(self.output_dir),
+                "--format", "excellon",
+                "--drill-origin", "absolute",
+                "--excellon-units", "mm",
+                "--excellon-separate-th",
+                str(self.pcb_path),
+            ]
+            self._log(f"  Drill cmd  : {' '.join(drill_cmd)}")
+            drill_result = subprocess.run(
+                drill_cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if DEBUG:
+                if drill_result.stdout.strip():
+                    for line in drill_result.stdout.strip().splitlines():
+                        self._log(f"    [kicad-cli drill stdout] {line}")
+                if drill_result.stderr.strip():
+                    for line in drill_result.stderr.strip().splitlines():
+                        self._log(f"    [kicad-cli drill stderr] {line}")
+            if drill_result.returncode != 0:
+                self._log(f"  WARNING: drill export failed (code {drill_result.returncode}); continuing without drill files")
+                if drill_result.stderr.strip() and not DEBUG:
+                    self._log(drill_result.stderr.strip())
+
             # Collect exported files
             exported = []
             for ext in ("*.gbr", "*.gtl", "*.gbl", "*.drl"):

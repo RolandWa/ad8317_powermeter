@@ -354,6 +354,30 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             log(msg)
 
     cu_layers = [l for l in stackup.get("layers", []) if l["type"] == "copper"]
+
+    def _layer_index_for_name(layer_name: str, fallback_idx: int) -> int:
+        """
+        Map KiCad copper layer names to FileBasedPCB indices.
+
+        EMerge FileBasedPCB convention:
+          -1 -> F.Cu (top)
+           0 -> B.Cu (bottom)
+           1..N -> In1.Cu, In2.Cu, ...
+        """
+        name = str(layer_name or "").strip()
+        if name == "F.Cu":
+            return -1
+        if name == "B.Cu":
+            return 0
+
+        m = _re.match(r"^In(\d+)\.Cu$", name)
+        if m:
+            try:
+                return int(m.group(1))
+            except Exception:
+                pass
+
+        return fallback_idx
     suffix = ", pre-crop=ON)" if sim_bounds else ")"
     _log(f"Loading {len(cu_layers)} copper layer(s) "
          f"(n_circ={circ_segs}, res_mm={res_mm}{suffix}")
@@ -373,6 +397,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
 
     for idx, layer in enumerate(cu_layers):
         name     = layer["name"]
+        em_layer_idx = _layer_index_for_name(name, idx)
         gbr_stem = name.replace(".", "_")
         candidates = [
             gerber_dir / f"{pcb_stem}-{gbr_stem}.gbr",
@@ -381,7 +406,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
         gbr = next((p for p in candidates if p.exists()), None)
 
         if gbr is None:
-            _log(f"  [{idx}] {name}: WARNING — Gerber not found "
+            _log(f"  [{idx}] {name} (layer={em_layer_idx}): WARNING — Gerber not found "
                  f"(searched: {[c.name for c in candidates]})")
             continue
 
@@ -409,13 +434,13 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
                 load_path = sanitized
 
         size_kb = load_path.stat().st_size / 1024
-        _log(f"  [{idx}] {name}: {load_path.name}  ({size_kb:.0f} kB)  parsing ...")
+        _log(f"  [{idx}] {name} (layer={em_layer_idx}): {load_path.name}  ({size_kb:.0f} kB)  parsing ...")
         t0 = time.monotonic()
         try:
-            pcb.layer_from_file(idx, str(load_path),
+            pcb.layer_from_file(em_layer_idx, str(load_path),
                                 res_mm=res_mm,
                                 n_circ_segments=circ_segs)
-            _log(f"  [{idx}] {name}: done  ({time.monotonic()-t0:.1f} s)")
+            _log(f"  [{idx}] {name} (layer={em_layer_idx}): done  ({time.monotonic()-t0:.1f} s)")
             loaded += 1
         except Exception as exc:
             # Cropped Gerbers can occasionally produce parser edge-cases on
@@ -424,24 +449,80 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             retried = False
             if sim_bounds and load_path != gbr and gbr.exists():
                 retried = True
-                _log(f"  [{idx}] {name}: cropped parse failed — retrying full Gerber ({gbr.name})")
+                _log(f"  [{idx}] {name} (layer={em_layer_idx}): cropped parse failed — retrying full Gerber ({gbr.name})")
                 t1 = time.monotonic()
                 try:
-                    pcb.layer_from_file(idx, str(gbr),
+                    pcb.layer_from_file(em_layer_idx, str(gbr),
                                         res_mm=res_mm,
                                         n_circ_segments=circ_segs)
-                    _log(f"  [{idx}] {name}: done (full Gerber fallback)  ({time.monotonic()-t1:.1f} s)")
+                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): done (full Gerber fallback)  ({time.monotonic()-t1:.1f} s)")
                     loaded += 1
                     continue
                 except Exception as exc2:
-                    _log(f"  [{idx}] {name}: FAILED on full Gerber fallback — {exc2}")
+                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): FAILED on full Gerber fallback — {exc2}")
                     if log:
                         traceback.print_exc()
 
             if not retried:
-                _log(f"  [{idx}] {name}: FAILED — {exc}")
+                _log(f"  [{idx}] {name} (layer={em_layer_idx}): FAILED — {exc}")
                 if log:
                     traceback.print_exc()
+
+    return loaded
+
+
+def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
+                          pcb_path: pathlib.Path | None = None,
+                          log=None) -> int:
+    """
+    Load drill/via definitions from Excellon drill files into *pcb*.
+
+    This complements copper Gerber loading by adding plated through-hole/via
+    geometry so vertical current paths exist in the 3D model.
+
+    Returns:
+        Number of drill files successfully loaded via vias_from_file().
+    """
+    def _log(msg):
+        if log:
+            log(msg)
+
+    if not gerber_dir.is_dir():
+        _log("  Drill import skipped: Gerber directory missing")
+        return 0
+
+    pcb_stem = pcb_path.stem if (pcb_path and pcb_path.exists()) else ""
+    drill_files = []
+    if pcb_stem:
+        drill_files.extend(sorted(gerber_dir.glob(f"{pcb_stem}*.drl")))
+    drill_files.extend(sorted(gerber_dir.glob("*.drl")))
+
+    # Deduplicate while preserving order.
+    seen = set()
+    ordered = []
+    for p in drill_files:
+        key = str(p.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(p)
+
+    if not ordered:
+        _log("  Drill import: no .drl files found")
+        return 0
+
+    loaded = 0
+    _log(f"Loading drill files ({len(ordered)}) ...")
+    for drl in ordered:
+        size_kb = drl.stat().st_size / 1024
+        _log(f"  drill: {drl.name}  ({size_kb:.1f} kB)  parsing ...")
+        t0 = time.monotonic()
+        try:
+            pcb.vias_from_file(str(drl))
+            _log(f"  drill: {drl.name}: done  ({time.monotonic()-t0:.1f} s)")
+            loaded += 1
+        except Exception as exc:
+            _log(f"  WARNING: vias_from_file failed for {drl.name}: {exc}")
 
     return loaded
 
