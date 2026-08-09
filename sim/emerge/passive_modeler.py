@@ -18,6 +18,7 @@ PassiveElementModeler
 import cmath
 import math
 import pathlib
+import inspect
 
 
 # =============================================================================
@@ -180,8 +181,9 @@ class PassiveElementModeler:
                       "emerge version — passives skipped")
             return 0
 
-        # series_impedance / parallel_impedance are available when the FreeCAD
-        # exporter helper package is installed; fall back to direct R/L/C kwargs.
+        # Keep the PCB extraction/filtering path, but model each component body
+        # the same way the stripline testcase does: a direct lumped-element
+        # material spanning pad1→pad2 with the parsed R/L/C value.
         try:
             from basicemergesolverhelperpackage.EMergeConstants import (
                 series_impedance as _series_impedance,
@@ -206,16 +208,24 @@ class PassiveElementModeler:
             return 0
 
         if _SERIES_HELPERS:
-            self._log("  Using series_impedance/parallel_impedance from EMergeConstants.")
+            self._log("  Using direct lumped-element materials (stripline-style insertion).")
 
         board_t = self.stackup["board_thickness_mm"]  * 1e-3
         cu_t    = self.stackup["copper_thickness_mm"] * 1e-3
         # Use API properties for exact copper-layer Z; fall back to stackup values
         z_top    = getattr(self.pcb_obj, "top",    board_t)
-        z_bottom = getattr(self.pcb_obj, "bottom", 0.0)
+        z_bottom = getattr(self.pcb_obj, "bottom", cu_t)
 
         added = skipped = 0
+        path_model_used = False
         self._log(f"  Passive components in PCB: {len(components)}")
+
+        try:
+            _pcb_new_sig = inspect.signature(self.pcb_obj.new)
+            _pcb_compile_paths = hasattr(self.pcb_obj, "compile_paths")
+        except Exception:
+            _pcb_new_sig = None
+            _pcb_compile_paths = False
 
         for comp in components:
             ref   = comp["ref"]
@@ -253,8 +263,12 @@ class PassiveElementModeler:
                     skipped += 1
                     continue
 
-            x1, y1 = comp["pad1_xy"][0] * 1e-3, comp["pad1_xy"][1] * 1e-3
-            x2, y2 = comp["pad2_xy"][0] * 1e-3, comp["pad2_xy"][1] * 1e-3
+            # KiCad reader coordinates are Y-down in mm. Convert to model
+            # coordinates (Gerber Y-up) to align with runner ports/bounds.
+            x1 = comp["pad1_xy"][0] * 1e-3
+            y1 = -comp["pad1_xy"][1] * 1e-3
+            x2 = comp["pad2_xy"][0] * 1e-3
+            y2 = -comp["pad2_xy"][1] * 1e-3
             dx, dy = x2 - x1, y2 - y1
             length = math.hypot(dx, dy)
             if length < 1e-6:
@@ -306,66 +320,77 @@ class PassiveElementModeler:
                 mat_name = f"{ref}_{comp_type}{value_si:.3g}"
                 dir_vec = (float(ux), float(uy), 0.0)
 
-                mat = None
-                if _SERIES_HELPERS:
+                # Prefer the stripline-style path API when the PCB object
+                # supports it, so the passive is visible as a meshable element.
+                if _pcb_new_sig is not None and _pcb_compile_paths:
                     try:
-                        from emsutil.material import FreqDependent as _FreqDependent, Material as _Material
-                        from emsutil.lib import EPS0 as _EPS0
-                        import numpy as _np
-
-                        if comp_type == "R":
-                            z_func = _series_impedance(R=float(value_si))
-                        elif comp_type == "L":
-                            z_func = _series_impedance(L=float(value_si))
+                        if _SERIES_HELPERS:
+                            if comp_type == "R":
+                                z_func = _series_impedance(R=float(value_si))
+                            elif comp_type == "L":
+                                z_func = _series_impedance(L=float(value_si))
+                            else:
+                                z_func = _parallel_impedance(C=float(value_si))
                         else:
-                            z_func = _series_impedance(C=float(value_si))
+                            if comp_type == "R":
+                                z_func = lambda f, _r=float(value_si): complex(_r)
+                            elif comp_type == "L":
+                                z_func = lambda f, _l=float(value_si): complex(0.0, 2.0 * math.pi * float(f) * _l)
+                            else:
+                                z_func = lambda f, _c=float(value_si): complex(1e30) if float(f) == 0 else complex(0.0, -1.0 / (2.0 * math.pi * float(f) * _c))
 
-                        _dv = _np.array(dir_vec)
-                        _dvout = _np.outer(_dv, _dv)
-                        _d = float(body_length)
-                        _A = float(area)
+                        new_kwargs = {}
+                        if "z" in _pcb_new_sig.parameters:
+                            new_kwargs["z"] = z
 
-                        # Convert the helper Z(f) into anisotropic epsilon so the
-                        # exporter uses the same impedance methodology as filter tests.
-                        def _fer_from_z(f):
-                            w = 2.0 * math.pi * f
-                            zf = z_func(f)
-                            if abs(zf) < 1e-30:
-                                zf = complex(1e-30, 0.0)
-                            er_s = _d / (_EPS0 * _A * 1j * w * zf)
-                            return _dvout * (er_s - 1.0) + _np.eye(3)
+                        lead_length = max(0.0, 0.5 * (float(length) - float(body_length)))
+                        path = self.pcb_obj.new(x1, y1, body_w, (ux, uy), **new_kwargs)
+                        path = path.straight(lead_length)
+                        path = path.lumped_element(z_func, size=(float(body_length), body_w))
+                        path = path.straight(lead_length)
+                        if hasattr(path, "prio_set"):
+                            path.prio_set(0)
+                        path_model_used = True
+                        layer_s = "top" if z == board_t else "bot"
+                        self._log(
+                            f"    {ref:<8} {comp_type}  {val_str:<14}  {layer_s}  "
+                            f"({x1*1e3:.2f},{y1*1e3:.2f})→({x2*1e3:.2f},{y2*1e3:.2f}) mm  "
+                            f"len={body_length*1e3:.2f} mm  lead={lead_length*1e3:.2f} mm  "
+                            f"w={body_w*1e3:.2f} mm  [path]")
+                        added += 1
+                        continue
+                    except Exception as exc:
+                        self._log(f"    {ref:<8} path model failed: {exc} — falling back to polygon patch")
 
-                        mat = _Material(er=_FreqDependent(matrix=_fer_from_z), name=mat_name)
-                    except Exception:
-                        mat = None
+                # Fallback: direct lumped-element patch geometry.
+                # Still uses the parsed PCB footprint geometry, but remains
+                # compatible with PCB objects that do not expose the path API.
+                kwargs = {comp_type: float(value_si)}
+                mat = lumped_element_material(
+                    material_name = mat_name,
+                    direction     = dir_vec,
+                    length        = float(body_length),
+                    Area          = float(area),
+                    **kwargs,
+                )
 
-                if mat is None:
-                    kwargs = {comp_type: float(value_si)}
-                    mat = lumped_element_material(
-                        material_name = mat_name,
-                        direction     = dir_vec,
-                        length        = float(body_length),
-                        Area          = float(area),
-                        **kwargs,
-                    )
-
-                # NOTE: works correctly with FileBasedPCB (Gerber gap in copper).
-                # With PCBNew (solid copper), current bypasses the polygon.
                 self.pcb_obj.add_poly(xs=xs, ys=ys, z=z, material=mat, name=ref)
                 layer_s = "top" if z == board_t else "bot"
-                if _SERIES_HELPERS:
-                    z1g = z_func(1e9) if 'z_func' in locals() else complex(float("nan"), float("nan"))
-                    zinfo = f"  |Z@1GHz|={abs(z1g):.3g}Ω ∠{math.degrees(cmath.phase(z1g)):+.1f}°"
-                else:
-                    zinfo = ""
                 self._log(
                     f"    {ref:<8} {comp_type}  {val_str:<14}  {layer_s}  "
                     f"({x1*1e3:.2f},{y1*1e3:.2f})→({x2*1e3:.2f},{y2*1e3:.2f}) mm  "
-                    f"len={body_length*1e3:.2f} mm  w={body_w*1e3:.2f} mm{zinfo}")
+                    f"len={body_length*1e3:.2f} mm  w={body_w*1e3:.2f} mm")
                 added += 1
             except Exception as exc:
                 self._log(f"    {ref:<8} passive material build failed: {exc}")
                 skipped += 1
+
+        if path_model_used and _pcb_compile_paths:
+            try:
+                self.pcb_obj.compile_paths(merge=True)
+                self._log("  Passive paths compiled with merge=True")
+            except Exception as exc:
+                self._log(f"  WARNING: passive path compile failed: {exc}")
 
         self._log(f"  Passives: {added} modeled, {skipped} skipped")
         return added

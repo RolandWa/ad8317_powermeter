@@ -512,6 +512,40 @@ class TestPassiveElementModeler:
                 })
         return MockPCB()
 
+    def _make_path_pcb_obj(self):
+        """Return a mock PCB object that records stripline-style path calls."""
+        class MockPath:
+            def __init__(self, pcb, name):
+                self.pcb = pcb
+                self.name = name
+                self.calls = []
+            def straight(self, length):
+                self.calls.append(("straight", length))
+                return self
+            def lumped_element(self, z_func, size=None):
+                self.calls.append(("lumped_element", size))
+                self.pcb.path_calls.append({"name": self.name, "size": size, "calls": self.calls})
+                return self
+            def prio_set(self, value):
+                self.calls.append(("prio_set", value))
+                return self
+
+        class MockPCB:
+            def __init__(self):
+                self.add_poly_calls = []
+                self.path_calls = []
+            def new(self, x, y, width, direction, z=None):
+                return MockPath(self, f"path@{x:.3f},{y:.3f}")
+            def compile_paths(self, merge=True):
+                self.path_calls.append({"compiled": merge})
+                return [object()]
+            def add_poly(self, xs, ys, z=0, material=None, name=None):
+                self.add_poly_calls.append({
+                    "name": name, "z": z,
+                    "material": material, "xs": xs, "ys": ys,
+                })
+        return MockPCB()
+
     def _make_stackup(self):
         return {
             "board_thickness_mm":  1.6,
@@ -656,3 +690,22 @@ class TestPassiveElementModeler:
             outline_pts=[],
         ).run()
         assert count == 3   # R1, C1, L1 (R2=0R and R3=DNP still skipped)
+
+    def test_path_model_used_when_available(self, passive_pcb_file):
+        """When the PCB API exposes path routing, use the stripline-style model."""
+        pcb_obj = self._make_path_pcb_obj()
+        stackup = self._make_stackup()
+        count = er.PassiveElementModeler(
+            pcb_obj=pcb_obj, pcb_path=passive_pcb_file, stackup=stackup,
+        ).run()
+        assert count == 3
+        assert pcb_obj.add_poly_calls == []
+        assert any(entry.get("compiled") for entry in pcb_obj.path_calls if isinstance(entry, dict))
+        assert any(call.get("name", "").startswith("path@") for call in pcb_obj.path_calls if isinstance(call, dict) and "name" in call)
+        r1_path = next(call for call in pcb_obj.path_calls if isinstance(call, dict) and call.get("name", "").startswith("path@"))
+        straight_calls = [c for c in r1_path["calls"] if c[0] == "straight"]
+        lumped_calls = [c for c in r1_path["calls"] if c[0] == "lumped_element"]
+        assert len(straight_calls) == 2
+        assert len(lumped_calls) == 1
+        assert straight_calls[0][1] < 1.0e-3
+        assert lumped_calls[0][1][0] < 1.0e-3

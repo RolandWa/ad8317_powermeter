@@ -1,6 +1,6 @@
-EMerge Plugin v1.2.0 — 2026-08-09 21:16:04
+EMerge Plugin v1.2.0 — 2026-08-09 22:03:30
 PCB:          C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
-emerge:       ?  (C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe)
+emerge:       2.8.1  (C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe)
 KiCad Python: C:\Program Files\KiCad\10.0\bin\kicad.exe
 
   PCB file   : C:\Users\<user>\<cloud-folder>\Simulation tools\GitHub\ad8317_powermeter\kicad\ad8317_powermeter.kicad_pcb
@@ -47,16 +47,16 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   Gerber tiny-segment filter: min_seg_um=20.0  drop_zero_segments=True  simplify_regions=True  region_min_seg_um=120.0
   solver:   Gerber crop ad8317_powermeter-F_Cu.gbr: 376 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [0] F.Cu: ad8317_powermeter-F_Cu.gbr  (43 kB)  parsing ...
-  solver:   [0] F.Cu: done  (3.4 s)
+  solver:   [0] F.Cu: done  (4.1 s)
   solver:   Gerber crop ad8317_powermeter-In1_Cu.gbr: 3 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [1] In1.Cu: ad8317_powermeter-In1_Cu.gbr  (1 kB)  parsing ...
-  solver:   [1] In1.Cu: done  (0.1 s)
+  solver:   [1] In1.Cu: done  (0.2 s)
   solver:   Gerber crop ad8317_powermeter-In2_Cu.gbr: 3 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [2] In2.Cu: ad8317_powermeter-In2_Cu.gbr  (1 kB)  parsing ...
-  solver:   [2] In2.Cu: done  (0.1 s)
+  solver:   [2] In2.Cu: done  (0.2 s)
   solver:   Gerber crop ad8317_powermeter-B_Cu.gbr: 5 features in bbox (133.7,-89.4)–(150.7,-79.5) mm
   solver:   [3] B.Cu: ad8317_powermeter-B_Cu.gbr  (2 kB)  parsing ...
-  solver:   [3] B.Cu: done  (0.1 s)
+  solver:   [3] B.Cu: done  (0.2 s)
   solver:   Geometry scope: port_focus_only=true
   solver:   Port PORT1 at (137.70, -85.00) mm
   solver:   Port PORT2: added R=200 Ω ∥ C=2 pF load polygon
@@ -65,12 +65,12 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   Port PORT3 at (146.74, -83.49) mm
   solver: 
   solver: Modeling passive components (R/L/C) ...
-  solver:   Using series_impedance/parallel_impedance from EMergeConstants.
+  solver:   Using direct lumped-element materials (stripline-style insertion).
   solver:   Passive components in PCB: 49
   solver:     R6       '10K'  → skipped (outside board outline, parsed R 10 kΩ)
   solver:     C8       '10uF/'  → skipped (outside board outline, parsed C 1e-05 F)
-  solver:     R2       R  100 Ω           bot  (142.91,84.99)→(142.91,83.97) mm  len=0.38 mm  w=0.54 mm  |Z@1GHz|=100Ω ∠+0.0°
-  solver:     C1       C  47 nF           bot  (144.06,85.59)→(145.01,85.59) mm  len=0.40 mm  w=0.62 mm  |Z@1GHz|=0.00339Ω ∠-90.0°
+  solver:     R2       R  100 Ω           bot  (142.91,-84.99)→(142.91,-83.97) mm  len=0.38 mm  lead=0.32 mm  w=0.54 mm  [path]
+  solver:     C1       C  47 nF           bot  (144.06,-85.59)→(145.01,-85.59) mm  len=0.40 mm  lead=0.28 mm  w=0.62 mm  [path]
   solver:     C28      '10uF/16V'  → skipped (outside board outline, parsed C 1e-05 F)
   solver:     C32      '1uF/'  → skipped (outside board outline, parsed C 1e-06 F)
   solver:     C23      '1uF/'  → skipped (outside board outline, parsed C 1e-06 F)
@@ -79,16 +79,16 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:     C3       '1nF / C0G'  → skipped (outside board outline, parsed C 1e-09 F)
   solver:     R22      '100k'  → skipped (outside board outline, parsed R 100 kΩ)
   solver:     R17      '100k'  → skipped (outside board outline, parsed R 100 kΩ)
-  solver:     R1       R  100 Ω           bot  (141.81,85.00)→(141.81,83.98) mm  len=0.38 mm  w=0.54 mm  |Z@1GHz|=100Ω ∠+0.0°
+  solver:     R1       R  100 Ω           bot  (141.81,-85.00)→(141.81,-83.98) mm  len=0.38 mm  lead=0.32 mm  w=0.54 mm  [path]
   solver:     R19      '100k'  → skipped (outside board outline, parsed R 100 kΩ)
   solver:     R14      '1k5'  → skipped (outside board outline, parsed R 1.5 kΩ)
   solver:     C18      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
-  solver:     C6       C  8.2 pF          bot  (147.22,87.60)→(148.18,87.60) mm  len=0.40 mm  w=0.62 mm  |Z@1GHz|=19.4Ω ∠-90.0°
+  solver:     C6       C  8.2 pF          bot  (147.22,-87.60)→(148.18,-87.60) mm  len=0.40 mm  lead=0.28 mm  w=0.62 mm  [path]
   solver:     C17      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
   solver:     C24      '1uF/'  → skipped (outside board outline, parsed C 1e-06 F)
-  solver:     R21      R  10 kΩ           bot  (145.88,81.90)→(146.52,81.90) mm  len=0.18 mm  w=0.40 mm  |Z@1GHz|=1e+04Ω ∠+0.0°
+  solver:     R21      R  10 kΩ           bot  (145.88,-81.90)→(146.52,-81.90) mm  len=0.18 mm  lead=0.23 mm  w=0.40 mm  [path]
   solver:     R16      '10k NTC Thermistor'  → skipped (outside board outline, parsed R 10 kΩ)
-  solver:     R4       R  1 kΩ            bot  (150.10,85.51)→(150.10,84.49) mm  len=0.38 mm  w=0.54 mm  |Z@1GHz|=1e+03Ω ∠+0.0°
+  solver:     R4       R  1 kΩ            bot  (150.10,-85.51)→(150.10,-84.49) mm  len=0.38 mm  lead=0.32 mm  w=0.54 mm  [path]
   solver:     C10      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
   solver:     R13      '0R'  → skipped (unparseable / DNP / 0R)
   solver:     R9       '5K1'  → skipped (outside board outline, parsed R 5.1 kΩ)
@@ -99,15 +99,15 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:     C11      '4.7uF'  → skipped (outside board outline, parsed C 4.7e-06 F)
   solver:     C12      '10uF/'  → skipped (outside board outline, parsed C 1e-05 F)
   solver:     C26      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
-  solver:     R3       R  1 kΩ            bot  (150.09,83.49)→(151.11,83.49) mm  len=0.48 mm  w=0.64 mm  |Z@1GHz|=1e+03Ω ∠+0.0°
+  solver:     R3       R  1 kΩ            bot  (150.09,-83.49)→(151.11,-83.49) mm  len=0.48 mm  lead=0.27 mm  w=0.64 mm  [path]
   solver:     C13      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
   solver:     R20      '10K'  → skipped (outside board outline, parsed R 10 kΩ)
-  solver:     C4       C  100 nF          bot  (148.28,80.90)→(147.32,80.90) mm  len=0.40 mm  w=0.62 mm  |Z@1GHz|=0.00159Ω ∠-90.0°
+  solver:     C4       C  100 nF          bot  (148.28,-80.90)→(147.32,-80.90) mm  len=0.40 mm  lead=0.28 mm  w=0.62 mm  [path]
   solver:     C31      '1uF/'  → skipped (outside board outline, parsed C 1e-06 F)
-  solver:     C5       C  10 µF           bot  (148.02,81.90)→(147.38,81.90) mm  len=0.18 mm  w=0.40 mm  |Z@1GHz|=1.59e-05Ω ∠-90.0°
-  solver:     R5       R  12 kΩ           bot  (149.60,80.89)→(149.60,81.91) mm  len=0.38 mm  w=0.54 mm  |Z@1GHz|=1.2e+04Ω ∠+0.0°
+  solver:     C5       C  10 µF           bot  (148.02,-81.90)→(147.38,-81.90) mm  len=0.18 mm  lead=0.23 mm  w=0.40 mm  [path]
+  solver:     R5       R  12 kΩ           bot  (149.60,-80.89)→(149.60,-81.91) mm  len=0.38 mm  lead=0.32 mm  w=0.54 mm  [path]
   solver:     C29      '10uF/16V'  → skipped (outside board outline, parsed C 1e-05 F)
-  solver:     C2       C  47 nF           bot  (144.08,83.49)→(145.03,83.49) mm  len=0.40 mm  w=0.62 mm  |Z@1GHz|=0.00339Ω ∠-90.0°
+  solver:     C2       C  47 nF           bot  (144.08,-83.49)→(145.03,-83.49) mm  len=0.40 mm  lead=0.28 mm  w=0.62 mm  [path]
   solver:     C14      '10uF/'  → skipped (outside board outline, parsed C 1e-05 F)
   solver:     C25      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
   solver:     R18      '100k'  → skipped (outside board outline, parsed R 100 kΩ)
@@ -116,6 +116,7 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:     C30      '100nF'  → skipped (outside board outline, parsed C 1e-07 F)
   solver:     R10      '5K1'  → skipped (outside board outline, parsed R 5.1 kΩ)
   solver:     C15      '10uF/'  → skipped (outside board outline, parsed C 1e-05 F)
+  solver:   Passive paths compiled with merge=True
   solver:   Passives: 11 modeled, 38 skipped
   solver: 
   solver: Building 3D geometry ...
@@ -125,18 +126,13 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   generate_air() ...
   solver:     done  (0.0 s)
   solver:   commit_geometry() — fusing CAD solids ...
-  solver:     done  (0.4 s)
+  solver:     done  (0.6 s)
   solver:   Ghost faces neutralised: 0  (none found)
   solver:   Sliver surfaces patched: 0  (threshold 0.10 mm)
   solver:   Compound sliver surfaces: 0  (no slivers < 0.10 mm)
   solver:   Curved boundary resolution: 20 (post-commit)
-  solver: Model built successfully.  (9.5 s)
+  solver: Model built successfully.  (11.5 s)
   solver: Showing 3D geometry — close the viewer window to continue ...
-  solver: 
-  solver: ============================================================
-  solver: Geometry — close window to continue
-  solver: ============================================================
-  solver: Geometry viewer closed.
   solver: 
   solver: ────────────────────────────────────────────────────────────
   solver: Stage 3 / 5 — Mesh generation
@@ -144,9 +140,9 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   Cells/lambda : 5
   solver:   Solver       : AUTO
   solver:   Curved boundary resolution: 20
-  solver:   CL scan coverage: large_surfaces=19  boundary_curves=1188  used=292
-  solver:   Skipped 896 artifact curves < 200 µm in mesh size scan
-  solver:   Shortest large-surface curve: 0.2010 mm  → CharacteristicLengthMax = 0.8000 mm
+  solver:   CL scan coverage: large_surfaces=19  boundary_curves=1286  used=386
+  solver:   Skipped 900 artifact curves < 200 µm in mesh size scan
+  solver:   Shortest large-surface curve: 0.2002 mm  → CharacteristicLengthMax = 0.8000 mm
   solver:   GMSH option Mesh.Algorithm = 6
   solver:   GMSH option Mesh.Algorithm3D = 10
   solver:   GMSH option Mesh.Smoothing = 10
@@ -154,52 +150,47 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver:   GMSH option Mesh.MaxNumThreads1D = 0
   solver:   GMSH option Mesh.MaxNumThreads2D = 0
   solver:   GMSH option Mesh.MaxNumThreads3D = 0
-  solver:   Region mesh sizes applied: 894 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
-  solver:   Copper Z-refinement: 2 layer(s), VIn=0.350 mm  VOut=10.00 mm  (Box fields: [1, 2])
+  solver:   Region mesh sizes applied: 992 vertices (Cu=0.60 Comp=0.90 Sub=2.00 Air=10.00 mm)
+  solver:   Copper Z-refinement: 2 layer(s), VIn=0.350 mm  VOut=10.00 mm  (Box fields: [3, 4])
   solver:   Sliver curves constrained: 0 curves on 0 surfaces
   solver:   Pre-mesh ghost removal: none found
   solver: Generating mesh …
-  solver:   Model bbox: (128.69, -95.01, -6.62) – (155.75, -73.90, 11.41) mm  size 27.06 x 21.11 x 18.03 mm
-  solver:   Entities: points=894  curves=944  surfaces=89  volumes=11
-  solver:   Surface diagnostics: discrete=0  orphan(no-volume)=6
-  solver:   Mesh fields configured: 3
+  solver:   Model bbox: (128.70, -95.00, -6.60) – (156.11, -73.91, 11.40) mm  size 27.41 x 21.09 x 18.00 mm
+  solver:   Entities: points=992  curves=1070  surfaces=127  volumes=11
+  solver:   Surface diagnostics: discrete=0  orphan(no-volume)=8
+  solver:   Mesh fields configured: 5
   solver:   Mesh focus: top 8 surfaces by boundary complexity
-  solver:     surf 47: boundary_curves=574  tiny(<200µm)=423  min_curve=0.0023 mm  bbox=17.04x9.92x0.0004 mm  zc=-1.600 mm  adj_vols=2  type=Plane
+  solver:     surf 80: boundary_curves=574  tiny(<200µm)=423  min_curve=0.0023 mm  bbox=17.04x9.92x0.0007 mm  zc=-1.600 mm  adj_vols=2  type=Plane
   solver:     surf 26: boundary_curves=112  tiny(<200µm)=100  min_curve=0.0023 mm  bbox=2.15x1.56x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-  solver:     surf 97: boundary_curves=90  tiny(<200µm)=78  min_curve=0.0555 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.455 mm  adj_vols=2  type=Plane
-  solver:     surf 96: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0555 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
-  solver:     surf 95: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0555 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
+  solver:     surf 142: boundary_curves=102  tiny(<200µm)=4  min_curve=0.1802 mm  bbox=17.04x9.92x0.0002 mm  zc=0.000 mm  adj_vols=2  type=Plane
+  solver:     surf 136: boundary_curves=90  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.455 mm  adj_vols=2  type=Plane
+  solver:     surf 135: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.555 mm  adj_vols=2  type=Plane
+  solver:     surf 134: boundary_curves=82  tiny(<200µm)=78  min_curve=0.0553 mm  bbox=17.04x9.92x0.0002 mm  zc=-1.590 mm  adj_vols=2  type=Plane
   solver:     surf 2: boundary_curves=80  tiny(<200µm)=55  min_curve=0.0024 mm  bbox=9.20x4.25x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
   solver:     surf 18: boundary_curves=52  tiny(<200µm)=44  min_curve=0.0023 mm  bbox=0.65x3.36x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-  solver:     surf 1: boundary_curves=51  tiny(<200µm)=30  min_curve=0.0061 mm  bbox=9.18x1.18x0.0002 mm  zc=-1.600 mm  adj_vols=2  type=Plane
-  solver:   Mesh focus summary: surfaces=89  tiny_boundary_curves_total=1391
+  solver:   Mesh focus summary: surfaces=127  tiny_boundary_curves_total=1401
   solver:   Mesh attempt 1/3
-  solver:   [mesh a1] still running … 30 s
-  solver:   Mesh done. total=48.1 s  attempt=47.9 s
-  solver:   Mesh nodes: 23878
-  solver:   Mesh elements: 2D=23953  3D=127635
+  solver:   [mesh a1] still running … 30 s  | gmsh_msgs=1280  | Info: Improving      24036 tet. on   1 thrd (GSC)
+  solver:   Mesh done. total=55.3 s  attempt=55.2 s
+  solver:   Mesh nodes: 26090
+  solver:   Mesh elements: 2D=26511  3D=139395
   solver: Showing 3D mesh — close the viewer window to continue ...
-  solver: 
-  solver: ============================================================
-  solver: Mesh — close window to continue
-  solver: ============================================================
-  solver: Mesh viewer closed.
   solver: 
   solver: ────────────────────────────────────────────────────────────
   solver: Stage 4 / 5 — Running FEM sweep
   solver: ────────────────────────────────────────────────────────────
   solver:   Frequency: 100 MHz – 0.1 GHz  (1 points)
   solver: Running FEM sweep …
-  solver:   [FEM] still running … 30 s  CPU 0%  MEM 31952/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 60 s  CPU 62%  MEM 28323/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 90 s  CPU 66%  MEM 29117/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 121 s  CPU 61%  MEM 28267/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 151 s  CPU 68%  MEM 29461/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 181 s  CPU 58%  MEM 29703/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 211 s  CPU 47%  MEM 28015/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 241 s  CPU 59%  MEM 29030/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   [FEM] still running … 271 s  CPU 42%  MEM 31869/32213 MiB  GPU 0% util  5/6113 MiB
-  solver:   Sweep done.  (285.0 s)
+  solver:   [FEM] still running … 30 s  CPU 0%  MEM 84% 27202/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 60 s  CPU 48%  MEM 94% 30347/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 90 s  CPU 50%  MEM 92% 29671/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 121 s  CPU 40%  MEM 98% 31460/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 151 s  CPU 42%  MEM 95% 30530/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 181 s  CPU 49%  MEM 94% 30406/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 211 s  CPU 37%  MEM 89% 28756/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 241 s  CPU 32%  MEM 91% 29442/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   [FEM] still running … 271 s  CPU 36%  MEM 98% 31521/32213 MiB  GPU 0% util  5/6113 MiB
+  solver:   Sweep done.  (284.2 s)
   solver: 
   solver: ────────────────────────────────────────────────────────────
   solver: Stage 5 / 5 — Results
@@ -210,4 +201,8 @@ Solver: C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe C:\Us
   solver: Stage 6 / 6 — Field animation
   solver: ────────────────────────────────────────────────────────────
   solver:   Field component: Ez  freq: 0.1 GHz
-FATAL: No result file produced by solver.
+  solver: S21: worst IL = 95.1 dB  (threshold 3.0 dB)  FAIL
+  solver: S11: best  RL = 0.0 dB  (threshold 10.0 dB)  FAIL
+  solver: Total violations: 2
+  solver: 0:08:34.676042  WARNING: EMerge simulation warnings:
+  solver: 0:08:34.676042  WARNING: 1: The ThinConductor boundary condition uses a new DoF splitting algorithm which may not be perfect. If you run into any issues, please condtact info@emerge-software.com to resolve any issues! :)
