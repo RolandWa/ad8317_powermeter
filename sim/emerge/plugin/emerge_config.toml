@@ -206,13 +206,30 @@ engine = "auto"  # let EMerge choose the best available solver backend
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualization — show interactive 3D windows before the FEM solve starts.
 # Both windows are blocking: close the viewer to continue.
-#   show_geometry = true  → open PyVista viewer after model build (ports + BCs visible)
-#   show_mesh     = true  → open PyVista viewer after mesh generation (surface mesh)
+#   show_geometry = true  → open geometry viewer after model build
+#   show_mesh     = true  → open mesh viewer after mesh generation
+#
+# Viewer backend selection:
+#   geometry_viewer / mesh_viewer = "auto" | "gmsh" | "emerge" | "both"
+#     auto   : prefer GMSH if available, otherwise EMerge native viewer
+#     gmsh   : force GMSH FLTK viewer
+#     emerge : force EMerge native viewer (sim.view)
+#     both   : show GMSH first, then EMerge
+#
+# Optional field animation after sweep:
+#   show_field_animation = true  -> opens animated field viewer at end
+#   field_component      = "Ez" -> field scalar component to animate
+#   field_animation_freq_hz = 0  -> 0 uses middle sweep frequency
 # ─────────────────────────────────────────────────────────────────────────────
 
 [visualization]
-show_geometry = false # disable blocking viewer in fast-iteration runs
-show_mesh     = false # disable blocking viewer in fast-iteration runs
+show_geometry = true
+show_mesh     = true
+geometry_viewer = "emerge"
+mesh_viewer     = "emerge"
+show_field_animation = false
+field_component      = "Ez"
+field_animation_freq_hz = 0
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gerber export settings (used by GerberExporter stage)
@@ -231,7 +248,7 @@ show_mesh     = false # disable blocking viewer in fast-iteration runs
 # ─────────────────────────────────────────────────────────────────────────────
 
 [passives]
-model_passives = false # temporarily disabled to isolate GMSH edge-recovery failure
+model_passives = true  # enable R/L/C modeling between ports for realistic transfer
 skip           = []    # e.g. ["C5", "C6", "R10"] to exclude specific parts
 
 [gerber]
@@ -254,6 +271,7 @@ use_gerbers = true
 
 [python]
 python_exe = "C:\\Users\\<user>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+min_emerge_version = "2.8.1"  # bump when the codebase adopts a newer API
 
 [gerber.layers]
 # Layers to export — names must match those in the .kicad_pcb stackup.

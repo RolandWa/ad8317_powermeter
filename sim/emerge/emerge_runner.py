@@ -213,6 +213,7 @@ class EmergeModelBuilder:
 
     def __init__(self, pcb_path, gerber_dir, port_defs,
                  show_geometry=False,
+                 geometry_viewer="auto",
                  use_gerbers=True,
                  model_passives=True, skip_passives=None,
                  curved_boundary_resolution=200,
@@ -237,6 +238,7 @@ class EmergeModelBuilder:
         self.gerber_dir                 = pathlib.Path(gerber_dir)
         self.port_defs                  = port_defs
         self.show_geometry              = show_geometry
+        self.geometry_viewer            = str(geometry_viewer or "auto").strip().lower()
         self.use_gerbers                = use_gerbers
         self.model_passives             = model_passives
         self.skip_passives              = list(skip_passives or [])
@@ -264,6 +266,7 @@ class EmergeModelBuilder:
         # Sanity-check: every attribute used in run() must be set here.
         _REQUIRED = [
             "pcb_path", "gerber_dir", "port_defs", "show_geometry",
+            "geometry_viewer",
             "use_gerbers", "model_passives", "skip_passives",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
             "port_focus_only",
@@ -684,13 +687,27 @@ class EmergeModelBuilder:
         # Optional interactive geometry viewer (blocks until closed)
         if self.show_geometry:
             self._log("Showing 3D geometry — close the viewer window to continue ...")
-            if _GERBER_BUILDER_OK:
-                gmsh_view_geometry("Geometry — close window to continue")
-            else:
+            mode = self.geometry_viewer
+            allow_gmsh = mode in ("auto", "gmsh", "both")
+            allow_emerge = mode in ("auto", "emerge", "native", "both")
+            shown = False
+
+            if allow_gmsh and _GERBER_BUILDER_OK:
+                try:
+                    gmsh_view_geometry("Geometry — close window to continue")
+                    shown = True
+                except Exception as exc:
+                    self._log(f"WARNING: GMSH geometry viewer failed: {exc}")
+
+            if allow_emerge and (mode != "auto" or not shown):
                 try:
                     _sim_view(sim, plot_mesh=False, labels=True, bc=True)
+                    shown = True
                 except Exception as exc:
-                    self._log(f"WARNING: geometry viewer failed: {exc}")
+                    self._log(f"WARNING: EMerge geometry viewer failed: {exc}")
+
+            if not shown:
+                self._log("WARNING: no geometry viewer backend available")
 
         # Debug snapshot (PNG + STEP/BREP)
         if DEBUG:
@@ -724,6 +741,10 @@ class EmergeSolver:
                  freq_start=1e6, freq_stop=10e9, freq_steps=201,
                  cells_per_lambda=15, solver_engine="auto",
                  show_mesh=False,
+                 mesh_viewer="auto",
+                 show_field_animation=False,
+                 field_component="Ez",
+                 field_animation_freq_hz=0.0,
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
                  # GMSH algorithm
@@ -750,6 +771,10 @@ class EmergeSolver:
         self.cells_per_lambda           = cells_per_lambda
         self.solver_engine              = (solver_engine or "auto").strip().lower()
         self.show_mesh                  = show_mesh
+        self.mesh_viewer                = str(mesh_viewer or "auto").strip().lower()
+        self.show_field_animation       = bool(show_field_animation)
+        self.field_component            = str(field_component or "Ez")
+        self.field_animation_freq_hz    = float(field_animation_freq_hz or 0.0)
         self.curved_boundary_resolution = int(curved_boundary_resolution)
         self.max_mesh_size_mm           = float(max_mesh_size_mm)
         self.min_mesh_size_mm           = float(min_mesh_size_mm)
@@ -773,7 +798,8 @@ class EmergeSolver:
         # Sanity-check: every attribute used in run() must be set here.
         _REQUIRED = [
             "model", "output_dir", "freq_start", "freq_stop", "freq_steps",
-            "cells_per_lambda", "solver_engine", "show_mesh",
+            "cells_per_lambda", "solver_engine", "show_mesh", "mesh_viewer",
+            "show_field_animation", "field_component", "field_animation_freq_hz",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
             "algorithm_2d", "algorithm_3d", "smoothing", "max_mesh_retries",
             "artifact_threshold_um", "char_length_max_floor_mm",
@@ -1752,13 +1778,27 @@ class EmergeSolver:
 
         if self.show_mesh:
             self._log("Showing 3D mesh — close the viewer window to continue ...")
-            if _GERBER_BUILDER_OK:
-                gmsh_view_mesh("Mesh — close window to continue")
-            else:
+            mode = self.mesh_viewer
+            allow_gmsh = mode in ("auto", "gmsh", "both")
+            allow_emerge = mode in ("auto", "emerge", "native", "both")
+            shown = False
+
+            if allow_gmsh and _GERBER_BUILDER_OK:
+                try:
+                    gmsh_view_mesh("Mesh — close window to continue")
+                    shown = True
+                except Exception as exc:
+                    self._log(f"WARNING: GMSH mesh viewer failed: {exc}")
+
+            if allow_emerge and (mode != "auto" or not shown):
                 try:
                     _sim_view(sim, plot_mesh=True)
+                    shown = True
                 except Exception as exc:
-                    self._log(f"WARNING: mesh viewer failed: {exc}")
+                    self._log(f"WARNING: EMerge mesh viewer failed: {exc}")
+
+            if not shown:
+                self._log("WARNING: no mesh viewer backend available")
 
         self._log("")
         self._log(_SEP)
@@ -1814,10 +1854,20 @@ class EmergeSolver:
                     self._log("  Fallback solver: PARDISO — success")
                 except Exception as _p_err:
                     self._log(f"  WARNING: PARDISO failed ({_p_err}) — retrying with SuperLU")
-                    sim.mw.solveroutine.set_solver(SolverSuperLU(""))
-                    mw_data = sim.mw.run_sweep()
-                    self._log("  Fallback solver: SuperLU — success")
+                    try:
+                        sim.mw.solveroutine.set_solver(SolverSuperLU(""))
+                        mw_data = sim.mw.run_sweep()
+                        self._log("  Fallback solver: SuperLU — success")
+                    except Exception as _su_err:
+                        self._log(f"  ERROR: SuperLU fallback failed: {_su_err}")
+                        self._log("  Traceback:\n" + traceback.format_exc())
+                        raise
             else:
+                self._log(
+                    f"  ERROR: FEM sweep failed with {type(_sweep_err).__name__}: "
+                    f"{_emsg if _emsg else repr(_sweep_err)}"
+                )
+                self._log("  Traceback:\n" + traceback.format_exc())
                 raise
         finally:
             _stop_fem_hb.set()
@@ -1855,6 +1905,40 @@ class EmergeSolver:
         self._log("Stage 5 / 5 — Results")
         self._log(_SEP)
         self._log(f"Touchstone written: {ts_path}")
+
+        if self.show_field_animation:
+            self._log("")
+            self._log(_SEP)
+            self._log("Stage 6 / 6 — Field animation")
+            self._log(_SEP)
+            try:
+                if not hasattr(mw_data, "field"):
+                    raise RuntimeError("field data not available in sweep result")
+
+                if len(freq_axis) == 0:
+                    raise RuntimeError("frequency axis is empty")
+
+                if self.field_animation_freq_hz > 0:
+                    target_f = float(self.field_animation_freq_hz)
+                else:
+                    target_f = float(freq_axis[len(freq_axis) // 2])
+
+                freq_arr = np.array(freq_axis, dtype=float)
+                nearest_f = float(freq_arr[np.argmin(np.abs(freq_arr - target_f))])
+                self._log(
+                    f"  Field component: {self.field_component}  "
+                    f"freq: {nearest_f/1e9:.6g} GHz"
+                )
+
+                # Use a thin horizontal cutplane near PCB mid-plane for stable visualization.
+                cut = mw_data.field.find(freq=nearest_f).cutplane(0.1e-3, z=0.0)
+                scalar = cut.scalar(self.field_component, "complex")
+                sim.display.animate().add_field(scalar, symmetrize=True)
+                self._log("Showing field animation — close the viewer window to continue ...")
+                sim.display.show()
+            except Exception as exc:
+                self._log(f"WARNING: field animation failed: {exc}")
+
         return ts_path
 
 
@@ -2100,6 +2184,7 @@ if __name__ == "__main__":
             gerber_dir                 = job["gerber_dir"],
             port_defs                  = job["port_defs"],
             show_geometry              = bool(vis_cfg.get("show_geometry", False)),
+            geometry_viewer            = str(vis_cfg.get("geometry_viewer", "auto")),
             use_gerbers                = use_gerbers,
             model_passives             = bool(passives_cfg.get("model_passives", True)),
             skip_passives              = list(passives_cfg.get("skip", [])),
@@ -2137,6 +2222,10 @@ if __name__ == "__main__":
             cells_per_lambda           = cpl,
             solver_engine              = solver_cfg.get("engine", "auto"),
             show_mesh                  = bool(vis_cfg.get("show_mesh", False)),
+            mesh_viewer                = str(vis_cfg.get("mesh_viewer", "auto")),
+            show_field_animation       = bool(vis_cfg.get("show_field_animation", False)),
+            field_component            = str(vis_cfg.get("field_component", "Ez")),
+            field_animation_freq_hz    = float(vis_cfg.get("field_animation_freq_hz", 0.0) or 0.0),
             curved_boundary_resolution = cbr,
             max_mesh_size_mm           = max_mm,
             min_mesh_size_mm           = min_mm,
@@ -2173,10 +2262,15 @@ if __name__ == "__main__":
         result = {"ts_path": str(ts_path), "violations": violations, "log": report_lines}
 
     except Exception as exc:
+        _tb = traceback.format_exc()
         result = {
             "ts_path":    None,
             "violations": -1,
-            "log":        report_lines + [f"FATAL: {exc}"],
+            "log":        report_lines + [
+                f"FATAL: {type(exc).__name__}: {exc if str(exc) else repr(exc)}",
+                "TRACEBACK:",
+                _tb,
+            ],
         }
 
     result_path.write_text(json.dumps(result, indent=2), encoding="utf-8")

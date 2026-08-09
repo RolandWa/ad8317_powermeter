@@ -108,10 +108,28 @@ def _summarise(text: str) -> str:
     vis = cfg.get("visualization", {})
     show_geo  = vis.get("show_geometry", False)
     show_mesh = vis.get("show_mesh",     False)
+    geo_viewer = str(vis.get("geometry_viewer", "auto") or "auto").strip().lower()
+    mesh_viewer = str(vis.get("mesh_viewer", "auto") or "auto").strip().lower()
+    show_field_anim = bool(vis.get("show_field_animation", False))
+    field_component = str(vis.get("field_component", "Ez") or "Ez")
+    field_anim_f_hz = float(vis.get("field_animation_freq_hz", 0.0) or 0.0)
     vis_parts = []
     if show_geo:  vis_parts.append("geometry")
     if show_mesh: vis_parts.append("mesh")
     lines.append(f"  3D preview : {', '.join(vis_parts) if vis_parts else 'off'}")
+    lines.append(f"    Geometry viewer backend : {geo_viewer}")
+    lines.append(f"    Mesh viewer backend     : {mesh_viewer}")
+    if show_field_anim:
+        if field_anim_f_hz > 0:
+            lines.append(
+                f"    Field animation         : on ({field_component} @ {field_anim_f_hz/1e9:.6g} GHz)"
+            )
+        else:
+            lines.append(
+                f"    Field animation         : on ({field_component} @ mid sweep freq)"
+            )
+    else:
+        lines.append("    Field animation         : off")
     lines.append("")
 
     # Mesh

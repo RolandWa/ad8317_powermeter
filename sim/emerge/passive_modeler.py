@@ -15,6 +15,7 @@ PassiveElementModeler
     element geometry into a PCBNew / FileBasedPCB model.
 """
 
+import cmath
 import math
 import pathlib
 
@@ -303,25 +304,67 @@ class PassiveElementModeler:
 
             try:
                 mat_name = f"{ref}_{comp_type}{value_si:.3g}"
-                kwargs   = {comp_type: float(value_si)}
-                lem = lumped_element_material(
-                    material_name = mat_name,
-                    direction     = (float(ux), float(uy), 0.0),
-                    length        = float(body_length),
-                    Area          = float(area),
-                    **kwargs,
-                )
+                dir_vec = (float(ux), float(uy), 0.0)
+
+                mat = None
+                if _SERIES_HELPERS:
+                    try:
+                        from emsutil.material import FreqDependent as _FreqDependent, Material as _Material
+                        from emsutil.lib import EPS0 as _EPS0
+                        import numpy as _np
+
+                        if comp_type == "R":
+                            z_func = _series_impedance(R=float(value_si))
+                        elif comp_type == "L":
+                            z_func = _series_impedance(L=float(value_si))
+                        else:
+                            z_func = _series_impedance(C=float(value_si))
+
+                        _dv = _np.array(dir_vec)
+                        _dvout = _np.outer(_dv, _dv)
+                        _d = float(body_length)
+                        _A = float(area)
+
+                        # Convert the helper Z(f) into anisotropic epsilon so the
+                        # exporter uses the same impedance methodology as filter tests.
+                        def _fer_from_z(f):
+                            w = 2.0 * math.pi * f
+                            zf = z_func(f)
+                            if abs(zf) < 1e-30:
+                                zf = complex(1e-30, 0.0)
+                            er_s = _d / (_EPS0 * _A * 1j * w * zf)
+                            return _dvout * (er_s - 1.0) + _np.eye(3)
+
+                        mat = _Material(er=_FreqDependent(matrix=_fer_from_z), name=mat_name)
+                    except Exception:
+                        mat = None
+
+                if mat is None:
+                    kwargs = {comp_type: float(value_si)}
+                    mat = lumped_element_material(
+                        material_name = mat_name,
+                        direction     = dir_vec,
+                        length        = float(body_length),
+                        Area          = float(area),
+                        **kwargs,
+                    )
+
                 # NOTE: works correctly with FileBasedPCB (Gerber gap in copper).
                 # With PCBNew (solid copper), current bypasses the polygon.
-                self.pcb_obj.add_poly(xs=xs, ys=ys, z=z, material=lem, name=ref)
+                self.pcb_obj.add_poly(xs=xs, ys=ys, z=z, material=mat, name=ref)
                 layer_s = "top" if z == board_t else "bot"
+                if _SERIES_HELPERS:
+                    z1g = z_func(1e9) if 'z_func' in locals() else complex(float("nan"), float("nan"))
+                    zinfo = f"  |Z@1GHz|={abs(z1g):.3g}Ω ∠{math.degrees(cmath.phase(z1g)):+.1f}°"
+                else:
+                    zinfo = ""
                 self._log(
                     f"    {ref:<8} {comp_type}  {val_str:<14}  {layer_s}  "
                     f"({x1*1e3:.2f},{y1*1e3:.2f})→({x2*1e3:.2f},{y2*1e3:.2f}) mm  "
-                    f"len={body_length*1e3:.2f} mm  w={body_w*1e3:.2f} mm")
+                    f"len={body_length*1e3:.2f} mm  w={body_w*1e3:.2f} mm{zinfo}")
                 added += 1
             except Exception as exc:
-                self._log(f"    {ref:<8} lumped_element_material failed: {exc}")
+                self._log(f"    {ref:<8} passive material build failed: {exc}")
                 skipped += 1
 
         self._log(f"  Passives: {added} modeled, {skipped} skipped")
