@@ -1,12 +1,12 @@
 (kicad_sch
-	(version 20250114)
+	(version 20260306)
 	(generator "eeschema")
-	(generator_version "9.0")
+	(generator_version "10.0")
 	(uuid "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 	(paper "A3")
 	(title_block
 		(title "RF Frontend")
-		(date "2026-07-19")
+		(date "2026-08-07")
 		(rev "A")
 		(company "Author")
 		(comment 1 "SMA (J1 Amphenol RF 132372)")
@@ -314,11 +314,13 @@
 			(type solid)
 		)
 		(fill
-			(color 255 255 204 0.3000)
+			(color 255 255 204 0.3)
 		)
 		(uuid "b1000001-0000-0000-0000-000000000001")
 		(property "Sheetname" "RF_Frontend"
 			(at 146.685 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.5 1.5)
@@ -328,6 +330,8 @@
 		)
 		(property "Sheetfile" "RF_Frontend.kicad_sch"
 			(at 146.685 144.0934 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -356,6 +360,13 @@
 				(justify right)
 			)
 		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "2")
+				)
+			)
+		)
 	)
 	(sheet
 		(at 207.01 102.87)
@@ -370,11 +381,13 @@
 			(type solid)
 		)
 		(fill
-			(color 204 228 255 0.3000)
+			(color 204 228 255 0.3)
 		)
 		(uuid "b1000002-0000-0000-0000-000000000002")
 		(property "Sheetname" "MCU"
 			(at 207.01 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.5 1.5)
@@ -384,6 +397,8 @@
 		)
 		(property "Sheetfile" "MCU.kicad_sch"
 			(at 207.01 143.4584 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -482,6 +497,13 @@
 				(justify left)
 			)
 		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "4")
+				)
+			)
+		)
 	)
 	(sheet
 		(at 147.955 166.37)
@@ -496,11 +518,13 @@
 			(type solid)
 		)
 		(fill
-			(color 255 220 204 0.3000)
+			(color 255 220 204 0.3)
 		)
 		(uuid "b1000003-0000-0000-0000-000000000003")
 		(property "Sheetname" "Power_Management"
 			(at 147.955 165.5446 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.5 1.5)
@@ -510,6 +534,8 @@
 		)
 		(property "Sheetfile" "Power_Management.kicad_sch"
 			(at 147.955 208.8634 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -568,6 +594,13 @@
 				(justify right)
 			)
 		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "3")
+				)
+			)
+		)
 	)
 	(sheet
 		(at 257.81 102.87)
@@ -582,11 +615,13 @@
 			(type solid)
 		)
 		(fill
-			(color 220 255 220 0.3000)
+			(color 220 255 220 0.3)
 		)
 		(uuid "b1000004-0000-0000-0000-000000000004")
 		(property "Sheetname" "User_Interface"
 			(at 257.81 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.5 1.5)
@@ -596,6 +631,8 @@
 		)
 		(property "Sheetfile" "User_Interface.kicad_sch"
 			(at 257.81 143.4584 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -652,6 +689,13 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+			)
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "5")
+				)
 			)
 		)
 	)

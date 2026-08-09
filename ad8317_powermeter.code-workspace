@@ -23,6 +23,7 @@
 		}
 	],
 	"settings": {
-		"cfs.configureWorkspace": "Never"
+		"cfs.configureWorkspace": "Never",
+		"powershell.cwd": "ad8317_powermeter"
 	}
 }

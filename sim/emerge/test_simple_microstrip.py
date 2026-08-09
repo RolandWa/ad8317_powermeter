@@ -32,6 +32,10 @@ _USE_ABC = "--no-abc" not in sys.argv   # pass --no-abc to disable absorbing BCs
 _PLOTS_ENABLED = "--plots" in sys.argv   # pass --plots to enable Stage 5 plotting
 _SHOW_GEOMETRY = "--show-geometry" in sys.argv
 _SHOW_MESH = "--show-mesh" in sys.argv
+_SOLVER = "auto"  # default: pick best available; override with --solver gpu|pardiso|cpu
+for _i, _a in enumerate(sys.argv[1:], 1):
+    if _a == "--solver" and _i < len(sys.argv):
+        _SOLVER = sys.argv[_i + 1].lower()
 
 _label  = "with_abc" if _USE_ABC else "no_abc"
 _OUTDIR = pathlib.Path(__file__).parent / "results" / "simple_test"
@@ -149,6 +153,13 @@ except TypeError:
 
 air_vol = pcb.generate_air(height=pml_h)
 pml     = open_pml_region(pml_xy, pml_xy, pml_z)
+
+# Priority: PCB volumes override air background
+if isinstance(pcb_vol, list):
+    for _v in pcb_vol: _v.prio_set(1)
+else:
+    pcb_vol.prio_set(1)
+air_vol.prio_set(5)
 
 sim.commit_geometry(pcb_vol, air_vol, pml, pg1, pg2)
 
@@ -291,15 +302,15 @@ if _SHOW_MESH:
 log("\n=== Stage 3: FEM sweep ===")
 t2 = time.monotonic()
 
-if _CUDSS_AVAILABLE:
+if _CUDSS_AVAILABLE and _SOLVER in ("auto", "gpu", "cuda"):
     sim.mw.solveroutine.set_solver(SolverCuDSS(""))
     log("  Solver: cuDSS (GPU)")
-elif _PARDISO_AVAILABLE:
+elif _PARDISO_AVAILABLE and _SOLVER in ("auto", "pardiso"):
     sim.mw.solveroutine.set_solver(SolverPardiso())
     log("  Solver: PARDISO")
 else:
     sim.mw.solveroutine.set_solver(SolverSuperLU())
-    log("  Solver: SuperLU")
+    log("  Solver: SuperLU (CPU)")
 
 mw_data = sim.mw.run_sweep()
 log(f"Sweep done  ({time.monotonic()-t2:.1f} s)")

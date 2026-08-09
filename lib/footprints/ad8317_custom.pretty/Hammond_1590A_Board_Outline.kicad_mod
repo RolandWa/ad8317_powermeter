@@ -3,10 +3,10 @@
 	(generator "pcbnew")
 	(generator_version "9.0")
 	(layer "F.Cu")
-	(descr "Mechanical PCB outline and clearance notches for Hammond 1590A enclosure (88x34mm PCB area)")
+	(descr "Mechanical PCB outline for Hammond 1590A — 88x34mm with R7mm concave corner notches clearing mounting bosses (0.5mm clearance from 89x35mm internal void)")
 	(tags "mechanical outline enclosure hammond 1590a")
 	(property "Reference" "REF**"
-		(at 0 -20 0)
+		(at 0 -22 0)
 		(layer "F.SilkS")
 		(uuid "5e60503f-3311-4d31-97be-ace31ed3f60b")
 		(effects
@@ -17,7 +17,7 @@
 		)
 	)
 	(property "Value" "Hammond_1590A_Outline"
-		(at 0 20 0)
+		(at 0 22 0)
 		(layer "F.SilkS")
 		(uuid "48736ca7-2fc0-4a10-a87f-9fe484102a4e")
 		(effects
@@ -53,8 +53,8 @@
 	)
 	(attr board_only exclude_from_pos_files exclude_from_bom)
 	(fp_line
-		(start -17 40)
-		(end -17 -40)
+		(start -37 -17)
+		(end 37 -17)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -63,8 +63,8 @@
 		(uuid "e218c819-a9b5-4c1d-9a67-c5958559b8fb")
 	)
 	(fp_line
-		(start -13 -44)
-		(end 13 -44)
+		(start 37 17)
+		(end -37 17)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -73,8 +73,8 @@
 		(uuid "eda6581b-e64b-42ca-bfe2-e76590a014dd")
 	)
 	(fp_line
-		(start 13 44)
-		(end -13 44)
+		(start -44 10)
+		(end -44 -10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -83,8 +83,8 @@
 		(uuid "a013457d-dd76-4018-af50-476aebe7b18f")
 	)
 	(fp_line
-		(start 17 -40)
-		(end 17 40)
+		(start 44 -10)
+		(end 44 10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -93,9 +93,9 @@
 		(uuid "bd973b7a-2cf9-4cf9-ba70-8847f5920829")
 	)
 	(fp_arc
-		(start -17 -40)
-		(mid -15.828427 -42.828427)
-		(end -13 -44)
+		(start 37 -17)
+		(mid 39.04975 -12.04975)
+		(end 44 -10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -104,9 +104,9 @@
 		(uuid "54cd5774-510f-4c6d-80f6-da747b26b566")
 	)
 	(fp_arc
-		(start -13 44)
-		(mid -15.828427 42.828427)
-		(end -17 40)
+		(start 44 10)
+		(mid 39.04975 12.04975)
+		(end 37 17)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -115,9 +115,9 @@
 		(uuid "0a57b073-3440-42a6-8793-e93a37ed8051")
 	)
 	(fp_arc
-		(start 13 -44)
-		(mid 15.828427 -42.828427)
-		(end 17 -40)
+		(start -37 17)
+		(mid -39.04975 12.04975)
+		(end -44 10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -126,9 +126,9 @@
 		(uuid "1e8d9dba-8a15-4a19-831f-0efdd9c1ad56")
 	)
 	(fp_arc
-		(start 17 40)
-		(mid 15.828427 42.828427)
-		(end 13 44)
+		(start -44 -10)
+		(mid -39.04975 -12.04975)
+		(end -37 -17)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -137,8 +137,8 @@
 		(uuid "ecf66fd9-c4a3-41c2-856a-3135c33d3966")
 	)
 	(fp_rect
-		(start -17.25 -44.25)
-		(end 17.25 44.25)
+		(start -44.25 -17.25)
+		(end 44.25 17.25)
 		(stroke
 			(width 0.05)
 			(type solid)

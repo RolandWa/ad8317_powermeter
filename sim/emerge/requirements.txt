@@ -1,0 +1,5 @@
+# EMerge FEM solver — minimum required version.
+# Update this file (and min_emerge_version in emerge_config.toml) whenever
+# the codebase adopts a new API introduced by a specific release.
+# Install: python -m pip install "git+https://github.com/FennisRobert/EMerge.git@v2.8.1"
+emerge==2.8.1
