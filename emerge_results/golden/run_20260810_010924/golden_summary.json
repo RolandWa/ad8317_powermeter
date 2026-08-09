@@ -1,0 +1,43 @@
+{
+  "name": "ad8317_powermeter_emerge_golden_20260810_010924",
+  "timestamp": "2026-08-10T01:09:24",
+  "plugin_version": "1.2.0",
+  "emerge_version": "2.8.1",
+  "status": "golden_reference",
+  "notes": "AOI-filtered vias included in geometry and mesh",
+  "layers": ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"],
+  "domain_mm": {
+    "xmin": 133.7,
+    "ymin": -89.4,
+    "xmax": 150.7,
+    "ymax": -79.5
+  },
+  "drills": {
+    "loaded_files": 2,
+    "drill_sizes": 1,
+    "total_holes": 10,
+    "fallback_added": 10,
+    "generated_via_objects": 10
+  },
+  "mesh": {
+    "nodes": 28452,
+    "elements_2d": 32322,
+    "elements_3d": 152876,
+    "mesh_time_s": 102.4,
+    "surfaces": 834,
+    "volumes": 101
+  },
+  "sweep": {
+    "start_hz": 100000000,
+    "stop_hz": 100000000,
+    "points": 1,
+    "time_s": 293.7
+  },
+  "thresholds": {
+    "total_violations": 2,
+    "s21_worst_il_db": 94.4,
+    "s11_best_rl_db": 0.0
+  },
+  "touchstone": "ad8317_powermeter.s2p",
+  "log_file": "emerge_e2e_20260810_010924_golden.log"
+}
