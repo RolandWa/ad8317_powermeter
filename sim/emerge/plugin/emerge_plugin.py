@@ -454,15 +454,27 @@ class EmergePlugin(pcbnew.ActionPlugin):
         from emerge_config_dialog import EmergeConfigDialog
         cfg_dlg = EmergeConfigDialog(parent, self._config_path)
         result  = cfg_dlg.ShowModal()
-        # Reload config from whatever file the user saved / opened
+        # Use dialog-selected path and current dialog values.
         self._config_path = cfg_dlg.current_path
+        cfg_text = cfg_dlg.get_text()
+        cfg_obj = cfg_dlg.get_config()
         cfg_dlg.Destroy()
 
         if result != wx.ID_OK:
             return   # user pressed Cancel
 
-        # Reload parsed config from the (possibly edited/saved) file
-        self._config = _load_config(self._config_path)
+        # Persist current values so the run and next launch see the same config.
+        try:
+            self._config_path.write_text(cfg_text, encoding="utf-8")
+        except Exception as exc:
+            wx.MessageBox(
+                f"Cannot write configuration file:\n{exc}",
+                "EMerge",
+                wx.OK | wx.ICON_ERROR,
+            )
+            return
+
+        self._config = cfg_obj if isinstance(cfg_obj, dict) else _load_config(self._config_path)
 
         # ── Check for emerge Python ──────────────────────────────────────────
         # Config can specify python_exe directly — skips all auto-detection.

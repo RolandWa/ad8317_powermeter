@@ -7,6 +7,7 @@
       "pad": "J1:1",
       "R": 50.0,
       "C": null,
+      "L": null,
       "active": true,
       "dir": "z"
     },
@@ -14,6 +15,7 @@
       "pad": "U1:1",
       "R": 200.0,
       "C": 2e-12,
+      "L": null,
       "active": false,
       "dir": "z"
     },
@@ -21,14 +23,15 @@
       "pad": "U1:8",
       "R": 200.0,
       "C": 2e-12,
+      "L": null,
       "active": false,
       "dir": "z"
     }
   },
   "sweep": {
-    "start_hz": 100000000,
-    "stop_hz": 6000000000,
-    "steps": 9,
+    "start_hz": 100000000.0,
+    "stop_hz": 100000000.0,
+    "steps": 1,
     "cells_per_lambda": 5
   },
   "thresholds": {
@@ -39,13 +42,13 @@
     "engine": "auto"
   },
   "visualization": {
-    "show_geometry": false,
-    "show_mesh": false,
+    "show_geometry": true,
+    "show_mesh": true,
     "geometry_viewer": "emerge",
     "mesh_viewer": "emerge",
-    "show_field_animation": false,
+    "show_field_animation": true,
     "field_component": "Ez",
-    "field_animation_freq_hz": 0
+    "field_animation_freq_hz": 0.0
   },
   "passives": {
     "model_passives": true,
@@ -56,8 +59,8 @@
   },
   "mesh": {
     "curved_boundary_resolution": 20,
-    "max_mesh_size_mm": 0,
-    "min_mesh_size_mm": 0,
+    "max_mesh_size_mm": 0.0,
+    "min_mesh_size_mm": 0.0,
     "port_focus_only": true,
     "domain_margin_mm": 4.0,
     "port_focus_margin_mm": 2.0,
@@ -76,10 +79,10 @@
     "algorithm_3d": 10,
     "smoothing": 10,
     "max_mesh_retries": 2,
-    "artifact_threshold_um": 200,
-    "char_length_max_factor": 2.5,
+    "artifact_threshold_um": 200.0,
     "char_length_max_floor_mm": 0.8,
     "char_length_max_ceil_mm": 8.0,
+    "char_length_max_factor": 2.5,
     "sliver_threshold_mm": 0.1,
     "mesh_copper_mm": 0.6,
     "mesh_copper_z_mm": 0.35,
