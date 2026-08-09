@@ -214,6 +214,25 @@ class TestEmergeModelBuilder:
         ).run()
         assert result is None
 
+    def test_port_focus_only_takes_precedence_over_outline(self, pcb_file, tmp_path):
+        report = []
+        with patch.object(er, "read_board_outline", return_value=[(0.0, 0.0), (200.0, 0.0), (200.0, 100.0), (0.0, 100.0)]), \
+             patch.object(er, "read_keepout_bbox", return_value=None), \
+             patch.object(er, "build_and_commit", return_value=(object(), object())):
+            er.EmergeModelBuilder(
+                pcb_path=pcb_file,
+                gerber_dir=tmp_path,
+                port_defs=PORT_DEFS,
+                port_focus_only=True,
+                port_focus_margin_mm=2.0,
+                report_lines=report,
+                verbose=False,
+            ).run()
+
+        full = "\n".join(report)
+        assert "port_focus_only=true" in full
+        assert "board outline bbox" not in full
+
 
 # ── EmergeSolver ──────────────────────────────────────────────────────────────
 

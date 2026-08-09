@@ -503,6 +503,14 @@ def build_and_commit(sim, pcb, board_t: float,
     air_vol = pcb.generate_air(height=air_height)
     _log(f"    done  ({time.monotonic()-t1:.1f} s)")
 
+    # Priority: PCB volumes win over air background (lower number = higher priority)
+    if isinstance(pcb_vol, list):
+        for _v in pcb_vol:
+            _v.prio_set(1)
+    else:
+        pcb_vol.prio_set(1)
+    air_vol.prio_set(5)
+
     pml = open_pml_region(pml_xy, pml_xy, pml_z)
 
     _log("  commit_geometry() — fusing CAD solids ...")

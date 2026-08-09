@@ -7,7 +7,8 @@ or None if none is found.
 
 Architecture note
 -----------------
-KiCad ships its own bundled Python (e.g. C:\\Program Files\\KiCad\\9.0\\bin\\python.exe).
+KiCad ships its own bundled Python (e.g. C:\\Program Files\\KiCad\\10.0\\bin\\python.exe
+or C:\\Program Files\\KiCad\\9.0\\bin\\python.exe).
 EMerge is installed into the *system* Python (e.g. Python 3.12 in AppData).
 The subprocess bridge in emerge_plugin.py spawns the system Python to run
 emerge_runner.py, so KiCad never needs EMerge in its own interpreter.

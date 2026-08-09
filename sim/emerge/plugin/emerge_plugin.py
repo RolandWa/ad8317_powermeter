@@ -181,10 +181,12 @@ def _build_port_defs(config: dict) -> dict:
     port_defs = {}
     for name, cfg in ports_cfg.items():
         c_val = cfg.get("C", 0)
+        l_val = cfg.get("L", 0)
         port_defs[name.upper()] = {
             "pad":    cfg.get("pad", ""),
             "R":      float(cfg.get("R", 50.0)),
             "C":      float(c_val) if c_val else None,
+            "L":      float(l_val) if l_val else None,
             "active": bool(cfg.get("active", True)),
             "dir":    str(cfg.get("dir", "z")),
         }
@@ -213,6 +215,8 @@ class EmergeSetupDialog(wx.Dialog):
             "  2. Set the EMERGE_PYTHON environment variable to the\n"
             "     full path of a Python executable that has emerge.\n\n"
             "  3. Install emerge into KiCad's own Python:\n"
+            "       \"C:\\Program Files\\KiCad\\10.0\\bin\\python.exe\" -m pip install emerge\n"
+            "       or\n"
             "       \"C:\\Program Files\\KiCad\\9.0\\bin\\python.exe\" -m pip install emerge\n\n"
             "After installing, restart KiCad and refresh plugins."
         )
@@ -438,7 +442,7 @@ class EmergePlugin(pcbnew.ActionPlugin):
             return
 
         pcb_path   = pathlib.Path(pcb_path)
-        output_dir = pcb_path.parent.parent / "sim" / "emerge" / "results"
+        output_dir = pcb_path.parent.parent / "emerge_results"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         parent = pcbnew.GetCurrentFrame() if hasattr(pcbnew, "GetCurrentFrame") \
@@ -512,6 +516,11 @@ class EmergePlugin(pcbnew.ActionPlugin):
             "visualization": {
                 "show_geometry": bool(vis_cfg.get("show_geometry", False)),
                 "show_mesh":     bool(vis_cfg.get("show_mesh",     False)),
+                "geometry_viewer": str(vis_cfg.get("geometry_viewer", "auto")),
+                "mesh_viewer":     str(vis_cfg.get("mesh_viewer",     "auto")),
+                "show_field_animation": bool(vis_cfg.get("show_field_animation", False)),
+                "field_component": str(vis_cfg.get("field_component", "Ez")),
+                "field_animation_freq_hz": float(vis_cfg.get("field_animation_freq_hz", 0.0) or 0.0),
             },
             "passives": {
                 "model_passives": bool(passives_cfg.get("model_passives", True)),

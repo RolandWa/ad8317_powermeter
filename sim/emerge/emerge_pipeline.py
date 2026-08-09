@@ -67,7 +67,7 @@ except ImportError:
 SCRIPT_DIR  = pathlib.Path(__file__).parent
 PROJECT_DIR = SCRIPT_DIR.parent.parent                    # …/ad8317_powermeter/
 KICAD_DIR   = PROJECT_DIR / "kicad"
-RESULTS_DIR = SCRIPT_DIR / "results"
+RESULTS_DIR = PROJECT_DIR / "emerge_results"
 
 # Single config — lives in plugin/ (deployed to KiCad plugin folder from there)
 DEFAULT_CONFIG = SCRIPT_DIR / "plugin" / "emerge_config.toml"
@@ -544,7 +544,7 @@ if __name__ == "__main__":
     parser.add_argument("--config",   default=None,
                         help="Path to emerge_config.toml (default: plugin/emerge_config.toml)")
     parser.add_argument("--out",      default=None,
-                        help="Output directory (default: sim/emerge/results/)")
+                        help="Output directory (default: emerge_results/)")
     parser.add_argument("--freq-ghz", type=float, default=None,
                         help="Upper frequency limit in GHz (overrides config)")
     parser.add_argument("--quiet",    action="store_true",

@@ -35,6 +35,7 @@ import sys
 import textwrap
 import time
 import traceback
+import contextlib
 
 # Force UTF-8 on stdout/stderr (Windows defaults to cp1252)
 if hasattr(sys.stdout, "reconfigure"):
@@ -44,6 +45,11 @@ if hasattr(sys.stderr, "reconfigure"):
 
 import numpy as np
 
+try:
+    import psutil as _psutil
+except Exception:
+    _psutil = None
+
 # ── DEBUG flag ─────────────────────────────────────────────────────────────────
 DEBUG: bool = os.environ.get("EMERGE_DEBUG", "0").strip() not in ("0", "", "false", "False")
 
@@ -52,6 +58,45 @@ def _dbg(msg: str, report_lines: list | None = None):
     print(line)
     if report_lines is not None:
         report_lines.append(line)
+
+
+def _system_usage_snapshot() -> str:
+    """Return a short CPU and memory status string for heartbeat logs."""
+    if _psutil is None:
+        return "CPU n/a  MEM n/a"
+
+    try:
+        cpu_pct = _psutil.cpu_percent(interval=None)
+        mem = _psutil.virtual_memory()
+        mem_used_mib = mem.used / (1024 * 1024)
+        mem_total_mib = mem.total / (1024 * 1024)
+        mem_pct = mem.percent
+        return f"CPU {cpu_pct:.0f}%  MEM {mem_pct:.0f}% {mem_used_mib:.0f}/{mem_total_mib:.0f} MiB"
+    except Exception:
+        return "CPU n/a  MEM n/a"
+
+
+@contextlib.contextmanager
+def _suppress_native_output():
+    """Temporarily silence native stdout/stderr noise from GUI backends."""
+    if not hasattr(os, "dup") or not hasattr(os, "dup2"):
+        yield
+        return
+
+    stdout_fd = os.dup(1)
+    stderr_fd = os.dup(2)
+    try:
+        with open(os.devnull, "w") as devnull:
+            os.dup2(devnull.fileno(), 1)
+            os.dup2(devnull.fileno(), 2)
+            yield
+    finally:
+        try:
+            os.dup2(stdout_fd, 1)
+        finally:
+            os.dup2(stderr_fd, 2)
+            os.close(stdout_fd)
+            os.close(stderr_fd)
 
 
 # ── emerge imports ─────────────────────────────────────────────────────────────
@@ -331,7 +376,7 @@ class EmergeModelBuilder:
             ports.append({
                 "name":   pname,
                 "x":       x_mm * 1e-3,
-                "y":      -y_mm * 1e-3,   # KiCad Y-down → Gerber Y-up (same flip as outline)
+                "y":      -y_mm * 1e-3,   # KiCad Y-down → Gerber Y-up (same flip as outline).
                 "R":      float(pdef.get("R", 50.0)),
                 "C":      float(pdef.get("C") or 0.0),
                 "L":      float(pdef.get("L") or 0.0),
@@ -343,6 +388,15 @@ class EmergeModelBuilder:
         if not ports:
             self._log("ERROR: No valid ports resolved — cannot build model.")
             return None
+
+        outline_pts = read_board_outline(self.pcb_path)
+        outline_bbox = None
+        if outline_pts:
+            xs_o = [p[0] for p in outline_pts]
+            ys_o = [p[1] for p in outline_pts]
+            outline_bbox = (min(xs_o), min(ys_o), max(xs_o), max(ys_o))
+
+        keepout_bbox = read_keepout_bbox(self.pcb_path)
 
         # ── Build stackup layers ──────────────────────────────────────────────
         cu_mat  = _copper_material()
@@ -363,10 +417,9 @@ class EmergeModelBuilder:
                                              name=lyr["name"]))
 
         # ── Board outline → simulation domain ─────────────────────────────────
-        # NOTE: read_board_outline() returns KiCad Y-down coordinates (mm).
-        # Gerber files use Y-up (negated).  Domain bounds are passed to
-        # pcb.set_bounds() which works in the same coordinate system as the
-        # Gerbers, so we negate Y here.
+        # NOTE: keep the area-of-interest in PCB coordinates (mm) so the
+        # imported Gerber crop and the generated air box stay aligned with
+        # the actual board outline / keepout region.
         _auto_margin = max(0.005, board_t * 3)
         _auto_port_margin = max(0.001, board_t)
         margin = (self.domain_margin_mm * 1e-3) if self.domain_margin_mm > 0 else _auto_margin
@@ -385,22 +438,28 @@ class EmergeModelBuilder:
             xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
             ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
             self._log("Domain source: port_focus_only=true — using port-based bounds")
+        elif keepout_bbox is not None:
+            kx0, ky0, kx1, ky1 = keepout_bbox
+            xmin = kx0 * 1e-3
+            xmax = kx1 * 1e-3
+            ymin = -ky1 * 1e-3   # KiCad Y-down -> Gerber Y-up.
+            ymax = -ky0 * 1e-3
+            self._log(f"Domain source: keepout bbox ({kx0:.1f}, {ky0:.1f}) – "
+                      f"({kx1:.1f}, {ky1:.1f}) mm")
+        elif outline_bbox is not None:
+            ox0, oy0, ox1, oy1 = outline_bbox
+            xmin = ox0 * 1e-3
+            xmax = ox1 * 1e-3
+            ymin = -oy1 * 1e-3   # KiCad Y-down -> Gerber Y-up.
+            ymax = -oy0 * 1e-3
+            self._log(f"Domain source: board outline bbox ({ox0:.1f}, {oy0:.1f}) – "
+                      f"({ox1:.1f}, {oy1:.1f}) mm")
         else:
-            ko_bbox = read_keepout_bbox(self.pcb_path)
-            if ko_bbox is not None:
-                kx0, ky0, kx1, ky1 = ko_bbox
-                xmin = kx0 * 1e-3
-                xmax = kx1 * 1e-3
-                ymin = -ky1 * 1e-3  # KiCad Y-down -> Gerber Y-up
-                ymax = -ky0 * 1e-3
-                self._log(f"Domain source: keepout bbox ({kx0:.1f}, {ky0:.1f}) – "
-                          f"({kx1:.1f}, {ky1:.1f}) mm")
-            else:
-                xs_p = [p["x"] for p in ports]
-                ys_p = [p["y"] for p in ports]
-                xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
-                ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
-                self._log("Domain source: keepout not found — using port-based bounds")
+            xs_p = [p["x"] for p in ports]
+            ys_p = [p["y"] for p in ports]
+            xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
+            ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
+            self._log("Domain source: outline not found — using port-based bounds")
 
         # Expand domain to include every port (handles off-board components)
         for p in ports:
@@ -412,13 +471,12 @@ class EmergeModelBuilder:
         self._log(f"Simulation domain: ({xmin*1e3:.1f}, {ymin*1e3:.1f}) – "
                   f"({xmax*1e3:.1f}, {ymax*1e3:.1f}) mm  margin={margin*1e3:.1f} mm")
 
-        # ── Simulation domain as KiCad-coordinate bbox (for passive filtering) ─
-        # Gerber Y-up (metres) → KiCad Y-down (mm): negate Y, scale ×1000
+        # ── Simulation domain as PCB-coordinate bbox (for passive filtering) ─
         # This rectangle is passed to PassiveElementModeler so only components
         # inside the simulation area are modelled — not the whole board.
         _sd_xmin_mm =  xmin * 1e3
         _sd_xmax_mm =  xmax * 1e3
-        _sd_ymin_mm = -ymax * 1e3   # Gerber Y-up → KiCad Y-down: negate
+        _sd_ymin_mm = -ymax * 1e3   # Gerber Y-up → KiCad Y-down: negate.
         _sd_ymax_mm = -ymin * 1e3
         sim_domain_outline = [
             (_sd_xmin_mm, _sd_ymin_mm),
@@ -1817,6 +1875,7 @@ class EmergeSolver:
         def _fem_heartbeat(stop_evt, log_fn, t0, interval=30.0):
             while not stop_evt.wait(timeout=interval):
                 elapsed = time.monotonic() - t0
+                sys_info = _system_usage_snapshot()
                 gpu_info = ""
                 try:
                     _r = _nvsmi.run(
@@ -1831,7 +1890,7 @@ class EmergeSolver:
                             gpu_info = f"  GPU {_p[0]}% util  {_p[1]}/{_p[2]} MiB"
                 except Exception:
                     pass
-                log_fn(f"  [FEM] still running … {elapsed:.0f} s{gpu_info}")
+                log_fn(f"  [FEM] still running … {elapsed:.0f} s  {sys_info}{gpu_info}")
 
         _stop_fem_hb = _threading_fem.Event()
         _fem_hb = _threading_fem.Thread(
@@ -1911,6 +1970,7 @@ class EmergeSolver:
             self._log(_SEP)
             self._log("Stage 6 / 6 — Field animation")
             self._log(_SEP)
+            _vtk_prev = None
             try:
                 if not hasattr(mw_data, "field"):
                     raise RuntimeError("field data not available in sweep result")
@@ -1930,14 +1990,37 @@ class EmergeSolver:
                     f"freq: {nearest_f/1e9:.6g} GHz"
                 )
 
+                # Silence noisy VTK/OpenGL warnings during interactive viewer init.
+                try:
+                    import vtk as _vtk
+                    if hasattr(_vtk, "vtkObject"):
+                        _vtk_prev = True
+                        _vtk.vtkObject.GlobalWarningDisplayOff()
+                    if hasattr(_vtk, "vtkLogger") and hasattr(_vtk.vtkLogger, "SetStderrVerbosity"):
+                        try:
+                            _vtk.vtkLogger.SetStderrVerbosity(_vtk.vtkLogger.VERBOSITY_OFF)
+                        except Exception:
+                            pass
+                except Exception:
+                    _vtk_prev = None
+
                 # Use a thin horizontal cutplane near PCB mid-plane for stable visualization.
                 cut = mw_data.field.find(freq=nearest_f).cutplane(0.1e-3, z=0.0)
                 scalar = cut.scalar(self.field_component, "complex")
-                sim.display.animate().add_field(scalar, symmetrize=True)
-                self._log("Showing field animation — close the viewer window to continue ...")
-                sim.display.show()
+                with _suppress_native_output():
+                    sim.display.animate().add_field(scalar, symmetrize=True)
+                    self._log("Showing field animation — close the viewer window to continue ...")
+                    sim.display.show()
             except Exception as exc:
                 self._log(f"WARNING: field animation failed: {exc}")
+            finally:
+                if _vtk_prev:
+                    try:
+                        import vtk as _vtk
+                        if hasattr(_vtk, "vtkObject"):
+                            _vtk.vtkObject.GlobalWarningDisplayOn()
+                    except Exception:
+                        pass
 
         return ts_path
 

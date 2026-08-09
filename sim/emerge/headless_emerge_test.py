@@ -10,7 +10,7 @@ Runs the same flow as the KiCad plugin without launching KiCad UI:
 Usage examples:
   python sim/emerge/headless_emerge_test.py --run
   python sim/emerge/headless_emerge_test.py --review-only
-  python sim/emerge/headless_emerge_test.py --output-dir sim/emerge/results --debug
+    python sim/emerge/headless_emerge_test.py --output-dir emerge_results --debug
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent
 DEFAULT_PCB = PROJECT / "kicad" / "ad8317_powermeter.kicad_pcb"
 DEFAULT_CONFIG = HERE / "plugin" / "emerge_config.toml"
-DEFAULT_OUTPUT_DIR = HERE / "results"
+DEFAULT_OUTPUT_DIR = PROJECT / "emerge_results"
 
 
 def _read_toml(path: pathlib.Path) -> dict[str, Any]:
@@ -61,7 +61,13 @@ def _load_ports(cfg: dict[str, Any]) -> dict[str, Any]:
 def _build_job(pcb_path: pathlib.Path,
                output_dir: pathlib.Path,
                gerber_dir: pathlib.Path,
-               cfg: dict[str, Any]) -> dict[str, Any]:
+               cfg: dict[str, Any],
+               force_no_viewers: bool = False) -> dict[str, Any]:
+    vis = dict(cfg.get("visualization", {}))
+    if force_no_viewers:
+        vis["show_geometry"] = False
+        vis["show_mesh"] = False
+
     return {
         "pcb_path": str(pcb_path),
         "gerber_dir": str(gerber_dir),
@@ -70,7 +76,7 @@ def _build_job(pcb_path: pathlib.Path,
         "sweep": dict(cfg.get("sweep", {})),
         "thresholds": dict(cfg.get("thresholds", {})),
         "solver": dict(cfg.get("solver", {})),
-        "visualization": dict(cfg.get("visualization", {})),
+        "visualization": vis,
         "passives": dict(cfg.get("passives", {})),
         "gerber": {
             "use_gerbers": bool(cfg.get("gerber", {}).get("use_gerbers", True)),
@@ -267,6 +273,8 @@ def main() -> int:
     parser.add_argument("--run", action="store_true", help="Run export + solver before review")
     parser.add_argument("--review-only", action="store_true", help="Skip run, only review existing outputs")
     parser.add_argument("--debug", action="store_true", help="Pass --debug to emerge_runner")
+    parser.add_argument("--force-no-viewers", action="store_true",
+                        help="Force show_geometry/show_mesh = false in generated job")
     args = parser.parse_args()
 
     pcb_path = pathlib.Path(args.pcb).resolve()
@@ -294,7 +302,13 @@ def main() -> int:
             print("ERROR: Gerber export failed")
             return 2
 
-        job = _build_job(pcb_path=pcb_path, output_dir=out_dir, gerber_dir=gerber_dir, cfg=cfg)
+        job = _build_job(
+            pcb_path=pcb_path,
+            output_dir=out_dir,
+            gerber_dir=gerber_dir,
+            cfg=cfg,
+            force_no_viewers=bool(args.force_no_viewers),
+        )
         job_path = out_dir / "emerge_job.json"
         job_path.write_text(json.dumps(job, indent=2), encoding="utf-8")
 

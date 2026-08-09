@@ -16,7 +16,7 @@ Usage
     python build.py --uninstall
 
     # Specify KiCad version or plugin version
-    python build.py --kicad-version 9.0 --version 1.1.0
+    python build.py --kicad-version 10.0 --version 1.1.0
 
 Deployment — single location
 -----------------------------
@@ -26,7 +26,7 @@ and makes the toolbar icon disappear.  Never copy the plugin to:
     %APPDATA%/kicad/<ver>/scripting/plugins/
 
 Correct install location (Windows):
-    %OneDrive%/Simulation tools/KiCad/9.0/3rdparty/plugins/com_github_<github-user>_emerge_fem/
+    %OneDrive%/Simulation tools/KiCad/<version>/3rdparty/plugins/com_github_<github-user>_emerge_fem/
 
 Source layout
 -------------
@@ -71,6 +71,7 @@ import json
 import os
 import pathlib
 import platform
+import subprocess
 import shutil
 import sys
 import zipfile
@@ -129,6 +130,52 @@ def _kicad_plugin_dir(kicad_version: str) -> pathlib.Path:
                 kicad_version / "3rdparty" / "plugins")
     # Linux / macOS fallback
     return pathlib.Path.home() / ".local" / "share" / "kicad" / kicad_version / "3rdparty" / "plugins"
+
+
+def _detect_kicad_versions() -> list[str]:
+    """Return detected KiCad version folders, newest first (e.g. ['10.0','9.0'])."""
+    versions: set[str] = set()
+
+    # 1) OneDrive project-local KiCad folders
+    onedrive = (os.environ.get("OneDrive") or
+                str(pathlib.Path.home() / "<cloud-folder>"))
+    root = pathlib.Path(onedrive) / "Simulation tools" / "KiCad"
+    if root.is_dir():
+        for d in root.iterdir():
+            if d.is_dir() and d.name.count(".") == 1:
+                versions.add(d.name)
+
+    # 2) Program Files KiCad installs
+    pf = pathlib.Path(r"C:\Program Files\KiCad")
+    if pf.is_dir():
+        for d in pf.iterdir():
+            if d.is_dir() and d.name.count(".") == 1:
+                versions.add(d.name)
+
+    def _vkey(s: str):
+        try:
+            return tuple(int(x) for x in s.split("."))
+        except Exception:
+            return (0,)
+
+    out = sorted(versions, key=_vkey, reverse=True)
+    if out:
+        return out
+    # Fallback when nothing can be detected from filesystem.
+    return ["10.0", "9.0"]
+
+
+def _resolve_kicad_version(kicad_version: str) -> str:
+    """
+    Resolve KiCad version option.
+    - explicit value like '9.0' or '10.0' is used as-is
+    - 'auto' picks newest detected version
+    """
+    val = (kicad_version or "auto").strip().lower()
+    if val != "auto":
+        return kicad_version
+    detected = _detect_kicad_versions()
+    return detected[0] if detected else "10.0"
 
 
 def _read_version_from_metadata() -> str:
@@ -318,6 +365,41 @@ def _dev_deploy(kicad_version: str):
     return True
 
 
+def _run_headless_debug() -> bool:
+    """
+    Run the headless pipeline test after sync/deploy.
+    Uses plugin emerge_config.toml and forces viewer windows OFF.
+    """
+    headless = EMERGE_DIR / "headless_emerge_test.py"
+    if not headless.exists():
+        print(f"  ERROR: headless test script not found: {headless}")
+        return False
+
+    cmd = [
+        sys.executable,
+        str(headless),
+        "--run",
+        "--debug",
+        "--config", str(THIS_DIR / "emerge_config.toml"),
+        "--force-no-viewers",
+    ]
+    print("\nRunning headless debug check ...")
+    print("  " + " ".join(cmd))
+
+    try:
+        rc = subprocess.run(cmd, cwd=str(EMERGE_DIR)).returncode
+    except Exception as exc:
+        print(f"  ERROR: failed to launch headless debug: {exc}")
+        return False
+
+    if rc != 0:
+        print(f"  ERROR: headless debug failed (exit code {rc})")
+        return False
+
+    print("  Headless debug: PASS")
+    return True
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -331,34 +413,43 @@ def main():
                         help="Remove the plugin from KiCad plugins directory")
     parser.add_argument("--clean-duplicates", action="store_true",
                         help="Remove duplicate AppData scripting/plugins install if present")
-    parser.add_argument("--kicad-version",    default="9.0",
-                        help="KiCad version string (default: 9.0)")
+    parser.add_argument("--kicad-version",    default="auto",
+                        help="KiCad version string (e.g. 9.0, 10.0) or 'auto' (default)")
     parser.add_argument("--version",          default=None,
                         help="Plugin version string (default: read from metadata.json)")
+    parser.add_argument("--headless-debug",   action="store_true",
+                        help="Run headless debug validation after deploy/dev-deploy")
+    parser.add_argument("--no-headless-debug", action="store_true",
+                        help="Skip headless debug validation after deploy/dev-deploy")
     args = parser.parse_args()
 
     version = args.version or _read_version_from_metadata()
+    kicad_version = _resolve_kicad_version(args.kicad_version)
 
     # ── uninstall ────────────────────────────────────────────────────────────
     if args.uninstall:
-        print(f"\nEMerge uninstall — KiCad {args.kicad_version}")
+        print(f"\nEMerge uninstall — KiCad {kicad_version}")
         print("=" * 50)
-        _uninstall(args.kicad_version)
+        _uninstall(kicad_version)
         return
 
     # ── clean duplicates only ────────────────────────────────────────────────
     if args.clean_duplicates:
-        print(f"\nEMerge clean duplicates — KiCad {args.kicad_version}")
+        print(f"\nEMerge clean duplicates — KiCad {kicad_version}")
         print("=" * 50)
-        _cleanup_duplicates(args.kicad_version)
+        _cleanup_duplicates(kicad_version)
         return
 
     # ── dev-deploy: copy from source, skip ZIP ───────────────────────────────
     if args.dev_deploy:
-        print(f"\nEMerge dev-deploy → KiCad {args.kicad_version}")
+        print(f"\nEMerge dev-deploy → KiCad {kicad_version}")
         print("=" * 50)
-        ok = _dev_deploy(args.kicad_version)
+        ok = _dev_deploy(kicad_version)
         if ok:
+            run_headless = args.headless_debug or not args.no_headless_debug
+            if run_headless:
+                if not _run_headless_debug():
+                    raise SystemExit(1)
             print("\nDone. In KiCad: Tools → External Plugins → Refresh Plugins")
         return
 
@@ -376,9 +467,13 @@ def main():
     zip_path = _make_zip(version)
 
     if args.deploy:
-        print(f"\nDeploying from ZIP → KiCad {args.kicad_version} ...")
-        ok = _deploy_from_zip(zip_path, args.kicad_version)
+        print(f"\nDeploying from ZIP → KiCad {kicad_version} ...")
+        ok = _deploy_from_zip(zip_path, kicad_version)
         if ok:
+            run_headless = args.headless_debug or not args.no_headless_debug
+            if run_headless:
+                if not _run_headless_debug():
+                    raise SystemExit(1)
             print("\nDone. In KiCad: Tools → External Plugins → Refresh Plugins")
     else:
         print("\nDone. To install:")
