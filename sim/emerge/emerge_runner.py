@@ -585,6 +585,7 @@ class EmergeModelBuilder:
                     pcb=pcb,
                     gerber_dir=self.gerber_dir,
                     pcb_path=self.pcb_path,
+                    sim_bounds=(xmin, ymin, xmax, ymax),
                     log=self._log,
                 )
                 if drill_stats.get("loaded_files", 0) > 0:
@@ -592,7 +593,8 @@ class EmergeModelBuilder:
                         "  Drill/via files loaded: "
                         f"{drill_stats.get('loaded_files', 0)}; "
                         f"drill sizes: {drill_stats.get('drill_size_count', 0)}; "
-                        f"total holes: {drill_stats.get('total_holes', 0)}"
+                        f"total holes: {drill_stats.get('total_holes', 0)}; "
+                        f"fallback added: {drill_stats.get('manual_fallback_holes', 0)}"
                     )
             else:
                 self._log("  WARNING: gerber_builder not available — "

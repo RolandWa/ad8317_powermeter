@@ -218,6 +218,53 @@ class TestGerberLayerIndexMapping:
         assert stats["total_holes"] == 0
         assert fake.via_calls == [f"{pcb_file.stem}-NPTH.drl", f"{pcb_file.stem}-PTH.drl"]
 
+    def test_load_vias_from_drills_filters_to_sim_bounds(self, tmp_path, pcb_file):
+        class _FakePCB:
+            def __init__(self):
+                self.via_calls = []
+                self.added = []
+                self.vias = []
+                self.via_holes = []
+
+            def vias_from_file(self, filename, **kw):
+                self.via_calls.append(pathlib.Path(filename).name)
+
+            def add_vias(self, *coords, radius, z1=None, z2=None, segments=6):
+                self.added.append({"coords": list(coords), "radius": radius})
+                self.vias.extend(coords)
+
+        gerber_dir = tmp_path / "gerbers"
+        gerber_dir.mkdir(parents=True, exist_ok=True)
+
+        drl_text = """M48
+; #@! TF.FileFunction,Plated,1,4,PTH
+METRIC
+T1C0.300
+%
+T1
+X10.0Y-10.0
+X100.0Y-100.0
+M30
+"""
+        (gerber_dir / f"{pcb_file.stem}-PTH.drl").write_text(drl_text, encoding="utf-8")
+
+        fake = _FakePCB()
+        stats = load_vias_from_drills(
+            pcb=fake,
+            gerber_dir=gerber_dir,
+            pcb_path=pcb_file,
+            sim_bounds=(0.0, -0.02, 0.02, 0.0),
+            log=None,
+        )
+
+        assert stats["loaded_files"] == 1
+        assert stats["total_holes"] == 1
+        assert stats["drill_size_count"] == 1
+        assert stats["manual_fallback_holes"] == 1
+        assert fake.via_calls == []
+        assert len(fake.added) == 1
+        assert fake.added[0]["coords"] == [(0.01, -0.01)]
+
     def test_emerge_version_set(self):
         assert er._EMERGE_VER != ""
 

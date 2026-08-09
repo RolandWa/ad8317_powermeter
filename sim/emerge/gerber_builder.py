@@ -473,6 +473,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
 
 def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
                           pcb_path: pathlib.Path | None = None,
+                          sim_bounds: tuple | None = None,
                           log=None) -> dict:
     """
     Load drill/via definitions from Excellon drill files into *pcb*.
@@ -482,10 +483,18 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
 
     Returns:
         Summary dict with loaded file count, drill size count, and hole count.
+        When sim_bounds=(xmin,ymin,xmax,ymax) is provided in metres, only drill
+        hits inside that area of interest are added to geometry.
     """
     def _log(msg):
         if log:
             log(msg)
+
+    def _in_bounds(x_m: float, y_m: float) -> bool:
+        if sim_bounds is None:
+            return True
+        xmin_m, ymin_m, xmax_m, ymax_m = sim_bounds
+        return xmin_m <= x_m <= xmax_m and ymin_m <= y_m <= ymax_m
 
     if not gerber_dir.is_dir():
         _log("  Drill import skipped: Gerber directory missing")
@@ -521,22 +530,27 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
             "drill_sizes_mm": [],
         }
 
-    def _parse_excellon_stats(drl_path: pathlib.Path) -> tuple[int, set[float]]:
+    def _parse_excellon_data(drl_path: pathlib.Path) -> tuple[int, set[float], dict[str, list[tuple[float, float]]], dict[str, float], bool]:
         """
         Parse Excellon drill file and estimate:
           - number of hole hits (coordinate commands)
           - set of tool diameters used in the body
+          - coordinate list per tool for optional manual via fallback
+          - tool diameter table in mm
+          - whether the file is plated (PTH) by KiCad file-function comment
         """
         tool_diam_mm: dict[str, float] = {}
         used_sizes: set[float] = set()
+        coords_by_tool: dict[str, list[tuple[float, float]]] = {}
         holes = 0
         current_tool: str | None = None
         in_header = True
+        plated = True
 
         try:
             lines = drl_path.read_text(encoding="utf-8", errors="replace").splitlines()
         except Exception:
-            return 0, set()
+            return 0, set(), {}, {}, True
 
         tool_def_re = _re.compile(r"^T(\d+)C([0-9]*\.?[0-9]+)$")
         tool_sel_re = _re.compile(r"^T(\d+)$")
@@ -545,6 +559,11 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
             line = raw.strip().upper()
             if not line:
                 continue
+
+            if "TFFILEFUNCTION,NONPLATED" in line.replace(".", ""):
+                plated = False
+            elif "TF.FILEFUNCTION,NONPLATED" in line:
+                plated = False
 
             if line == "%":
                 in_header = False
@@ -563,31 +582,94 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
             if in_header:
                 continue
 
-            # Hole/plunge commands in Excellon bodies are coordinate lines.
-            # Count lines that contain at least one axis coordinate.
-            if _re.search(r"[XY]-?\d+", line):
-                holes += 1
+            # Hole/plunge commands in KiCad decimal Excellon bodies are coordinate lines.
+            # Also support slot syntax where line may contain two XY pairs.
+            xy_pairs = _re.findall(r"X(-?\d+(?:\.\d+)?)Y(-?\d+(?:\.\d+)?)", line)
+            if xy_pairs:
+                holes += len(xy_pairs)
                 if current_tool is not None and current_tool in tool_diam_mm:
                     used_sizes.add(tool_diam_mm[current_tool])
+                    lst = coords_by_tool.setdefault(current_tool, [])
+                    for sx, sy in xy_pairs:
+                        try:
+                            # Excellon is metric decimal in mm here.
+                            lst.append((float(sx) * 1e-3, float(sy) * 1e-3))
+                        except Exception:
+                            pass
 
-        return holes, used_sizes
+        return holes, used_sizes, coords_by_tool, tool_diam_mm, plated
+
+    def _manual_add_vias(coords_by_tool: dict[str, list[tuple[float, float]]],
+                         tool_diam_mm: dict[str, float], plated: bool) -> int:
+        """Fallback when pcb.vias_from_file ingests zero via records."""
+        if not hasattr(pcb, "add_vias"):
+            return 0
+
+        added = 0
+        for tool, coords in coords_by_tool.items():
+            if not coords:
+                continue
+            diam_mm = tool_diam_mm.get(tool)
+            if diam_mm is None or diam_mm <= 0:
+                continue
+            radius_m = 0.5 * diam_mm * 1e-3
+            try:
+                # add_vias creates conductive vias (appropriate for plated drills).
+                # For non-plated drills we still add them as fallback geometry markers
+                # because vias_from_file currently ingests zero records on this setup.
+                pcb.add_vias(*coords, radius=radius_m)
+                added += len(coords)
+            except Exception:
+                continue
+        return added
 
     loaded = 0
     total_holes = 0
     drill_sizes_mm: set[float] = set()
+    manual_fallback_added = 0
+    if sim_bounds is not None:
+        _log("  Drill geometry scope: filtered to simulation bounds")
     _log(f"Loading drill files ({len(ordered)}) ...")
     for drl in ordered:
         size_kb = drl.stat().st_size / 1024
         _log(f"  drill: {drl.name}  ({size_kb:.1f} kB)  parsing ...")
         t0 = time.monotonic()
         try:
-            pcb.vias_from_file(str(drl))
-            holes, used_sizes = _parse_excellon_stats(drl)
+            vias_before = len(getattr(pcb, "vias", []) or [])
+            via_holes_before = len(getattr(pcb, "via_holes", []) or [])
+            holes, used_sizes, coords_by_tool, tool_diam_mm, plated = _parse_excellon_data(drl)
+
+            if sim_bounds is not None:
+                filtered_coords_by_tool: dict[str, list[tuple[float, float]]] = {}
+                for _tool, _coords in coords_by_tool.items():
+                    _kept = [(x_m, y_m) for (x_m, y_m) in _coords if _in_bounds(x_m, y_m)]
+                    if _kept:
+                        filtered_coords_by_tool[_tool] = _kept
+                coords_by_tool = filtered_coords_by_tool
+                holes = sum(len(v) for v in coords_by_tool.values())
+                used_sizes = {tool_diam_mm[t] for t, v in coords_by_tool.items() if v and t in tool_diam_mm}
+
             total_holes += holes
             drill_sizes_mm.update(used_sizes)
+
+            # Only use the native vias_from_file path when no bounds filter is
+            # required; it has no bbox/AOI argument and would ingest whole-board vias.
+            if sim_bounds is None:
+                pcb.vias_from_file(str(drl))
+
+            vias_after = len(getattr(pcb, "vias", []) or [])
+            via_holes_after = len(getattr(pcb, "via_holes", []) or [])
+            ingested_delta = (vias_after - vias_before) + (via_holes_after - via_holes_before)
+
+            if ingested_delta <= 0 and coords_by_tool:
+                fb_added = _manual_add_vias(coords_by_tool, tool_diam_mm, plated)
+                manual_fallback_added += fb_added
+                if fb_added > 0:
+                    _log(f"  drill: {drl.name}: via parser fallback added {fb_added} hole(s)")
+
             _log(
                 f"  drill: {drl.name}: done  ({time.monotonic()-t0:.1f} s)"
-                f"  holes={holes}  sizes={len(used_sizes)}"
+                f"  holes={holes}  sizes={len(used_sizes)}  ingested={max(ingested_delta, 0)}"
             )
             loaded += 1
         except Exception as exc:
@@ -598,6 +680,7 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
         "total_holes": total_holes,
         "drill_size_count": len(drill_sizes_mm),
         "drill_sizes_mm": sorted(drill_sizes_mm),
+        "manual_fallback_holes": manual_fallback_added,
     }
 
 
@@ -658,6 +741,23 @@ def build_and_commit(sim, pcb, board_t: float,
     air_vol = pcb.generate_air(height=air_height)
     _log(f"    done  ({time.monotonic()-t1:.1f} s)")
 
+    # Generate explicit via geometries when available. Some FileBasedPCB
+    # paths ingest drill data into pcb.vias but do not inject them into the
+    # main PCB solid automatically.
+    via_geos = []
+    try:
+        _vias = getattr(pcb, "vias", []) or []
+        if _vias and hasattr(pcb, "generate_vias"):
+            _vg = pcb.generate_vias(merge=False)
+            if isinstance(_vg, list):
+                via_geos = [v for v in _vg if v is not None]
+            elif _vg is not None:
+                via_geos = [_vg]
+            if via_geos:
+                _log(f"  generate_vias() ... done  ({len(via_geos)} via object(s))")
+    except Exception as _via_exc:
+        _log(f"  WARNING: generate_vias failed: {_via_exc}")
+
     # Priority: PCB volumes win over air background (lower number = higher priority)
     if isinstance(pcb_vol, list):
         for _v in pcb_vol:
@@ -671,7 +771,7 @@ def build_and_commit(sim, pcb, board_t: float,
     _log("  commit_geometry() — fusing CAD solids ...")
     t2 = time.monotonic()
     try:
-        sim.commit_geometry(pcb_vol, air_vol, pml, *port_geos)
+        sim.commit_geometry(pcb_vol, *via_geos, air_vol, pml, *port_geos)
     except Exception as exc:
         _log(f"  commit_geometry failed after {time.monotonic()-t2:.1f} s: {exc}")
         try:
