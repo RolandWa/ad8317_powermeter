@@ -1,9 +1,31 @@
 # DESIGN REQUIREMENTS DOCUMENT (DRD)
 
-**Project Title:** Handheld Micro-RF Power Meter (AD8317 + STM32F373RCT6)
+**Project Title:** Handheld Micro-RF Power Meter (AD8317 + STM32F373RCTx)
 **Form Factor / Target Enclosure:** Hammond 1590A Ultra-Compact Shielded Chassis
 **Firmware Architecture:** Bare-Metal C / HAL Ecosystem
 **Compilation Toolchain:** MSYS64 (arm-none-eabi-gcc) / STM32CubeIDE
+
+---
+
+## Revision History
+
+| Rev | Date | Author | Changes |
+| :--- | :--- | :--- | :--- |
+| A | 2026-07-19 | Author | Initial release |
+| B | 2026-08-10 | Author | Schematic-to-DRD sync after hardware review; added Sec 10 RF connector requirements; added Sec 11 PDN/decoupling strategy; added Sec 12 open items |
+
+### Rev B Summary of Changes
+
+| Item | Rev A (DRD) | Rev B (Current Schematic) |
+| :--- | :--- | :--- |
+| MCU part marking | STM32F373RCT**6** | STM32F373RCT**x** (same die, KiCad convention) |
+| Battery charger (U5) | MCP73831T-2ACI | **BQ24090DGQ** (TI 1A, HVSSOP-10, with NTC thermal control) |
+| Analog LDO voltage (U4/U5) | ADP150AUJZ-**2.8**V | ADP150AUJZ-**3.3**V (AD8317 VPOS min 3.0 V satisfied) |
+| Digital LDO | AP2112K-3.3 | AP2112K-3.3 (unchanged) |
+| EEPROM | Not in DRD | **M24C02-WMN** added (U7, I2C, calibration data) |
+| USB-C connector | USB4110-GF-A | **G-Switch GT-USB-7010ASV** (footprint identical) |
+| Tactile switches | TACT-66N-F | **Omron B3FS** (6×6 mm SMD, B3FS-100xP footprint) |
+| VDDSD supply (STM32 pin 32) | Not specified | Currently routed to `+3V3` (digital) — see Sec 12 open item |
 
 ---
 
@@ -118,18 +140,18 @@ The architecture relies on a strict physical isolation barrier between the sensi
 The analog rail (+3V3_A) powers the AD8317 log detector and REF3030 voltage reference. These are
 noise-sensitive: AD8317 output ripple directly adds to the SDADC measurement error.
 
-| Parameter | AP2112K-3.3 | **ADP150AUJZ-2.8** | Benefit |
+| Parameter | AP2112K-3.3 | **ADP150AUJZ-3.3** | Benefit |
 | :--- | :--- | :--- | :--- |
-| Output voltage | 3.3 V | **2.8 V** | AD8317 VPOS range 3.0–5.5 V ✓; lower headroom → less dropout at low VBAT |
+| Output voltage | 3.3 V | **3.3 V** | Matches AD8317 VPOS nominal; simplifies BOM (single voltage) |
 | Output noise (10 Hz–100 kHz) | ~50 µVrms | **9 µVrms** | 5× lower noise floor on VPOS |
 | PSRR @ 1 kHz | 65 dB | **100 dB** | Better battery switcher rejection |
 | Quiescent current | 55 µA | **65 µA** | Comparable |
 | Package | SOT-23-5 | **TSOT-5** | Same footprint family |
 | Datasheet | — | [ADP150](https://www.analog.com/en/products/adp150.html) | |
-| Mouser | AP2112K-3.3TRG1 | **584-ADP150AUJZ-2.8R7** | |
+| Mouser | AP2112K-3.3TRG1 | **584-ADP150AUJZ-3.3R7** | |
 
-**U5 (analog LDO) is changed from AP2112K to ADP150AUJZ-2.8-R7.**  
-U4 (digital LDO, +3V3 rail for STM32 VDD / OLED) remains AP2112K-3.3.
+**U4 (analog LDO) is ADP150AUJZ-3.3-R7** (Rev B: changed from 2.8 V to 3.3 V to satisfy AD8317 VPOS minimum 3.0 V with margin).  
+U6 (digital LDO, +3V3 rail for STM32 VDD / OLED) remains AP2112K-3.3.
 
 The REF3030 voltage reference (U3) is powered from the ADP150 +3V3_A rail and provides a stable
 3.00 V to VREFSD+ of the STM32F373 SDADC1. Datasheet:
@@ -340,9 +362,10 @@ Optimized for **JLCPCB automated assembly** and structural placement inside a Ha
 | **U2** | 1 | AD8317 | LFCSP-8 (3x3mm) | **Mouser** | 584-AD8317ACPZ-R7 | Demodulating Logarithmic Amp 10GHz |
 | **U3** | 1 | REF3030AIDBZR | SOT-23-3 | **Mouser** | 595-REF3030AIDBZR | Low-Drift Voltage Reference 3.00V, 50ppm |
 | **U4** | 1 | AP2112K-3.3TRG1 | SOT-23-5 | **TME** | AP2112K-3.3TRG1 | Fixed LDO 3.3V, 600mA — digital rail (+3V3) |
-| **U5** | 1 | ADP150AUJZ-2.8-R7 | TSOT-5 | **Mouser** | 584-ADP150AUJZ-2.8R7 | Ultra-Low-Noise LDO 2.8V, 150mA, 9µVrms — analog rail (+3V3_A) |
-| **U6** | 1 | MCP73831T-2ACI | SOT-23-5 | **TME** | MCP73831T-2ACI/OT | Fully Standalone Li-Po CC/CV Charger |
-| **U7** | 1 | AP9101RA-ASTRG1 | SOT-26 | **TME** | AP9101RA-ASTRG1 | Primary Lithium Cell Protection Supervisor |
+| **U4** | 1 | ADP150AUJZ-3.3-R7 | TSOT-5 | **Mouser** | 584-ADP150AUJZ-3.3R7 | Ultra-Low-Noise LDO 3.3V, 150mA, 9µVrms — analog rail (+3V3_A) |
+| **U5** | 1 | BQ24090DGQ | HVSSOP-10 | **Mouser** | 595-BQ24090DGQ | 1A Single-Input Li-Ion/Li-Pol Charger with NTC temperature sensing |
+| **U6** | 1 | AP2112K-3.3 | SOT-23-5 | **TME** | AP2112K-3.3TRG1 | Fixed LDO 3.3V, 600mA — digital rail (+3V3) |
+| **U7** | 1 | M24C02-WMN | SOIC-8 | **Mouser** | 511-M24C02-WMN6P | 2Kb I2C EEPROM — calibration curve storage |
 | **T1, T2, T4** | 3 | AO3401A | SOT-23 | **JLCPCB** | C13125 (Direct) | Power P-MOSFET, -30V, -4A, RDS(on) < 50mR |
 | **T3** | 1 | BSS138 | SOT-23 | **TME** | BSS138-7-F | Signal N-MOSFET Control Switch, Logic-Level |
 | **T_PCM** | 1 | FS8205A | TSSOP-8 | **JLCPCB** | C347480 (Direct) | Dual-Channel N-MOSFET Battery Pack Driver |
@@ -354,9 +377,10 @@ Optimized for **JLCPCB automated assembly** and structural placement inside a Ha
 | **C1-C12** | 12 | 100 nF | 0603 | **JLCPCB** | Standard 100nF X7R | Multilayer Ceramic Decoupling Capacitors |
 | **DISP1** | 1 | SBC-OLED01 | Mod. 27x27mm | **Conrad** | 2176922 | 0.96" SSD1306 Graphic Display Matrix, I2C |
 | **BAT1** | 1 | Akyga AKY0638 | Li-Po Pack | **TME** | AKY0638 | 3.7V Single-Cell Battery Pack, **1200mAh**, JST |
-| **SW1, SW2** | 2 | Tact Switch 6x6 | SMD | **TME** | TACT-66N-F | UI Navigation Inputs (MENU, NEXT keys) |
-| **CONN1** | 1 | USB4110-GF-A | Mid-Mount SMT | **Mouser** | 640-USB4110-GF-A | USB-C 16-pin interface socket entry |
-| **CONN2** | 1 | Amphenol RF 132372 | SMT Cable-Mount | **TME** | 132372 | SMA Female Straight 50Ω, 18 GHz, PTFE, Gold contacts |
+| **SW1, SW2** | 2 | Omron B3FS | SMD 6×6 mm | **TME** | B3FS-100xP | Tactile switch, 100 gf, SMD, 6×6 mm |
+| **J2** | 1 | G-Switch GT-USB-7010ASV | SMT 16P | **Mouser** | USB-C 16P receptacle |
+| **J1** | 1 | Amphenol 132289 | Edge-mount SMA | **Mouser** | 132289 | SMA edge-launch, 18 GHz (see Sec 10 for frequency limit notes) |
+| **J3** | 1 | 2.54 mm 1×4 socket | Through-hole | — | — | UART/I2C expansion header |
 
 ---
 
@@ -398,4 +422,103 @@ When prompting an AI helper for implementation, feed it the rules below to get w
 
 1. **Never use blocking delays (`HAL_Delay`)** inside the main operational loops or SCPI parsing routines. All timings, including button debounce and OLED frame rates, must rely on non-blocking `HAL_GetTick()` token counters.
 2. **Enforce clean register state restoration** during the deep sleep cycle. Remind the AI to include the `SystemClock_Config()` restoration parameters immediately following the execution of `HAL_PWR_EnterSTOPMode()`.
+
+---
+
+## 10. RF Connector Selection Requirements
+
+The SMA (3.5 mm outer conductor) connector family, including all Amphenol 132xx edge-launch variants, is rated to a maximum of **18 GHz** (MIL-C-39012 / IEC 61169-15).  
+Beyond 18 GHz the TE₁₁ higher-order mode begins propagating in the outer conductor:
+
+$$f_{cutoff}^{TE_{11}} = \frac{c}{\pi \times d \times \sqrt{\varepsilon_r}} \approx 18\text{ GHz (air dielectric)}$$
+
+This device is designed and calibrated for **1 MHz – 10 GHz** using the AD8317. The SMA connector selection is therefore within specification for the intended operating range.
+
+### Connector frequency budget
+
+| Connector family | Outer conductor Ø | Single-mode cutoff | Suitability |
+| :--- | :--- | :--- | :--- |
+| **SMA (Amphenol 132289)** | 3.5 mm | ~18 GHz | **Correct for 1 MHz – 10 GHz** |
+| 2.92 mm (K) | 2.92 mm | ~40 GHz | Required only if extending to >18 GHz |
+| 2.4 mm (V) | 2.40 mm | ~50 GHz | Required only if extending to >40 GHz |
+
+### PCB launch requirements for SMA edge-mount (J1)
+
+1. GCPW trace width on layer 1 (F.Cu) matched to 50 Ω using board stackup εr and layer spacing
+2. Coplanar ground gap ≤ 0.15 mm clearance from signal trace
+3. Ground via fence along GCPW run: via pitch ≤ λ/8 at 10 GHz in FR-4 (≤ 3.2 mm)
+4. Via stub length after signal layer ≤ 0.4 mm; back-drill if via passes through full 4-layer stack
+5. No ground plane interruption under the SMA pad footprint within 2× pad diameter
+
+---
+
+## 11. Power Delivery Network (PDN) & Decoupling Strategy
+
+### Philosophy
+
+Decoupling is validated by SIwave Power Integrity (PI) simulation with harmonics analysis on the actual power planes, using physical component placement and via parasitics.  This approach is more accurate than rule-of-thumb multi-stage capacitor stacking because it captures mounted inductance, plane spreading inductance, and real anti-resonance frequencies.
+
+### Chosen decoupling topology
+
+Two-stage flat-impedance approach per supply domain:
+
+| Stage | Value | Package | Self-resonance (typical) | Role |
+| :--- | :--- | :--- | :--- | :--- |
+| Stage 1 | 100 nF X7R | 0402 | 60–80 MHz | Covers MCU harmonics at 36 / 72 MHz |
+| Stage 2 | 10 µF X5R | 0402 | 3–6 MHz | Bulk charge for burst-current events |
+
+No intermediate values (10 nF, 1 nF) are required when SIwave confirms PDN impedance meets target across the relevant band.
+
+### Target impedance
+
+For VDDA and VREF+ domains driving the STM32F373 16-bit SDADC:  
+- Noise budget: < 1 mV rms in 1 kHz – 1 MHz band
+- SDADC peak current: ~3–5 mA  
+- Required PDN impedance: **Z < 0.2–0.3 Ω at 100 kHz – 1 MHz**
+
+This is achievable with 100 nF mounted < 1 mm from VDDA (pin 13) and 10 µF within 3–5 mm, provided mounted inductance L_mount < 0.5 nH.
+
+### SIwave validation checklist
+
+- [ ] PDN impedance at VDDA (pin 13) < 0.3 Ω across 100 kHz – 10 MHz
+- [ ] PDN impedance at VREF+ (pin 17) < 0.3 Ω across 100 kHz – 10 MHz
+- [ ] VDDSD (pin 32) anti-resonance peaks do not fall within SDADC clock harmonics (6 MHz, 12 MHz, 18 MHz)
+- [ ] No plane resonances coincide with MCU PLL frequency (72 MHz) or USB SOF (1 kHz)
+- [ ] Analog/digital ground coupling inductance < 1 nH between VSSA (pin 12) and VSS (pin 63)
+
+### Placement rules derived from simulation
+
+1. One 100 nF capacitor shall be placed within 0.5 mm of each VDDA/VSSA pin pair
+2. One 10 µF capacitor per supply domain placed within 3 mm of the device
+3. REF3030 output decoupling: 1 µF C0G + 100 nF X7R directly on VREF+ net, within 2 mm of pin 17
+4. Via placement: decoupling cap vias connect directly to plane, no shared via with other components
+
+---
+
+## 12. Schematic Review Findings & Open Items (2026-08-10)
+
+Review performed against KiCad schematic (Rev A board, 4-layer 1.6 mm FR-4).
+
+### Confirmed correct
+
+| Item | Pin(s) | Net | Status |
+| :--- | :--- | :--- | :--- |
+| VDDA analog supply | 13 | +3V3_A (ADP150) | ✅ |
+| VREF+ and VREFSD+ | 17, 33 | REF3030 3.0 V | ✅ |
+| SWD debug: SWDIO/SWCLK | 46, 49 | J5 1.27 mm header | ✅ |
+| USB D-/D+ | 44, 45 | PA11/PA12 → USB-C J2 | ✅ |
+| I2C1: SCL/SDA | 58, 59 | PB6/PB7 → M24C02 EEPROM | ✅ |
+| UART1 TX/RX | 42, 43 | PA9/PA10 → J5 header | ✅ |
+| VDET (AD8317 output) | 14 | PA0 / SDADC channel | ✅ |
+| BOOT0 | 60 | JP1 solder jumper | ✅ (verify default = GND) |
+
+### Open items requiring PCB layout verification
+
+| # | Item | Risk | Action |
+| :--- | :--- | :--- | :--- |
+| OI-1 | **VDDSD (pin 32) routed from +3V3 (digital)**  | SDADC noise floor degraded by digital switching | Add ferrite bead (Z≥600Ω@100MHz) between +3V3 and VDDSD, or route from +3V3_A. Validate with SIwave. |
+| OI-2 | **VBAT (pin 1) supply source** | RTC / backup domain non-functional if floating | Confirm VBAT hierarchical label resolves to battery net or VDD with diode at power sheet level |
+| OI-3 | **BOOT0 JP1 default state** | Unintended boot from UART/USB if BOOT0 floats HIGH | Confirm JP1 pulls BOOT0 to GND by default; bridging only for DFU programming mode |
+| OI-4 | **VDDA / VREF+ decoupling proximity** | ADC noise floor | Layout rule: 100 nF within 0.5 mm of pin 13; 1 µF C0G within 1 mm of pin 17 |
+| OI-5 | **Input matching network (C6 = 8.2 pF) self-resonance** | 0402 self-resonance ~3–4 GHz; above resonance C6 becomes inductive | Verify EMerge FEM simulation shows acceptable S11 at 6–10 GHz after accounting for inductive behaviour |
 3. **Always wrap SCPI text buffers safely**. The USBTMC command buffers must include string tokenization safety (`strtok_r` or `strncmp`) to avoid memory leak panics or buffer overflows during continuous automated sweeps
