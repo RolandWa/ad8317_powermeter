@@ -4,7 +4,7 @@
 
 `hfss_sma_coupon_gcpw_opt.py` is a fully parametric HFSS IronPython script for
 **iterative optimization of a single SMA-to-GCPW transition**.  It uses a short
-(20 mm default) **half-model** with one SMA connector on the left and a radiation
+(10 mm) **half-model** with one SMA connector on the left and a radiation
 boundary on the right face that absorbs the propagating GCPW mode.
 
 Wave port **WP1** is placed on the circular outer face of the SMA connector
@@ -33,7 +33,7 @@ No external packages required.  Edit the `CONFIG` section before running.
 
 | Feature | `hfss_sma_coupon_gcpw.py` | `hfss_sma_coupon_gcpw_opt.py` |
 |---|---|---|
-| Board length | 60 mm, two SMA connectors | **20 mm**, one SMA connector |
+| Board length | 60 mm, two SMA connectors | **10 mm**, one SMA connector |
 | Right termination | SMA connector + wave port WP2 | **Radiation boundary** (absorbs GCPW mode) |
 | Ports | WP1 (left SMA), WP2 (right SMA) | **WP1 only** (circular, outer SMA face) |
 | F.Cu signal conductor | 1 uniform-width box | **3 boxes** — entrance + stub + center-to-right-edge |
@@ -66,7 +66,7 @@ Z
 ```
 
 - **Origin**: centre of the board in XY; z = 0 at the bottom of B.Cu.
-- **X**: board long axis; board spans `[−hx, +hx]` where `hx = BOARD_LENGTH/2 = 10 mm`.
+- **X**: board long axis; board spans `[−hx, +hx]` where `hx = BOARD_LENGTH/2 = 5 mm`.
 - **Left end** (x = −hx): SMA connector pin contact; `P1` (component internal, kept).
   Wave port `WP1` is at the outer coaxial cable face, x < −hx.
 - **Right end** (x = +hx): Radiation boundary `Rad_PML_Right` (no physical connector).
@@ -136,11 +136,11 @@ For default stackup (TRACE_WIDTH=0.35, GAP_MM=0.20): max = 0.70 mm.
 
 | Object | X start (AEDT expr) | X size (AEDT expr) | Y centre | Y size | Material |
 |---|---|---|---|---|---|
-| `Trace_FCu_L_Ent` | `-10mm` | `comp_induct_len` | 0 | `comp_induct_w` | copper |
-| `Trace_FCu_L_Cap` | `-10mm+comp_induct_len` | `comp_cap_len` | 0 | `comp_cap_w` | copper |
-| `Trace_FCu_Ctr` | `-10mm+comp_induct_len+comp_cap_len` | `20mm−comp_induct_len−comp_cap_len` | 0 | `TRACE_WIDTH` | copper |
+| `Trace_FCu_L_Ent` | `-5mm` | `comp_induct_len` | 0 | `comp_induct_w` | copper |
+| `Trace_FCu_L_Cap` | `-5mm+comp_induct_len` | `comp_cap_len` | 0 | `comp_cap_w` | copper |
+| `Trace_FCu_Ctr` | `-5mm+comp_induct_len+comp_cap_len` | `10mm−comp_induct_len−comp_cap_len` | 0 | `TRACE_WIDTH` | copper |
 
-*(hx = 10 mm for default 20 mm board)*
+*(hx = 5 mm for 10 mm board)*
 
 The Ctr segment extends all the way to x = +hx (right PCB edge / radiation
 boundary face).  There are **no right-side compensation pieces** because there
@@ -401,14 +401,46 @@ of optimised variables.  For Adaptive Single-Objective with n=4:
 ## Mesh Strategy
 
 ```
-Mesh_Transition   → MeshZone_Trans_Left only                    [MESH_TRANS_MM]
-Mesh_Trace        → Trace_FCu_Ctr                               [MESH_TRACE_MM]
-Mesh_Trace_Comp   → Trace_FCu_L_Ent, Trace_FCu_L_Cap           [MESH_TRACE_MM]
-Mesh_CoplnarGND   → CGND_FCu_PosY, CGND_FCu_NegY               [MESH_CGND_MM]
-Mesh_Planes       → inner + B.Cu planes                         [MESH_PLANE_MM]
-Mesh_Vias_xx      → via barrels                                 [MESH_VIA_MM]
-Mesh_Skin_xx      → all copper (skin depth)                     [MESH_SKIN_MM]
+Mesh_Transition   → MeshZone_Trans_Left only                    [MESH_TRANS_MM = 0.15 mm]
+Mesh_Trace        → Trace_FCu_Ctr                               [MESH_TRACE_MM = 0.12 mm]
+Mesh_Trace_Comp   → Trace_FCu_L_Ent, Trace_FCu_L_Cap           [MESH_TRACE_MM = 0.12 mm]
+Mesh_CoplnarGND   → CGND_FCu_PosY, CGND_FCu_NegY               [MESH_CGND_MM  = 0.25 mm]
+Mesh_Planes       → inner + B.Cu planes                         [MESH_PLANE_MM = 0.60 mm]
+Mesh_Vias_xx      → via barrels                                 [MESH_VIA_MM   = 0.10 mm]
+Mesh_Skin_xx      → signal trace + comp segments ONLY           [MESH_SKIN_MM  = 0.10 mm]
 ```
+
+### Skin-depth op scope — signal trace only
+
+Inner planes (In1.Cu, In2.Cu, B.Cu) and coplanar GND strips are **excluded** from
+the skin-depth mesh op.  At `SurfTriMaxLength = MESH_TRACE_MM = 0.12 mm`, a single
+20 × 10 mm ground plane generates roughly 90 000 surface triangles × 2 skin-depth
+layers ≈ **180 000 extra tetrahedra per plane**.  Three planes across 20 adaptive
+passes caused `SOLVER_OUT_OF_MEMORY` on the local machine (2026-08-12).
+
+Return current on inner planes is diffuse; HFSS adaptive refinement places elements
+there automatically wherever ΔS is large — no explicit skin-depth op is needed.
+
+> **Physical note:** the electromagnetic skin depth in copper at 16 GHz is ~0.5 µm.
+> `MESH_SKIN_MM = 0.10 mm` is the **volumetric layer thickness** of the mesh op
+> (how deep the layered tet elements penetrate into the conductor), not the EM
+> skin depth.  It sets the resolution with which HFSS resolves the current gradient
+> inside the signal trace wall.
+
+### Adaptive solve parameters
+
+| CONFIG constant | Value | Notes |
+|---|---|---|
+| `MAX_PASSES` | **10** | Reduced from 20 — each pass adds ~30% to mesh count |
+| `MAX_DELTA_S` | 0.02 | Stop when S-parameter change between passes < 0.02 |
+| `MESH_SKIN_MM` | **0.10 mm** | Skin-depth layer thickness on signal trace only |
+
+### RAM limit — check before running
+
+AEDT Tools → Options → HFSS → HPC and Analysis Options → Solver Settings →
+**RAM Limit (%)** — raise to **90%** if it is below that.  The solver aborts
+when it reaches the configured percentage of installed RAM even if more is
+physically free.
 
 `MeshZone_Trans_Right` is created by `make_transition_zones` and then immediately
 deleted in `main()`.  It is unnecessary because there is no SMA connector at
@@ -437,14 +469,97 @@ Use this before running Optimetrics to get a feel for the sensitivities:
 5. **Fine-tune**: iterate inductance ↔ capacitance with voids fixed.
 
 6. **Run Optimetrics**: once in the right ballpark, launch **OptimizationSetup1**
-   (DX SCREENING samples 100 initial points across the full variable space, then
-   refines toward the best region).  After it converges, re-run RF_Sweep to
-   verify broadband S11.  If you already have a good starting point from a
-   previous screen, switch the optimizer in the AEDT GUI to **Quasi Newton** for
-   faster gradient-based convergence.
+   (kDX ASO — Adaptive Single-Objective(Gradient) — runs 19 space-filling samples
+   then up to 68 total evaluations with gradient-guided refinement).  After it
+   converges, re-run RF_Sweep to verify broadband S11.  For final verification
+   raise CONFIG `MAX_PASSES` to 10 and `MAX_DELTA_S` to 0.02, then re-run the
+   winning design once.
 
 7. **Transfer to full model**: copy final variable values into
    `hfss_sma_coupon_gcpw.py` and verify with the 60 mm two-connector model.
+
+---
+
+## Reducing Computation Time
+
+A full kDX ASO run (68 evaluations × HFSS adaptive solve) can take many hours on
+a local workstation.  The levers below, applied together, reduce wall-clock time
+by 70–85%.
+
+### 1. CopyMesh — not available for geometry variables
+
+`CopyMesh=True` tells HFSS to reuse the adapted mesh from the nominal solve for
+each optimizer evaluation.  **This is only valid for material or excitation
+sweeps.**  All four optimization variables (`comp_induct_w/len`, `comp_cap_w/len`)
+change the PCB geometry — HFSS therefore rejects `CopyMesh=True` at setup time
+with:
+
+> *Cannot set Copy mesh flag because all of the variables being varied are
+> geometry variables.*
+
+The script uses `CopyMesh=False, SolveWithCopiedMeshOnly=False` — each evaluation
+runs a full adaptive solve from the lambda mesh.  This is the correct setting for
+geometric Optimetrics.
+
+### 2. Relax convergence for optimizer iterations (two-phase strategy)
+
+The optimizer needs to **rank** designs, not achieve maximum accuracy.  Loose
+settings for the optimization run, tight settings for the single final verification:
+
+| Phase | `MAX_PASSES` | `MAX_DELTA_S` | Purpose |
+| --- | --- | --- | --- |
+| Optimization run (current CONFIG) | **6** | **0.05** | Fast ranking of 68 designs |
+| Final verification | 10 | 0.02 | Accurate S11 on the winner |
+
+To verify the winner: set `MAX_PASSES=10`, `MAX_DELTA_S=0.02` in CONFIG, delete
+the old HFSS_Adaptive setup in AEDT, then re-run the script (or use
+Analyze → Analyze All on the re-configured setup).
+
+### 3. HPC parallel cores
+
+AEDT Tools → Options → HFSS → HPC and Analysis Options → set **Number of Cores**
+to all physical cores (not HyperThreading logical cores).  The direct solver
+(LU matrix factorization) scales almost linearly to ~8 cores.  This applies to
+every adaptive pass and every frequency sweep point.
+
+### 4. Frequency sweep type — Interpolating, not Discrete
+
+Right-click RF_Sweep → Edit → check that **Type** is **Interpolating** (or
+**Fast/AWE**).  Discrete type solves all 401 frequency points separately and
+can add several minutes per iteration.  Interpolating solves at a handful of
+basis frequencies and interpolates the rest.
+
+### 5. Shorten the board length
+
+Mesh count scales with board volume.  `BOARD_LENGTH` is set to **10 mm** (reduced
+from 20 mm), cutting tetrahedra by ~50%.  The physics of the SMA transition is
+captured within 5–6 mm of the connector pin; the remaining GCPW section is pure
+waveguide that adds mesh but not information.
+
+### 6. GPU acceleration (NVIDIA only)
+
+AEDT Tools → Options → HFSS → GPU Acceleration → enable if an NVIDIA CUDA GPU
+is present.  Matrix assembly and solve offload to the GPU, typically 2–5× faster
+for models in the 100k–500k tetrahedra range.
+
+### 7. RAM limit
+
+Tools → Options → HFSS → HPC and Analysis Options → Solver Settings →
+**RAM Limit (%)** → set to **90**.  The solver aborts at the configured percentage
+even if physical RAM is still free.
+
+### Expected combined savings
+
+| Change | Typical saving per iteration |
+|---|---|
+| CopyMesh=True | ~65% (7 → 2 adaptive passes) |
+| MAX_PASSES 10→6, MAX_DELTA_S 0.02→0.05 | ~20% |
+| HPC cores (4→8) | ~40% on matrix solve |
+| Shorter board (20→10 mm) | ~50% fewer tets |
+| Interpolating sweep | Eliminates repeated discrete solves |
+
+A 16-hour run with default settings can realistically drop to 3–5 hours with all
+changes applied on a local 8-core workstation.
 
 ---
 
@@ -490,6 +605,31 @@ Use this before running Optimetrics to get a feel for the sensitivities:
   (e.g. `"comp_induct_len"`, `"-10.000000mm+comp_induct_len"`) are evaluated
   live by AEDT when Optimetrics updates variable values — geometry updates
   without re-running the script.
+
+- **OneDrive / UNC paths with spaces** cause post-solve file copy failures
+  (`Failed to copy local file ... Error: The system cannot find the path specified`).
+  HFSS writes results to a local temp directory then copies them back to the project
+  folder.  Paths with spaces break the copy.  **Always save HFSS projects to a
+  local directory without spaces**, e.g. `D:\Ansys_proj\SMA_Coupon_GCPW_Opt\`.
+  Keep the `.aedt` project file on the local drive; only commit scripts and result
+  exports (Touchstone, report CSVs) to the Git repository on OneDrive.
+
+- **`SOLVER_OUT_OF_MEMORY`** during adaptive solve — three causes and fixes:
+
+  1. **RAM Limit (%) too low.**  AEDT aborts when solver RAM reaches the
+     configured percentage of installed RAM, even if more is physically free.
+     Fix: Tools → Options → HFSS → HPC and Analysis Options → Solver Settings →
+     set **RAM Limit (%)** to **90**.
+
+  2. **Skin-depth op applied to large copper planes.**  `AssignSkinDepthOp` on
+     inner-layer ground planes (~20 × 10 mm) generates ~90 000 surface triangles
+     × 2 skin-depth layers ≈ **180 000 extra tetrahedra per plane**.  Three
+     planes × 20 adaptive passes is the direct cause of the 2026-08-12 OOM.
+     Fix: restrict skin-depth op to signal trace objects only — see Mesh Strategy.
+
+  3. **`MAX_PASSES` too high.**  20 passes can multiply the initial mesh 10×.
+     Fix: reduce to **10** (set in CONFIG).  With `MAX_DELTA_S = 0.02` the
+     solve usually converges before 10 passes anyway.
 
 ---
 

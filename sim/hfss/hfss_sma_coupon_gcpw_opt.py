@@ -4,8 +4,9 @@
 """
 hfss_sma_coupon_gcpw_opt.py  -  SMA edge-connector optimization coupon (GCPW)
 
-Half-model (20 mm default): one SMA connector on the left + radiation boundary
-on the right face.  Wave port WP1 is placed on the outer coaxial face of the
+Half-model (10 mm default): one SMA connector on the left + lumped 50 Ohm RLC
+load on the right face (Load_Sheet_Right, full board cross-section, B.Cu→F.Cu).
+Wave port WP1 is placed on the outer coaxial face of the
 SMA connector (cable end, found via GetModelBoundingBox).  The SMA component's
 internal port P1 (at the PCB-pin interface) is preserved and not modified.
 WP1 and P1 are at different X positions and do not conflict.
@@ -57,7 +58,7 @@ SMA_COMP_FILE = "SM-2400071.a3dcomp"
 N_LAYERS    = 4
 SOLDER_MASK = True
 
-BOARD_LENGTH = 20.0   # mm  X  half-model: one SMA + 20mm of GCPW + PML right
+BOARD_LENGTH = 10.0   # mm  X  one SMA + ~9mm GCPW + PML right
 BOARD_WIDTH  = 10.0   # mm  Y
 
 # GCPW dimensions for 50-ohm target (mm)
@@ -83,8 +84,11 @@ F_STOP      = 20.0
 F_ADAPT     = 16.0
 F_ADAPT2    = 1.0
 F_POINTS    = 401
-MAX_DELTA_S = 0.02
-MAX_PASSES  = 10   # 20 caused SOLVER_OUT_OF_MEMORY; each pass adds ~30% mesh
+MAX_DELTA_S = 0.05  # optimizer iterations — tighten to 0.02 for final verification
+MAX_PASSES  = 6    # optimizer iterations — raise to 10 for final verification
+#   OOM note: 20 passes caused SOLVER_OUT_OF_MEMORY (2026-08-12); each pass
+#   adds ~30% to the mesh.  For a final single solve, 10 passes / 0.02 delta S
+#   gives good accuracy without the optimizer overhead.
 
 # Mesh
 MESH_TRANS_HX  = 3.0
@@ -867,43 +871,67 @@ def place_sma(oEditor, side, comp_path, hx, z_pin):
 
 
 # ===========================================================================
-# PML / radiation boundary (right board end)
+# Lumped 50 Ohm load — right board end
 # ===========================================================================
 
-def make_pml_termination(oDesign, oEditor, hx, pcb):
+def make_right_end_termination(oDesign, oEditor, hx, pcb):
     """
-    Radiation boundary on the right PCB cross-section face (x = +hx).
-    Absorbs the propagating GCPW mode so only WP1 (left coaxial port) is
-    excited, halving solve time per Optimetrics iteration.
-    Residual GCPW reflection at the right face is ~-20 to -30 dB — dominated
-    by the connector transition under optimisation (~10-20 dB larger).
+    Lumped 50 Ohm RLC load at the right PCB cross-section face (x = +hx).
+
+    WHY NOT a radiation boundary:
+      AssignRadiation (IsForPML=False) is an ABC — it absorbs radiated waves
+      only. The guided GCPW mode reflects with |Gamma|≈1, giving S11≈0 dB at
+      WP1 regardless of connector quality. A lumped RLC load correctly
+      terminates the guided mode so S11 shows only the SMA transition.
+
+    Sheet spans the full board cross-section (Y: ±hy, Z: B.Cu→F.Cu top).
+    Full height is required — a thin F.Cu-only sheet (~0.035 mm) is too small
+    for HFSS to mesh reliably. The lumped RLC distributes current according to
+    the local E-field, so the 50 Ohm load acts primarily on the GCPW signal
+    region where E-field is concentrated, not on the GND-to-GND regions.
+
+    The load is NOT included in the S-matrix (passive termination).
+    Expected S11 at WP1 after this fix: -15 to -30 dB for a well-designed
+    SMA-to-GCPW transition.
+
+    API note: AEDT IronPython requires "RLC Type:=" (with space) — confirmed
+    by AEDT 2026.1 script recorder. "RLCType:=" (no space) is rejected silently.
     """
-    sheet  = "PML_Sheet_Right"
-    z_bot  = pcb["z_bcu_bot"]
-    z_top  = pcb["z_fcu_top"]
+    sheet  = "Load_Sheet_Right"
+    z_bot  = pcb["z_bcu_bot"]     # full board height — B.Cu bottom
+    z_top  = pcb["z_fcu_top"]     # to F.Cu top
     hy     = BOARD_WIDTH / 2.0
     height = z_top - z_bot
 
     try:
         create_rectangle(oEditor, sheet, "X",
                          hx, -hy, z_bot, BOARD_WIDTH, height)
-        _log("  PML sheet at x=+{:.1f}mm  Y:[{:.2f},{:.2f}]  Z:[{:.4f},{:.4f}]".format(
+        _log("  Load sheet at x=+{:.1f}mm  Y:[{:.2f},{:.2f}]  Z:[{:.4f},{:.4f}]".format(
             hx, -hy, hy, z_bot, z_top))
     except Exception as e:
-        _err("  PML sheet: " + str(e))
+        _err("  Load sheet: " + str(e))
         return
 
     try:
         oBdry = oDesign.GetModule("BoundarySetup")
-        oBdry.AssignRadiation(
-            ["NAME:Rad_PML_Right",
-             "Objects:=",     [sheet],
-             "IsFssReference:=", False,
-             "IsForPML:=",    False])
-        _log("  Radiation boundary Rad_PML_Right assigned (absorbs GCPW mode)")
+        # IronPython 2.7 / AEDT 2026.1: values must be plain numbers without
+        # unit suffix.  "50ohm" is silently treated as zero → validation error
+        # "At least one of R/C/L must be defined".  Plain "50" is accepted.
+        oBdry.AssignLumpedRLC(
+            ["NAME:Load_50R",
+             "Objects:=",              [sheet],
+             "UseLineModeAlignment:=", False,
+             "NumModes:=",             1,
+             "RLC Type:=",             "Parallel",
+             "Resistance:=",           "50",
+             "Inductance:=",           "0",
+             "Capacitance:=",          "0"])
+        _log("  Lumped 50 Ohm RLC (Load_50R) assigned — not in S-matrix")
+        _log("  S11 at WP1 now measures SMA connector reflection only")
     except Exception as e:
-        _err("  AssignRadiation: " + str(e))
-        _warn("  Manual: select PML_Sheet_Right > Assign Boundary > Radiation")
+        _err("  AssignLumpedRLC: " + str(e))
+        _warn("  Manual: select Load_Sheet_Right > Assign Boundary > Lumped RLC")
+        _warn("  R=50ohm  L=0nH  C=0pF  Type=Parallel  uncheck Include in S-matrix")
 
 
 # ===========================================================================
@@ -1083,6 +1111,94 @@ def create_solution_setup(oDesign):
 
 
 # ===========================================================================
+# Reports: S-parameter plot + Jsurf connector-check field plot
+# ===========================================================================
+
+def create_reports(oDesign):
+    """
+    Create two pre-built result views so the user can inspect results
+    immediately after the nominal solve without manual setup:
+
+    1. S Parameter Plot1 — dB(S(WP1,WP1)) vs Freq  (RF_Sweep, 0.01-20 GHz)
+    2. Jsurf_ConnCheck   — surface current density on the three F.Cu trace
+       objects at F_ADAPT GHz.  Used to verify the SMA connector pin makes
+       electrical contact with the PCB trace: bright continuous current from
+       connector body into Trace_FCu_L_Ent confirms a good connection; a sharp
+       current discontinuity at x=-hx indicates a gap.
+
+    Both are created pre-solve; they render automatically once a solution exists.
+    For the Jsurf plot: right-click > Modify Plot > scale = Log10 for best
+    contrast.  The SMA connector body can be added manually via right-click >
+    Modify Plot > Objects if needed.
+    """
+    # --- S-parameter report --------------------------------------------------
+    try:
+        oReport = oDesign.GetModule("ReportSetup")
+        oReport.CreateReport(
+            "S Parameter Plot1",
+            "Modal Solution Data",
+            "Rectangular Plot",
+            "HFSS_Adaptive : RF_Sweep",
+            ["Domain:=", "Sweep"],
+            ["Freq:=", ["All"]],
+            ["X Component:=", "Freq",
+             "Y Component:=", ["dB(S(WP1,WP1))"]],
+            []
+        )
+        _log("  Report: S Parameter Plot1  dB(S(WP1,WP1)) vs Freq")
+    except Exception as e:
+        _warn("  CreateReport S-param: " + str(e))
+        _warn("  Manual: Results > Create Modal Solution Data Report > Rectangular Plot")
+
+    # --- Jsurf field plot on F.Cu signal trace --------------------------------
+    try:
+        oFields = oDesign.GetModule("FieldsReporter")
+        trace_objs = ["Trace_FCu_L_Ent", "Trace_FCu_L_Cap", "Trace_FCu_Ctr"]
+        # AEDT 2026.1 notes:
+        #  - "ObjList" selection key renamed to "Objects"
+        #  - IntrinsicVar: no single-quotes around values ("Freq=16GHz" not
+        #    "Freq='16GHz'") — IronPython passes the string verbatim to AEDT
+        #    which parses it with its own scanner; quoted values are rejected.
+        oFields.CreateFieldPlot(
+            ["NAME:Jsurf_ConnCheck",
+             "SolutionName:=", "HFSS_Adaptive : LastAdaptive",
+             "QuantityName:=", "Jsurf",
+             "PlotFolder:=", "J",
+             "UserSpecifyName:=", 0,
+             "UserSpecifyFolder:=", 0,
+             "StreamlinePlot:=", False,
+             "AdjacentSidePlot:=", False,
+             "FullModelPlot:=", False,
+             "IntrinsicVar:=", "Freq={:.6g}GHz Phase=0deg".format(F_ADAPT),
+             "PlotGeomInfo:=", [1, "Surface", "Objects",
+                                len(trace_objs)] + trace_objs,
+             "FilterBoxes:=", [0],
+             ["NAME:PlotOnSurfaceSettings",
+              "Filled:=", True,
+              "IsoValType:=", "Fringe",
+              "AddGrid:=", False,
+              "MapTransparency:=", False,
+              "Transparency:=", 0,
+              "SmoothingLevel:=", 0,
+              "ShadingType:=", "PhongShading",
+              "SurfaceOnly:=", False,
+              "UseStoredValues:=", False],
+             "Refinement:=", 0,
+             "Smooth:=", False,
+             "EnhanceAxis:=", "Z",
+             "ShowLastAdaptive:=", True,
+             "BSurfacePlot:=", False]
+        )
+        _log("  Field plot: Jsurf_ConnCheck on trace objects at {:.0f}GHz".format(
+            F_ADAPT))
+        _log("  TIP: Field Overlays > J > Jsurf_ConnCheck — verify current flows")
+        _log("       from SMA pin into Trace_FCu_L_Ent (right-click > Log10 scale)")
+    except Exception as e:
+        _warn("  CreateFieldPlot Jsurf: " + str(e))
+        _warn("  Manual: select trace objects > HFSS > Fields > Plot Fields > J > Jsurf")
+
+
+# ===========================================================================
 # Optimetrics optimization setup
 # ===========================================================================
 
@@ -1223,7 +1339,7 @@ def create_optimetrics(oDesign):
                  ["NAME:ProdOptiSetupDataV2",
                   "SaveFields:=",            False,
                   "CopyMesh:=",              False,
-                  "SolveWithCopiedMeshOnly:=", True],
+                  "SolveWithCopiedMeshOnly:=", False],
                  _sp,
                  "Optimizer:=",        "kDX ASO",
                  _stop,
@@ -1298,13 +1414,24 @@ def create_optimetrics(oDesign):
 
 def create_parametric_sweep(oDesign):
     """
-    ParametricSetup1: independent 1-D sweep of the 4 LC-network variables.
-    Each variable is swept over its physical range in 6 steps while the
-    others are held at their starting values (Synchronize=0).
-    Total: 4 variables x 6 points = 24 adaptive solves.
+    ParametricSetup1: full-factorial sweep of the 4 LC-network variables.
+
+    IMPORTANT — actual solve count is 6^4 = 1296, NOT 24:
+      In AEDT Optimetrics, Synchronize=0 on four separate sweep definitions
+      creates four independent sweep groups, and AEDT evaluates the Cartesian
+      product of all groups.  Each variable has 6 steps → 6×6×6×6 = 1296
+      total variations.  With SolveWithCopiedMeshOnly=True and geometry
+      variables, HFSS cannot copy the mesh, so each variation re-solves the
+      interpolating sweep (~1 min each) = ~21 h total on one machine.
+
+      To run a fast 1-D sensitivity scan (24 points) instead:
+        - Use the AEDT Parametric Table format (one row per variation).
+        - Or skip ParametricSetup1 and go directly to OptimizationSetup1
+          (kDX ASO generates its own design-of-experiments internally).
+
     Void variables (void_l2/l3) are held at CONFIG defaults and not swept.
-    Workflow: run ParametricSetup1 first to confirm LC sensitivity,
-    then launch OptimizationSetup1 (DX SCREENING) to converge.
+    Workflow: skip ParametricSetup1 for speed; run OptimizationSetup1
+    directly — the DX ASO optimizer covers the parameter space in ~68 solves.
     """
     oOpt = oDesign.GetModule("Optimetrics")
 
@@ -1389,7 +1516,7 @@ def main():
 
     _log("Topology    : GCPW_Opt  {:d}-layer  {:.1f}x{:.1f}mm  t={:.4f}mm".format(
         N_LAYERS, BOARD_LENGTH, BOARD_WIDTH, board_t))
-    _log("Ports       : WP1 (circular, outer SMA face) + Rad_PML_Right (right end)")
+    _log("Ports       : WP1 (circular, outer SMA face) + Load_50R (50 Ohm lumped, right end)")
     _log("Metric      : S(WP1,WP1) = connector return loss  [target < -23dB]")
     _log("SMA comp    : " + comp_path +
          ("  [OK]" if os.path.exists(comp_path) else "  [MISSING]"))
@@ -1547,8 +1674,11 @@ def main():
     # Position determined from GetModelBoundingBox after Insert3DComponent.
     # The SMA component's internal port P1 (PCB-pin interface) is kept as-is.
     make_wave_port_coaxial(oDesign, oEditor, "WP1", hx, z_pin, PORT_OUTER_R)
-    # Right end: radiation boundary absorbs propagating GCPW mode.
-    make_pml_termination(oDesign, oEditor, hx, pcb)
+    # Right end: lumped 50 Ohm RLC load terminates the GCPW mode.
+    # NOTE: radiation boundary (Rad_PML_Right) did NOT absorb the guided GCPW
+    # mode — only radiated waves are absorbed by ABC. Guided-mode reflection
+    # was ~0 dB, masking the connector S11 entirely. Lumped RLC fixes this.
+    make_right_end_termination(oDesign, oEditor, hx, pcb)
 
     # -- Solution setup ----------------------------------------------------
     _step("Solution setup")
@@ -1556,6 +1686,13 @@ def main():
         create_solution_setup(oDesign)
     except Exception as e:
         _err("create_solution_setup: " + str(e))
+
+    # -- Reports -----------------------------------------------------------
+    _step("Reports")
+    try:
+        create_reports(oDesign)
+    except Exception as e:
+        _warn("create_reports: " + str(e))
 
     # -- Optimetrics -------------------------------------------------------
     _step("Optimetrics: OptimizationSetup1")
@@ -1583,7 +1720,7 @@ def main():
     _log("=" * 55)
     _log("DONE  {:.1f}s   {:d} vias   {:d} copper objects".format(
         elapsed, len(via_names), len(pcb["copper_objects"])))
-    _log("Model: WP1 (circular coax, outer SMA face) + 20mm GCPW + PML right")
+    _log("Model: WP1 (circular coax, outer SMA face) + {}mm GCPW + 50R lumped load right".format(int(BOARD_LENGTH)))
     _log("Optimization workflow:")
     _log("  1. Verify: 3D view — check WP1 disc sits at SMA cable end (outer face)")
     _log("  2. Verify: In1.Cu / In2.Cu have voids at LEFT end only")
@@ -1591,7 +1728,7 @@ def main():
     _log("  4. Add {:.1f}GHz adaptive: Edit Setup > Multi-Frequency".format(F_ADAPT2))
     _log("  5. SENSITIVITY: Optimetrics > ParametricSetup1 > Analyze  (~24 solves)")
     _log("     — sweeps comp_induct_w/len + comp_cap_w/len independently")
-    _log("  6. OPTIMISE: Optimetrics > OptimizationSetup1 > Analyze  (Quasi Newton)")
+    _log("  6. OPTIMISE: Optimetrics > OptimizationSetup1 > Analyze  (kDX ASO)")
     _log("     — goal: dB(S(WP1,WP1)) <= -23 dB @ {:.0f} GHz".format(F_ADAPT))
     _log("  7. After convergence: run RF_Sweep to check broadband S11")
     _log("  8. Transfer best values to hfss_sma_coupon_gcpw.py (full 2-port model)")
