@@ -84,7 +84,7 @@ F_ADAPT     = 16.0
 F_ADAPT2    = 1.0
 F_POINTS    = 401
 MAX_DELTA_S = 0.02
-MAX_PASSES  = 20
+MAX_PASSES  = 10   # 20 caused SOLVER_OUT_OF_MEMORY; each pass adds ~30% mesh
 
 # Mesh
 MESH_TRANS_HX  = 3.0
@@ -95,7 +95,7 @@ MESH_TRACE_MM  = 0.12
 MESH_CGND_MM   = 0.25
 MESH_PLANE_MM  = 0.60
 MESH_VIA_MM    = 0.10
-MESH_SKIN_MM   = 0.035
+MESH_SKIN_MM   = 0.10    # applied to signal trace only — not to planes (OOM fix)
 
 # Materials
 ER_FR4   = 4.5
@@ -779,13 +779,20 @@ def assign_mesh(oDesign, pcb, zone_names):
             assign_length_op(oMesh, "Mesh_Vias_{:02d}".format(ci // chunk),
                              seg, MESH_VIA_MM)
 
-    all_cu = pcb["copper_objects"]
-    if all_cu:
-        for ci in range(0, len(all_cu), 50):
-            seg = all_cu[ci:ci + 50]
+    # Skin-depth op on signal conductor only — NOT on planes or coplanar GND.
+    # Inner planes (In1/In2/B.Cu) are large flat surfaces: at 0.15mm surface
+    # triangle length a 20x10mm plane generates ~90k surface triangles × 2
+    # skin-depth layers = ~180k tets per plane.  Three planes × 20 adaptive
+    # passes caused SOLVER_OUT_OF_MEMORY (2026-08-12).  The return current on
+    # inner planes is diffuse; HFSS adaptive refinement handles it correctly
+    # without an explicit skin-depth op.
+    trace_cu = [pcb["trace_object"]] + list(pcb.get("comp_trace_objects") or [])
+    if trace_cu:
+        for ci in range(0, len(trace_cu), 50):
+            seg = trace_cu[ci:ci + 50]
             assign_skin_depth_op(oMesh,
                                  "Mesh_Skin_{:02d}".format(ci // 50),
-                                 seg, MESH_SKIN_MM, MESH_TRANS_MM)
+                                 seg, MESH_SKIN_MM, MESH_TRACE_MM)
 
 
 # ===========================================================================

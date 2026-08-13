@@ -55,7 +55,7 @@ F_ADAPT      = 16.0    # GHz  primary adaptive mesh point
 F_ADAPT2     = 1.0     # GHz  secondary adaptive point (low-freq accuracy)
 F_POINTS     = 401
 MAX_DELTA_S  = 0.02    # convergence threshold
-MAX_PASSES   = 20
+MAX_PASSES   = 10   # 20 caused SOLVER_OUT_OF_MEMORY; each pass adds ~30% mesh
 
 # Transition-zone mesh boxes at each SMA-to-PCB pin contact
 # Half-extents (mm) and max element edge length inside the zone (mm)
@@ -71,7 +71,7 @@ MESH_TRACE_MM = 0.063  # override if TRACE_WIDTH / 3 > 0.05
 MESH_PLANE_MM = 0.60
 
 # Skin-depth surface refinement on copper (effective at high frequency)
-MESH_SKIN_MM  = 0.035  # mm  (35 um = copper skin depth at ~1 GHz)
+MESH_SKIN_MM  = 0.10   # applied to signal trace only — not to planes (OOM fix)
 
 # Materials
 ER_FR4   = 4.5
@@ -446,10 +446,12 @@ def assign_mesh(oDesign, pcb, zone_names):
     if pcb["plane_objects"]:
         assign_length_op(oMesh, "Mesh_Planes", pcb["plane_objects"], MESH_PLANE_MM)
 
-    all_cu = pcb["copper_objects"]
-    if all_cu:
-        assign_skin_depth_op(oMesh, "Mesh_SkinDepth", all_cu,
-                             MESH_SKIN_MM, MESH_TRANS_MM)
+    # Skin-depth op on signal trace only — NOT on planes.
+    # Large ground planes at 0.035mm surface elements caused SOLVER_OUT_OF_MEMORY
+    # (2026-08-12).  Return current on inner planes is diffuse; HFSS adaptive
+    # refinement handles it without an explicit skin-depth op.
+    assign_skin_depth_op(oMesh, "Mesh_SkinDepth", ["Trace_FCu"],
+                         MESH_SKIN_MM, MESH_TRACE_MM)
 
 
 # ===========================================================================
