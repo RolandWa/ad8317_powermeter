@@ -265,6 +265,7 @@ class EmergeModelBuilder:
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
                  port_focus_only=False,
+                 use_keepout_bbox=True,
                  domain_margin_mm=0.0,
                  port_focus_margin_mm=0.0,
                  simplify_geometry=False,
@@ -278,6 +279,7 @@ class EmergeModelBuilder:
                  gerber_drop_zero_segments=True,
                  gerber_simplify_regions=False,
                  gerber_region_min_segment_um=0.0,
+                 gerber_repair_regions=True,
                  sliver_threshold_mm=0.10,
                  report_lines=None, verbose=True):
         self.pcb_path                   = pathlib.Path(pcb_path)
@@ -292,6 +294,7 @@ class EmergeModelBuilder:
         self.max_mesh_size_mm           = float(max_mesh_size_mm)
         self.min_mesh_size_mm           = float(min_mesh_size_mm)
         self.port_focus_only            = bool(port_focus_only)
+        self.use_keepout_bbox           = bool(use_keepout_bbox)
         self.domain_margin_mm           = float(domain_margin_mm)
         self.port_focus_margin_mm       = float(port_focus_margin_mm)
         self.simplify_geometry          = bool(simplify_geometry)
@@ -305,6 +308,7 @@ class EmergeModelBuilder:
         self.gerber_drop_zero_segments  = bool(gerber_drop_zero_segments)
         self.gerber_simplify_regions    = bool(gerber_simplify_regions)
         self.gerber_region_min_segment_um = max(0.0, float(gerber_region_min_segment_um))
+        self.gerber_repair_regions      = bool(gerber_repair_regions)
         self.sliver_threshold_mm        = float(sliver_threshold_mm)
         self.report_lines               = report_lines if report_lines is not None else []
         self.verbose                    = verbose
@@ -316,12 +320,14 @@ class EmergeModelBuilder:
             "use_gerbers", "model_passives", "skip_passives",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
             "port_focus_only",
+            "use_keepout_bbox",
             "domain_margin_mm", "port_focus_margin_mm",
             "simplify_geometry", "simplify_factor",
             "pcb_split_z", "pcb_merge",
             "gerber_circ_segments", "gerber_min_circ_segments", "gerber_res_mm",
             "gerber_min_segment_um", "gerber_drop_zero_segments",
             "gerber_simplify_regions", "gerber_region_min_segment_um",
+            "gerber_repair_regions",
             "sliver_threshold_mm",
             "report_lines", "verbose",
         ]
@@ -439,7 +445,7 @@ class EmergeModelBuilder:
             xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
             ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
             self._log("Domain source: port_focus_only=true — using port-based bounds")
-        elif keepout_bbox is not None:
+        elif self.use_keepout_bbox and keepout_bbox is not None:
             kx0, ky0, kx1, ky1 = keepout_bbox
             xmin = kx0 * 1e-3
             xmax = kx1 * 1e-3
@@ -460,7 +466,15 @@ class EmergeModelBuilder:
             ys_p = [p["y"] for p in ports]
             xmin = min(xs_p) - port_margin;  xmax = max(xs_p) + port_margin
             ymin = min(ys_p) - port_margin;  ymax = max(ys_p) + port_margin
-            self._log("Domain source: outline not found — using port-based bounds")
+            if outline_bbox is not None:
+                ox0, oy0, ox1, oy1 = outline_bbox
+                xmin = ox0 * 1e-3
+                xmax = ox1 * 1e-3
+                ymin = -oy1 * 1e-3
+                ymax = -oy0 * 1e-3
+                self._log("Domain source: board outline bbox (keepout disabled)")
+            else:
+                self._log("Domain source: outline not found — using port-based bounds")
 
         # Expand domain to include every port (handles off-board components)
         for p in ports:
@@ -548,6 +562,7 @@ class EmergeModelBuilder:
                     drop_zero_segments = self.gerber_drop_zero_segments,
                     simplify_regions = self.gerber_simplify_regions,
                     region_min_seg_um = self.gerber_region_min_segment_um,
+                    repair_regions = self.gerber_repair_regions,
                     sim_bounds = (xmin, ymin, xmax, ymax),
                     log        = self._log,
                 )
@@ -816,7 +831,8 @@ class EmergeModelBuilder:
 
             if allow_emerge and (mode != "auto" or not shown):
                 try:
-                    _sim_view(sim, plot_mesh=False, labels=True, bc=False)
+                    _sim_view(sim, plot_mesh=False, labels=True, bc=False,
+                              use_gmsh=True)
                     shown = True
                 except Exception as exc:
                     emerge_failed = True
@@ -870,6 +886,8 @@ class EmergeSolver:
                  show_field_animation=False,
                  field_component="Ez",
                  field_animation_freq_hz=0.0,
+                 export_sparam_png=False,
+                 export_field_html=False,
                  curved_boundary_resolution=200,
                  max_mesh_size_mm=0.0, min_mesh_size_mm=0.0,
                  # GMSH algorithm
@@ -900,6 +918,8 @@ class EmergeSolver:
         self.show_field_animation       = bool(show_field_animation)
         self.field_component            = str(field_component or "Ez")
         self.field_animation_freq_hz    = float(field_animation_freq_hz or 0.0)
+        self.export_sparam_png          = bool(export_sparam_png)
+        self.export_field_html          = bool(export_field_html)
         self.curved_boundary_resolution = int(curved_boundary_resolution)
         self.max_mesh_size_mm           = float(max_mesh_size_mm)
         self.min_mesh_size_mm           = float(min_mesh_size_mm)
@@ -925,6 +945,7 @@ class EmergeSolver:
             "model", "output_dir", "freq_start", "freq_stop", "freq_steps",
             "cells_per_lambda", "solver_engine", "show_mesh", "mesh_viewer",
             "show_field_animation", "field_component", "field_animation_freq_hz",
+            "export_sparam_png", "export_field_html",
             "curved_boundary_resolution", "max_mesh_size_mm", "min_mesh_size_mm",
             "algorithm_2d", "algorithm_3d", "smoothing", "max_mesh_retries",
             "artifact_threshold_um", "char_length_max_floor_mm",
@@ -943,6 +964,106 @@ class EmergeSolver:
         self.report_lines.append(msg)
         if self.verbose:
             print(msg, flush=True)
+
+    def _result_dir(self) -> pathlib.Path:
+        return pathlib.Path(self.output_dir)
+
+    def _resolve_field_frequency(self, freq_axis) -> float:
+        if len(freq_axis) == 0:
+            raise RuntimeError("frequency axis is empty")
+        if self.field_animation_freq_hz > 0:
+            target_f = float(self.field_animation_freq_hz)
+        else:
+            target_f = float(freq_axis[len(freq_axis) // 2])
+        freq_arr = np.array(freq_axis, dtype=float)
+        return float(freq_arr[np.argmin(np.abs(freq_arr - target_f))])
+
+    def _export_sparam_png(self, freq_axis, Smat):
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+        except Exception as exc:
+            self._log(f"WARNING: S-parameter PNG export skipped: {exc}")
+            return None
+
+        try:
+            out_path = self._result_dir() / "S_params.png"
+            freqs_ghz = np.array(freq_axis, dtype=float) / 1e9
+            fig, ax = plt.subplots(figsize=(8, 4))
+            for port_idx in range(min(Smat.shape[1], 4)):
+                try:
+                    ax.plot(freqs_ghz, 20*np.log10(np.abs(Smat[:, port_idx, 0]) + 1e-30), label=f"S{port_idx+1}1")
+                except Exception:
+                    pass
+            ax.set_xlabel("Frequency (GHz)")
+            ax.set_ylabel("Magnitude (dB)")
+            ax.set_title(f"{self.model.modelname} S-parameters")
+            ax.grid(True)
+            ax.legend()
+            fig.savefig(str(out_path), dpi=150, bbox_inches="tight")
+            plt.close(fig)
+            self._log(f"S-parameter PNG written: {out_path}")
+            return out_path
+        except Exception as exc:
+            self._log(f"WARNING: S-parameter PNG export failed: {exc}")
+            return None
+
+    def _export_field_html(self, mw_data, freq_axis):
+        try:
+            import plotly.graph_objects as go
+        except Exception as exc:
+            self._log(f"WARNING: field HTML export skipped: {exc}")
+            return None
+
+        try:
+            if not hasattr(mw_data, "field"):
+                raise RuntimeError("field data not available in sweep result")
+            nearest_f = self._resolve_field_frequency(freq_axis)
+            fld = mw_data.field.find(freq=nearest_f)
+            ds_cp = 0.3e-3
+
+            def _cutplane_surface(plane, coord, name, colorscale="Hot"):
+                kwargs = {plane: coord}
+                eh_cp = fld.cutplane(ds_cp, **kwargs)
+                try:
+                    pd = eh_cp.scalar(self.field_component, "abs")
+                except Exception:
+                    pd = eh_cp.scalar("normE", "abs")
+                X, Y, Z, F = pd.xyzf
+                F = np.nan_to_num(np.abs(F))
+                return go.Surface(
+                    x=X*1e3, y=Y*1e3, z=Z*1e3,
+                    surfacecolor=F,
+                    colorscale=colorscale, opacity=0.78,
+                    showscale=(plane == "z"),
+                    colorbar=dict(title=f"|{self.field_component}|", x=1.02) if plane == "z" else None,
+                    name=name, showlegend=True,
+                )
+
+            cp_traces = [
+                _cutplane_surface("z", 0.0, f"XY z=0 mm @ {nearest_f/1e9:.4g} GHz"),
+                _cutplane_surface("y", 0.0, "XZ y=0 mm", colorscale="Plasma"),
+                _cutplane_surface("x", 0.0, "YZ x=0 mm", colorscale="Viridis"),
+            ]
+            fig_cp = go.Figure(data=cp_traces)
+            fig_cp.update_layout(
+                title=f"{self.model.modelname} {self.field_component} field view",
+                scene=dict(
+                    xaxis_title="X (mm)", yaxis_title="Y (mm)", zaxis_title="Z (mm)",
+                    aspectmode="data",
+                    camera=dict(eye=dict(x=1.4, y=-1.6, z=1.1)),
+                ),
+                margin=dict(l=0, r=0, t=40, b=0),
+                legend=dict(x=0.01, y=0.99),
+            )
+            out_path = self._result_dir() / "field_cutplane.html"
+            fig_cp.write_html(str(out_path), include_plotlyjs="cdn")
+            self._log(f"Field HTML written: {out_path}")
+            return out_path
+        except Exception as exc:
+            self._log(f"WARNING: field HTML export failed: {exc}")
+            return None
 
     def run(self):
         """Solve and export Touchstone. Returns path to .s2p file, or None."""
@@ -1359,6 +1480,20 @@ class EmergeSolver:
             self._log(f"  Mesh attempt {_attempt+1}/{_MAX_MESH_RETRIES+1}")
             # Re-apply any accumulated surface-fix constraints after clear
             _gmsh.model.mesh.clear()
+            try:
+                _entity_counts = tuple(
+                    len(_gmsh.model.getEntities(_dim)) for _dim in (0, 1, 2, 3))
+                _cl_attempt = _gmsh.option.getNumber("Mesh.CharacteristicLengthMax")
+            except Exception:
+                _entity_counts = (0, 0, 0, 0)
+                _cl_attempt = float("nan")
+            self._log(
+                f"  Mesh attempt parameters: entities="
+                f"points={_entity_counts[0]} curves={_entity_counts[1]} "
+                f"surfaces={_entity_counts[2]} volumes={_entity_counts[3]} "
+                f"CLmax={_cl_attempt*1e3:.4f} mm "
+                f"curved_boundary={self.curved_boundary_resolution} "
+                f"extra_constraints={len(_extra_constraints)}")
             for _ec_tag, _ec_n in _extra_constraints:
                 try:
                     _gmsh.model.mesh.setTransfiniteCurve(_ec_tag, _ec_n)
@@ -1390,6 +1525,21 @@ class EmergeSolver:
                     f"  Mesh attempt {_attempt+1} failed after "
                     f"{time.monotonic()-_attempt_t0:.1f} s"
                 )
+                self._log(
+                    f"  Mesh exception: {type(_mesh_exc).__name__}: "
+                    f"{_mesh_msg or repr(_mesh_exc)}")
+                self._log("  Mesh traceback:\n" + traceback.format_exc())
+                try:
+                    _after_counts = tuple(
+                        len(_gmsh.model.getEntities(_dim)) for _dim in (0, 1, 2, 3))
+                    _nodes, _, _ = _gmsh.model.mesh.getNodes()
+                    self._log(
+                        f"  Mesh state after failure: entities="
+                        f"points={_after_counts[0]} curves={_after_counts[1]} "
+                        f"surfaces={_after_counts[2]} volumes={_after_counts[3]} "
+                        f"nodes={len(_nodes)}")
+                except Exception as _mesh_diag_exc:
+                    self._log(f"  Mesh state diagnostics failed: {_mesh_diag_exc}")
 
                 _is_oom = (
                     "Unable to allocate" in _mesh_msg
@@ -1546,16 +1696,10 @@ class EmergeSolver:
                     except Exception:
                         pass
 
-                    _cbr_new = min(80, int(self.curved_boundary_resolution * (1.0 + 0.5 * _hxt_recovery_steps)))
-                    try:
-                        sim.mesher.set_curved_boundary_meshing(_cbr_new)
-                    except Exception:
-                        pass
-
                     self._log(
                         f"  Generic HXT recovery step {_hxt_recovery_steps}: "
                         f"CLmax {_cl_cur*1e3:.4f} -> {_cl_new*1e3:.4f} mm, "
-                        f"curved_boundary {_cbr_new}"
+                        f"curved_boundary unchanged at {self.curved_boundary_resolution}"
                     )
                     continue
 
@@ -1973,7 +2117,8 @@ class EmergeSolver:
 
             if allow_emerge and (mode != "auto" or not shown):
                 try:
-                    _sim_view(sim, plot_mesh=True, labels=False, bc=False)
+                    _sim_view(sim, plot_mesh=True, labels=False, bc=False,
+                              use_gmsh=True)
                     shown = True
                 except Exception as exc:
                     emerge_failed = True
@@ -2097,6 +2242,12 @@ class EmergeSolver:
         self._log("Stage 5 / 5 — Results")
         self._log(_SEP)
         self._log(f"Touchstone written: {ts_path}")
+
+        if self.export_sparam_png:
+            self._export_sparam_png(freq_axis, Smat)
+
+        if self.export_field_html:
+            self._export_field_html(mw_data, freq_axis)
 
         if self.show_field_animation:
             self._log("")
@@ -2358,6 +2509,8 @@ if __name__ == "__main__":
         mesh_cfg     = job.get("mesh",          {})
 
         use_gerbers  = bool (gerber_cfg.get("use_gerbers",                    False))
+        use_keepout_bbox = bool(mesh_cfg.get("use_keepout_bbox",              True))
+        repair_regions = bool(gerber_cfg.get("repair_regions",               True))
         cbr          = int  (mesh_cfg.get("curved_boundary_resolution",        40))
         max_mm       = float(mesh_cfg.get("max_mesh_size_mm",                   0))
         min_mm       = float(mesh_cfg.get("min_mesh_size_mm",                   0))
@@ -2408,6 +2561,7 @@ if __name__ == "__main__":
             max_mesh_size_mm           = max_mm,
             min_mesh_size_mm           = min_mm,
             port_focus_only            = port_focus,
+            use_keepout_bbox           = use_keepout_bbox,
             domain_margin_mm           = dom_margin,
             port_focus_margin_mm       = port_margin,
             simplify_geometry          = simplify_geo,
@@ -2421,6 +2575,7 @@ if __name__ == "__main__":
             gerber_drop_zero_segments  = drop_zero_segs,
             gerber_simplify_regions    = simplify_regions,
             gerber_region_min_segment_um = region_min_seg_um,
+            gerber_repair_regions       = repair_regions,
             sliver_threshold_mm        = sliver_mm,
             report_lines               = report_lines,
             verbose                    = True,
@@ -2442,6 +2597,8 @@ if __name__ == "__main__":
             show_field_animation       = bool(vis_cfg.get("show_field_animation", False)),
             field_component            = str(vis_cfg.get("field_component", "Ez")),
             field_animation_freq_hz    = float(vis_cfg.get("field_animation_freq_hz", 0.0) or 0.0),
+            export_sparam_png          = bool(vis_cfg.get("export_sparam_png", False)),
+            export_field_html          = bool(vis_cfg.get("export_field_html", False)),
             curved_boundary_resolution = cbr,
             max_mesh_size_mm           = max_mm,
             min_mesh_size_mm           = min_mm,

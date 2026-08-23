@@ -307,11 +307,280 @@ def sanitize_gerber_tiny_segments(src: pathlib.Path, dst: pathlib.Path,
     return True, converted
 
 
+def repair_gerber_region_polygons(src: pathlib.Path, dst: pathlib.Path,
+                                   log=None) -> tuple[bool, int]:
+    """
+    Re-write a Gerber file, repairing degenerate G36/G37 polygon loops.
+
+    Fixes two classes of errors that EMerge's loopsplit.py validator rejects:
+      1. Collinear backtracking — a vertex where the polygon reverses direction
+         (A→B→A spike). Detected via cross≈0 AND dot<0 on consecutive edge
+         vectors; the spike vertex is removed. Repeated until stable.
+      2. Self-intersecting outlines — two non-adjacent edges cross. Repaired
+         via Shapely Polygon.buffer(0) when shapely is importable; skipped
+         (backtracking removal alone applied) when shapely is absent.
+
+    Non-region content (header, apertures, D01/D02/D03 draws) is passed
+    through unchanged.  Returns (ok, repaired_count) where repaired_count
+    is the number of G36/G37 regions that were modified.
+    """
+    def _log(msg):
+        if log:
+            log(msg)
+
+    try:
+        text = src.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        _log(f"  repair_gerber: cannot read {src.name}: {exc}")
+        return False, 0
+
+    fmt_m = _re.search(r'%FS[LT]A[XY](\d)(\d)[XY]\d\d', text)
+    frac_d = int(fmt_m.group(2)) if fmt_m else 6
+    scale = 10.0 ** frac_d
+
+    coord_re = _re.compile(r'(?:X(-?\d+))?(?:Y(-?\d+))?D0*([123])\*')
+
+    def _to_gerber_coord(x_mm: float, y_mm: float, cmd: str) -> str:
+        xi = int(round(x_mm * scale))
+        yi = int(round(y_mm * scale))
+        return f"X{xi}Y{yi}{cmd}*\n"
+
+    def _remove_backtracking(pts: list) -> list:
+        """
+        Remove collinear-backtrack spike vertices; repeat until stable.
+
+        Threshold matches EMerge's metre-scale check (tol=1e-12 m²) converted to
+        mm²: 1e-12 / (0.001)² = 1e-6 mm².  We use 1e-5 (10x slack) to account
+        for floating-point noise while still catching all EMerge-flagged vertices.
+        """
+        EPS_CROSS = 1e-5   # mm² — matches EMerge 1e-12 m² with margin
+        changed = True
+        while changed and len(pts) >= 3:
+            changed = False
+            new_pts: list = []
+            n = len(pts)
+            for i in range(n):
+                prev = pts[(i - 1) % n]
+                curr = pts[i]
+                nxt  = pts[(i + 1) % n]
+                ax = curr[0] - prev[0];  ay = curr[1] - prev[1]
+                bx = nxt[0]  - curr[0];  by = nxt[1]  - curr[1]
+                cross = ax * by - ay * bx
+                dot   = ax * bx + ay * by
+                if abs(cross) <= EPS_CROSS and dot < 0:
+                    changed = True   # skip this backtrack vertex
+                else:
+                    new_pts.append(curr)
+            pts = new_pts
+        return pts
+
+    def _orient2d(ax, ay, bx, by, cx, cy):
+        return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+
+    def _edges_cross(a, b, c, d):
+        """True if segments AB and CD properly (non-degenerate) cross."""
+        o1 = _orient2d(a[0], a[1], b[0], b[1], c[0], c[1])
+        o2 = _orient2d(a[0], a[1], b[0], b[1], d[0], d[1])
+        o3 = _orient2d(c[0], c[1], d[0], d[1], a[0], a[1])
+        o4 = _orient2d(c[0], c[1], d[0], d[1], b[0], b[1])
+        return o1 * o2 < 0 and o3 * o4 < 0
+
+    def _repair_self_intersections(pts: list, window: int = 60,
+                                   max_iters: int = 40) -> list:
+        """
+        Remove self-intersecting polygon segments.
+
+        Only checks edge pairs within *window* steps of each other — this covers
+        the typical close-proximity crossings from Gerber zone-fill outlines while
+        keeping O(n·window·max_iters) rather than O(n²·max_iters).
+
+        When a crossing between edges i→i+1 and j→j+1 is found, the shorter arc
+        (vertices i+1 … j inclusive) is deleted, connecting vertex i directly to
+        vertex j+1.
+        """
+        for _ in range(max_iters):
+            n = len(pts)
+            if n < 4:
+                break
+            fixed = False
+            for i in range(n):
+                a = pts[i];  b = pts[(i + 1) % n]
+                jmax = min(i + window, n - (1 if i > 0 else 2))
+                for j in range(i + 2, jmax):
+                    if (j + 1) % n == i:
+                        continue   # skip closing / adjacent edge
+                    c = pts[j];  d = pts[(j + 1) % n]
+                    if _edges_cross(a, b, c, d):
+                        # Remove vertices i+1 … j  (the shorter inner segment)
+                        pts = pts[:i + 1] + pts[j + 1:]
+                        fixed = True
+                        break
+                if fixed:
+                    break
+            if not fixed:
+                break
+        return pts
+
+    def _repair_pts(raw_pts: list) -> tuple[list, bool]:
+        """
+        Return (repaired_pts, was_modified).
+        raw_pts is the full vertex list as collected from the Gerber region,
+        possibly including an explicit closing duplicate of the first vertex.
+        """
+        if len(raw_pts) < 3:
+            return raw_pts, False
+
+        # Remove duplicate consecutive vertices
+        pts = [raw_pts[0]]
+        for p in raw_pts[1:]:
+            if abs(p[0] - pts[-1][0]) > 1e-10 or abs(p[1] - pts[-1][1]) > 1e-10:
+                pts.append(p)
+        # Remove closing duplicate so we work with an open ring
+        if (len(pts) > 1 and
+                abs(pts[0][0] - pts[-1][0]) < 1e-10 and
+                abs(pts[0][1] - pts[-1][1]) < 1e-10):
+            pts = pts[:-1]
+
+        if len(pts) < 3:
+            return raw_pts, False
+
+        original_len = len(pts)
+
+        # Pass 1 — collinear backtracking removal
+        pts = _remove_backtracking(pts)
+        if len(pts) < 3:
+            return raw_pts, False
+
+        # Pass 2 — self-intersection repair (pure Python, no Shapely required)
+        pts = _repair_self_intersections(pts)
+        if len(pts) < 3:
+            return raw_pts, False
+
+        # Pass 3 — Shapely for any remaining complex self-intersections
+        try:
+            from shapely.geometry import Polygon as _SPoly
+            poly = _SPoly(pts)
+            if not poly.is_valid:
+                fixed = poly.buffer(0)
+                if fixed.geom_type == "MultiPolygon":
+                    fixed = max(fixed.geoms, key=lambda g: g.area)
+                if fixed.geom_type == "Polygon" and not fixed.is_empty:
+                    coords = list(fixed.exterior.coords)[:-1]
+                    if len(coords) >= 3:
+                        pts = [(x, y) for x, y in coords]
+        except ImportError:
+            pass   # shapely not available — passes 1+2 only
+        except Exception:
+            pass   # shapely repair failed — keep pass-1+2 result
+
+        modified = len(pts) != original_len
+        return pts, modified
+
+    # ── parse and repair ─────────────────────────────────────────────────────
+    lines = text.splitlines(keepends=True)
+    out_lines: list[str] = []
+    repaired_count = 0
+    in_region = False
+    region_paths: list[tuple[list[str], list[tuple[float, float]]]] = []
+    region_body: list[str] = []   # raw lines for the current D02-started contour
+    region_pts:  list      = []   # vertices for the current contour
+    cur_x = 0.0
+    cur_y = 0.0
+
+    for raw_line in lines:
+        line = raw_line.strip()
+
+        if not in_region:
+            if line == "G36*":
+                in_region = True
+                region_paths = []
+                region_body = []
+                region_pts = []
+            else:
+                out_lines.append(raw_line)
+                m = coord_re.search(line)
+                if m:
+                    rx, ry = m.group(1), m.group(2)
+                    if rx is not None: cur_x = int(rx) / scale
+                    if ry is not None: cur_y = int(ry) / scale
+        else:
+            if line == "G37*":
+                in_region = False
+                if region_body or region_pts:
+                    region_paths.append((region_body, region_pts))
+                out_lines.append("G36*\n")
+                for path_body, path_pts in region_paths:
+                    pts_fixed, modified = _repair_pts(path_pts)
+                    if len(pts_fixed) < 3:
+                        _log(f"  Gerber polygon repair {src.name}: omitted degenerate "
+                             f"sub-contour with {len(pts_fixed)} point(s)")
+                    elif modified:
+                        repaired_count += 1
+                        for j, (px, py) in enumerate(pts_fixed):
+                            out_lines.append(_to_gerber_coord(
+                                px, py, "D02" if j == 0 else "D01"))
+                        out_lines.append(_to_gerber_coord(
+                            pts_fixed[0][0], pts_fixed[0][1], "D01"))
+                    else:
+                        out_lines.extend(path_body)
+                out_lines.append("G37*\n")
+                region_paths = []
+                region_body = []
+                region_pts  = []
+            else:
+                m = coord_re.search(line)
+                if m:
+                    rx, ry = m.group(1), m.group(2)
+                    if rx is not None: cur_x = int(rx) / scale
+                    if ry is not None: cur_y = int(ry) / scale
+                    if m.group(3) == "2" and region_pts:
+                        region_paths.append((region_body, region_pts))
+                        region_body = []
+                        region_pts = []
+                region_body.append(raw_line)
+                if m:
+                    region_pts.append((cur_x, cur_y))
+
+    try:
+        dst.write_text("".join(out_lines), encoding="utf-8")
+    except Exception as exc:
+        _log(f"  repair_gerber: cannot write {dst}: {exc}")
+        return False, repaired_count
+
+    if repaired_count:
+        _log(f"  Gerber polygon repair {src.name}: {repaired_count} region(s) fixed "
+             f"(collinear backtracking removed; Shapely self-intersection repair applied where available)")
+    return True, repaired_count
+
+
 # ── lazy gmsh import (available after emerge initialises GMSH) ────────────────
 
 def _gmsh():
     import gmsh as _g
     return _g
+
+
+def _gerber_diagnostics(path: pathlib.Path) -> str:
+    """Return compact structural diagnostics for a Gerber artifact."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        commands = _re.findall(r"(?:X-?\d+)?(?:Y-?\d+)?D0*([123])\*", text)
+        coords = []
+        for line in text.splitlines():
+            for x_raw, y_raw in _re.findall(
+                    r"X(-?\d+)Y(-?\d+)D0*[123]\*", line):
+                coords.append((int(x_raw), int(y_raw)))
+        bbox = "n/a"
+        if coords:
+            xs = [x for x, _ in coords]
+            ys = [y for _, y in coords]
+            bbox = f"({min(xs)},{min(ys)})–({max(xs)},{max(ys)})"
+        return (f"bytes={path.stat().st_size} G36={text.count('G36*')} "
+                f"G37={text.count('G37*')} D01={commands.count('1')} "
+                f"D02={commands.count('2')} D03={commands.count('3')} "
+                f"coord_bbox={bbox}")
+    except Exception as exc:
+        return f"diagnostics_failed={exc}"
 
 
 # =============================================================================
@@ -325,6 +594,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
                        drop_zero_segments: bool = True,
                        simplify_regions: bool = False,
                        region_min_seg_um: float = 0.0,
+                       repair_regions: bool = True,
                        sim_bounds: tuple | None = None,
                        log=None) -> int:
     """
@@ -344,6 +614,10 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
         res_mm      : geometry resolution in mm (default 0.05).
         sim_bounds  : (xmin, ymin, xmax, ymax) metres, Gerber Y-up.
                       Gerbers are pre-cropped to this box when given.
+        repair_regions : when True (default), G36/G37 polygon loops are
+                      repaired before passing to EMerge: collinear backtracking
+                      vertices are removed and self-intersecting outlines are
+                      fixed via Shapely when available.
         log         : callable(str) for progress messages, or None.
 
     Returns:
@@ -383,19 +657,24 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
          f"(n_circ={circ_segs}, res_mm={res_mm}{suffix}")
     _log(f"  Gerber tiny-segment filter: min_seg_um={min_seg_um:.1f}  "
             f"drop_zero_segments={drop_zero_segments}  "
-            f"simplify_regions={simplify_regions}  region_min_seg_um={region_min_seg_um:.1f}")
+            f"simplify_regions={simplify_regions}  region_min_seg_um={region_min_seg_um:.1f}  "
+            f"repair_regions={repair_regions}")
 
     pcb_stem = pcb_path.stem if (pcb_path and pcb_path.exists()) else ""
     loaded   = 0
 
-    crop_dir = gerber_dir / "_cropped"
+    crop_dir     = gerber_dir / "_cropped"
     sanitize_dir = gerber_dir / "_sanitized"
+    repaired_dir = gerber_dir / "_repaired"
     if sim_bounds:
         crop_dir.mkdir(parents=True, exist_ok=True)
     if min_seg_um > 0 or drop_zero_segments:
         sanitize_dir.mkdir(parents=True, exist_ok=True)
+    if repair_regions:
+        repaired_dir.mkdir(parents=True, exist_ok=True)
 
     for idx, layer in enumerate(cu_layers):
+        layer_t0 = time.monotonic()
         name     = layer["name"]
         em_layer_idx = _layer_index_for_name(name, idx)
         gbr_stem = name.replace(".", "_")
@@ -413,15 +692,19 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
         if sim_bounds:
             xmin_m, ymin_m, xmax_m, ymax_m = sim_bounds
             cropped = crop_dir / gbr.name
+            crop_t0 = time.monotonic()
             ok = crop_gerber_to_bbox(gbr, cropped,
                                      xmin_m, ymin_m, xmax_m, ymax_m,
                                      log=_log)
             load_path = cropped if ok else gbr
+            _log(f"  [{idx}] {name}: crop stage {'done' if ok else 'failed'} "
+                 f"({time.monotonic()-crop_t0:.2f} s)")
         else:
             load_path = gbr
 
         if min_seg_um > 0 or drop_zero_segments:
             sanitized = sanitize_dir / load_path.name
+            sanitize_t0 = time.monotonic()
             ok_san, _ = sanitize_gerber_tiny_segments(
                 load_path, sanitized,
                 min_seg_um=min_seg_um,
@@ -432,34 +715,81 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
             )
             if ok_san:
                 load_path = sanitized
+            _log(f"  [{idx}] {name}: sanitize stage "
+                 f"{'done' if ok_san else 'failed'} ({time.monotonic()-sanitize_t0:.2f} s)")
+
+        if repair_regions:
+            repaired = repaired_dir / load_path.name
+            repair_t0 = time.monotonic()
+            ok_rep, _ = repair_gerber_region_polygons(load_path, repaired, log=_log)
+            if ok_rep:
+                load_path = repaired
+            _log(f"  [{idx}] {name}: repair stage "
+                 f"{'done' if ok_rep else 'failed'} ({time.monotonic()-repair_t0:.2f} s)")
 
         size_kb = load_path.stat().st_size / 1024
-        _log(f"  [{idx}] {name} (layer={em_layer_idx}): {load_path.name}  ({size_kb:.0f} kB)  parsing ...")
+        _log(f"  [{idx}] {name} (layer={em_layer_idx}): {load_path.name}  "
+             f"({size_kb:.0f} kB)  { _gerber_diagnostics(load_path) }")
+        _log(f"  [{idx}] {name} (layer={em_layer_idx}): parsing ...")
         t0 = time.monotonic()
         try:
             pcb.layer_from_file(em_layer_idx, str(load_path),
                                 res_mm=res_mm,
                                 n_circ_segments=circ_segs)
-            _log(f"  [{idx}] {name} (layer={em_layer_idx}): done  ({time.monotonic()-t0:.1f} s)")
+            _log(f"  [{idx}] {name} (layer={em_layer_idx}): done  "
+                 f"({time.monotonic()-t0:.1f} s; layer total={time.monotonic()-layer_t0:.1f} s)")
             loaded += 1
         except Exception as exc:
+            # Log the parse exception explicitly for debugging
+            _log(f"  [{idx}] {name} (layer={em_layer_idx}): parse error — "
+                 f"{type(exc).__name__}: {str(exc)[:200]}")
             # Cropped Gerbers can occasionally produce parser edge-cases on
             # complex copper fills. Retry once with the original full Gerber
-            # to keep the pipeline moving.
+            # to keep the pipeline moving — BUT ONLY if no domain scope is set,
+            # because falling back to the full Gerber violates sim_bounds constraints.
             retried = False
-            if sim_bounds and load_path != gbr and gbr.exists():
+            if not sim_bounds and load_path != gbr and gbr.exists():
                 retried = True
-                _log(f"  [{idx}] {name} (layer={em_layer_idx}): cropped parse failed — retrying full Gerber ({gbr.name})")
+                _log(f"  [{idx}] {name} (layer={em_layer_idx}): no domain scope — "
+                     f"retrying full Gerber ({gbr.name})")
+                gbr_to_load = gbr
+                # Apply the same sanitization to the full Gerber that was applied
+                # to the cropped version — removes sub-nm edges that become
+                # collinear-backtracking vertices after EMerge's metre-scale check.
+                if min_seg_um > 0 or drop_zero_segments:
+                    gbr_san2 = sanitize_dir / f"full_{gbr.name}"
+                    ok_san2, _ = sanitize_gerber_tiny_segments(
+                        gbr, gbr_san2,
+                        min_seg_um=min_seg_um,
+                        drop_zero_segments=drop_zero_segments,
+                        simplify_regions=simplify_regions,
+                        region_min_seg_um=region_min_seg_um,
+                        log=_log,
+                    )
+                    if ok_san2:
+                        gbr_to_load = gbr_san2
+                if repair_regions:
+                    gbr_rep = repaired_dir / f"full_{gbr.name}"
+                    ok_rep2, _ = repair_gerber_region_polygons(gbr_to_load, gbr_rep, log=_log)
+                    if ok_rep2:
+                        gbr_to_load = gbr_rep
+                _log(f"  [{idx}] {name} (layer={em_layer_idx}): fallback artifact "
+                     f"{gbr_to_load.name}  {_gerber_diagnostics(gbr_to_load)}")
                 t1 = time.monotonic()
                 try:
-                    pcb.layer_from_file(em_layer_idx, str(gbr),
+                    pcb.layer_from_file(em_layer_idx, str(gbr_to_load),
                                         res_mm=res_mm,
                                         n_circ_segments=circ_segs)
-                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): done (full Gerber fallback)  ({time.monotonic()-t1:.1f} s)")
+                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): done "
+                        f"(full Gerber fallback, {gbr_to_load.name})  "
+                        f"({time.monotonic()-t1:.1f} s; layer total={time.monotonic()-layer_t0:.1f} s)")
                     loaded += 1
                     continue
                 except Exception as exc2:
-                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): FAILED on full Gerber fallback — {exc2}")
+                    _log(f"  [{idx}] {name} (layer={em_layer_idx}): FAILED on full "
+                         f"Gerber fallback — {type(exc2).__name__}: {exc2}")
+                    _log(f"  [{idx}] {name}: layer total before failure="
+                        f"{time.monotonic()-layer_t0:.1f} s")
                     if log:
                         traceback.print_exc()
 
@@ -474,6 +804,7 @@ def load_copper_layers(pcb, stackup: dict, pcb_path: pathlib.Path,
 def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
                           pcb_path: pathlib.Path | None = None,
                           sim_bounds: tuple | None = None,
+                          allow_manual_fallback: bool = False,
                           log=None) -> dict:
     """
     Load drill/via definitions from Excellon drill files into *pcb*.
@@ -661,7 +992,7 @@ def load_vias_from_drills(pcb, gerber_dir: pathlib.Path,
             via_holes_after = len(getattr(pcb, "via_holes", []) or [])
             ingested_delta = (vias_after - vias_before) + (via_holes_after - via_holes_before)
 
-            if ingested_delta <= 0 and coords_by_tool:
+            if allow_manual_fallback and ingested_delta <= 0 and coords_by_tool:
                 fb_added = _manual_add_vias(coords_by_tool, tool_diam_mm, plated)
                 manual_fallback_added += fb_added
                 if fb_added > 0:
@@ -1532,6 +1863,7 @@ def gmsh_view_mesh(title: str = "Mesh — close window to continue"):
 
 def sim_view(sim, plot_mesh: bool = False, labels: bool = False,
              bc: bool = False, off_screen: bool = False,
+             use_gmsh: bool = False,
              screenshot=None):
     """
     Call sim.view() with only the keyword arguments that the installed
@@ -1548,6 +1880,7 @@ def sim_view(sim, plot_mesh: bool = False, labels: bool = False,
     if not sig_params or "plot_mesh" in sig_params: kwargs["plot_mesh"] = plot_mesh
     if "labels"     in sig_params:                  kwargs["labels"]    = labels
     if "bc"         in sig_params:                  kwargs["bc"]        = bc
+    if "use_gmsh"   in sig_params:                  kwargs["use_gmsh"]  = use_gmsh
     if "off_screen" in sig_params and off_screen:   kwargs["off_screen"] = off_screen
     if "screenshot" in sig_params and screenshot:   kwargs["screenshot"] = screenshot
     sim.view(**kwargs)
