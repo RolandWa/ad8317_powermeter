@@ -121,14 +121,16 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
 
         if region_start.match(line):
             in_region     = True
-            region_in_box = False
+            region_in_box = True  # Assume in-box; set False if ANY vertex outside
             region_buf    = [raw_line]
             continue
 
         if region_end.match(line):
             in_region = False
             if region_in_box:
-                # Only flush the whole region if at least one vertex was inside
+                # Only flush the region if ALL vertices were inside the box.
+                # This prevents large copper pours from outside the crop boundary
+                # from leaking into the simulation domain.
                 region_buf.append(raw_line)
                 body_lines.extend(region_buf)
             region_buf = []
@@ -144,8 +146,9 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
                 cur_y = _to_mm(raw_y)
 
             if in_region:
-                if _in_box(cur_x, cur_y):
-                    region_in_box = True
+                if not _in_box(cur_x, cur_y):
+                    # ANY vertex outside the box → discard entire region
+                    region_in_box = False
                 region_buf.append(raw_line)
                 continue
 
