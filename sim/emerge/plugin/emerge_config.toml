@@ -45,10 +45,11 @@ dir    = "z"
 # ─────────────────────────────────────────────────────────────────────────────
 
 [sweep]
-start_hz         = 100_000_000    # 100 MHz
-stop_hz          = 6_000_000_000  # 6 GHz
-steps            = 9              # fast-iteration profile; raise for final signoff
-cells_per_lambda = 5              # very coarse for quick mesh/solve turnaround
+start_hz         = 10_000_000      # 10 MHz to 10 GHz logarithmic sweep
+stop_hz          = 10_000_000_000
+steps            = 10
+spacing          = "log"
+cells_per_lambda = 5               # engineering sweep mesh density
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Mesh settings
@@ -74,6 +75,7 @@ min_mesh_size_mm            = 0     # 0 = auto
 #   port_focus_only = true  -> use only a port-focused simulation/crop region
 #   port_focus_only = false -> use keepout bbox if defined; otherwise port-focused fallback
 port_focus_only            = true
+use_keepout_bbox            = true
 
 # Domain expansion (controls the red simulation rectangle / Gerber pre-crop area)
 #   domain_margin_mm      = global expansion around all resolved ports (0 = auto)
@@ -150,7 +152,7 @@ max_mesh_retries            = 2
 # char_length_max_factor, then clamped to [floor, ceil].
 # Curves shorter than artifact_threshold_um are skipped as boolean-op artefacts.
 
-artifact_threshold_um       = 200   # µm — skip more tiny curves in CL scan
+artifact_threshold_um       = 500   # µm — skip more tiny curves in CL scan (raised from 200)
 char_length_max_factor      = 2.50  # stronger coarsening from shortest valid curve
 char_length_max_floor_mm    = 0.80  # coarser baseline CL max for faster meshing
 char_length_max_ceil_mm     = 8.00  # allow coarse cap for speed testing
@@ -206,8 +208,8 @@ engine = "auto"  # let EMerge choose the best available solver backend
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualization — show interactive 3D windows before the FEM solve starts.
 # Both windows are blocking: close the viewer to continue.
-#   show_geometry = true  → open geometry viewer after model build
-#   show_mesh     = true  → open mesh viewer after mesh generation
+#   show_geometry = true  → open geometry viewer after model build (blocks)
+#   show_mesh     = true  → open mesh viewer after mesh generation (blocks)
 #
 # Viewer backend selection:
 #   geometry_viewer / mesh_viewer = "auto" | "gmsh" | "emerge" | "both"
@@ -220,16 +222,21 @@ engine = "auto"  # let EMerge choose the best available solver backend
 #   show_field_animation = true  -> opens animated field viewer at end
 #   field_component      = "Ez" -> field scalar component to animate
 #   field_animation_freq_hz = 0  -> 0 uses middle sweep frequency
+# Optional result exports after sweep:
+#   export_sparam_png = true  -> writes S_params.png beside the Touchstone file
+#   export_field_html = true  -> writes an interactive field cutplane HTML view
 # ─────────────────────────────────────────────────────────────────────────────
 
 [visualization]
 show_geometry = true
 show_mesh     = true
-geometry_viewer = "emerge"
-mesh_viewer     = "emerge"
-show_field_animation = false
+geometry_viewer = "gmsh"
+mesh_viewer     = "gmsh"
+show_field_animation = true
 field_component      = "Ez"
 field_animation_freq_hz = 0
+export_sparam_png = true
+export_field_html = true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gerber export settings (used by GerberExporter stage)
@@ -262,6 +269,7 @@ kicad_cli = ""
 # use_gerbers = false → PCBNew — simplified uniform copper planes (fast, seconds).
 #                        Low-level Simulation API. Use for quick domain/port checks.
 use_gerbers = true
+repair_regions = true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Python interpreter used to run emerge_runner.py (system Python, not KiCad's)
