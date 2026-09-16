@@ -513,9 +513,10 @@ class EmergePlugin(pcbnew.ActionPlugin):
             "output_dir": str(output_dir / "touchstone"),
             "port_defs":  port_defs,
             "sweep": {
-                "start_hz":          float(sweep.get("start_hz", 1e6)),
+                "start_hz":          float(sweep.get("start_hz", 10e6)),
                 "stop_hz":           float(sweep.get("stop_hz",  10e9)),
-                "steps":             int  (sweep.get("steps",    201)),
+                "steps":             int  (sweep.get("steps",    10)),
+                "spacing":            str  (sweep.get("spacing", "log")),
                 "cells_per_lambda":  int  (sweep.get("cells_per_lambda", 15)),
             },
             "thresholds": {
@@ -533,6 +534,8 @@ class EmergePlugin(pcbnew.ActionPlugin):
                 "show_field_animation": bool(vis_cfg.get("show_field_animation", False)),
                 "field_component": str(vis_cfg.get("field_component", "Ez")),
                 "field_animation_freq_hz": float(vis_cfg.get("field_animation_freq_hz", 0.0) or 0.0),
+                "export_sparam_png": bool(vis_cfg.get("export_sparam_png", False)),
+                "export_field_html": bool(vis_cfg.get("export_field_html", False)),
             },
             "passives": {
                 "model_passives": bool(passives_cfg.get("model_passives", True)),
@@ -540,12 +543,14 @@ class EmergePlugin(pcbnew.ActionPlugin):
             },
             "gerber": {
                 "use_gerbers": bool(gerber_cfg.get("use_gerbers", True)),
+                "repair_regions": bool(gerber_cfg.get("repair_regions", True)),
             },
             "mesh": {
                 "curved_boundary_resolution": int  (mesh_cfg.get("curved_boundary_resolution",    40)),
                 "max_mesh_size_mm":           float(mesh_cfg.get("max_mesh_size_mm",               0)),
                 "min_mesh_size_mm":           float(mesh_cfg.get("min_mesh_size_mm",               0)),
                 "port_focus_only":            bool (mesh_cfg.get("port_focus_only",            False)),
+                "use_keepout_bbox":            bool (mesh_cfg.get("use_keepout_bbox",            True)),
                 "domain_margin_mm":           float(mesh_cfg.get("domain_margin_mm",               0)),
                 "port_focus_margin_mm":       float(mesh_cfg.get("port_focus_margin_mm",           0)),
                 "simplify_geometry":          bool (mesh_cfg.get("simplify_geometry",          False)),

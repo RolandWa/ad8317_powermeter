@@ -1,4 +1,6 @@
 (fp_lib_table
-  (version 1)
-  (lib (name "ad8317_custom")(type "KiCad")(uri "${KIPRJMOD}/../lib/footprints/ad8317_custom.pretty")(options "")(descr "Custom footprints for ad8317_powermeter"))
+	(version 7)
+	(lib (name "ad8317_custom") (type "KiCad") (uri "${KIPRJMOD}/../lib/footprints/ad8317_custom.pretty") (options "") (descr "Custom footprints for ad8317_powermeter"))
+	(lib (name "Connector_THT_Wurth") (type "KiCad") (uri "${KIPRJMOD}/../lib/footprints/Connector_THT_Wurth.pretty") (options "") (descr ""))
+	(lib (name "Connector_SMD_Wurth") (type "KiCad") (uri "${KIPRJMOD}/../lib/footprints/Connector_SMD_Wurth.pretty") (options "") (descr ""))
 )

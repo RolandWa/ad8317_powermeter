@@ -103,6 +103,16 @@ def _as_int(value, default: int) -> int:
         return int(default)
 
 
+def _csv_from_list(values) -> str:
+    if not isinstance(values, (list, tuple)):
+        return ""
+    return ", ".join(str(v) for v in values)
+
+
+def _parse_csv_list(text: str) -> list[str]:
+    return [part.strip() for part in str(text or "").split(",") if part.strip()]
+
+
 class EmergeConfigDialog(wx.Dialog):
     TITLE = "EMerge - Simulation Configuration"
 
@@ -185,7 +195,9 @@ class EmergeConfigDialog(wx.Dialog):
         self.Bind(wx.EVT_CLOSE, self._on_close)
 
     def _build_sweep_tab(self, parent):
-        panel = wx.Panel(parent)
+        scroll = wx.ScrolledWindow(parent, style=wx.VSCROLL)
+        scroll.SetScrollRate(8, 8)
+        panel = wx.Panel(scroll)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         grid = wx.FlexGridSizer(cols=2, hgap=8, vgap=8)
@@ -194,7 +206,8 @@ class EmergeConfigDialog(wx.Dialog):
         self._debug = wx.CheckBox(panel, -1, "Enable debug logs")
         self._start_hz = wx.TextCtrl(panel, -1, "")
         self._stop_hz = wx.TextCtrl(panel, -1, "")
-        self._steps = wx.SpinCtrl(panel, -1, min=1, max=50001, initial=9)
+        self._steps = wx.SpinCtrl(panel, -1, min=1, max=50001, initial=10)
+        self._sweep_spacing = wx.Choice(panel, -1, choices=["linear", "log"])
         self._cells_per_lambda = wx.SpinCtrl(panel, -1, min=1, max=200, initial=5)
 
         self._solver_engine = wx.Choice(panel, -1, choices=["auto", "pardiso", "mumps", "cuda", "superlu", "umfpack"])
@@ -202,6 +215,13 @@ class EmergeConfigDialog(wx.Dialog):
         self._show_mesh = wx.CheckBox(panel, -1, "Show mesh viewer")
         self._geometry_viewer = wx.Choice(panel, -1, choices=["auto", "gmsh", "emerge", "both"])
         self._mesh_viewer = wx.Choice(panel, -1, choices=["auto", "gmsh", "emerge", "both"])
+        self._show_field_animation = wx.CheckBox(panel, -1, "Show field animation after sweep")
+        self._field_component = wx.TextCtrl(panel, -1, "Ez")
+        self._field_animation_freq_hz = wx.TextCtrl(panel, -1, "0")
+        self._export_sparam_png = wx.CheckBox(panel, -1, "Export S-parameter PNG")
+        self._export_field_html = wx.CheckBox(panel, -1, "Export field HTML view")
+        self._insertion_loss_db = wx.SpinCtrlDouble(panel, -1, min=0.0, max=200.0, initial=3.0, inc=0.1)
+        self._return_loss_db = wx.SpinCtrlDouble(panel, -1, min=0.0, max=200.0, initial=10.0, inc=0.1)
 
         self._add_row(grid, panel, "Debug", self._debug, "Global debug switch. Long press for help.")
         self._add_row(
@@ -219,17 +239,30 @@ class EmergeConfigDialog(wx.Dialog):
             lambda: self._frequency_help_text("Stop"),
         )
         self._add_row(grid, panel, "Simulation steps", self._steps, "Number of frequency points in the sweep.")
+        self._add_row(grid, panel, "Sweep spacing", self._sweep_spacing, "Frequency spacing between points: linear or logarithmic.")
         self._add_row(grid, panel, "cells_per_lambda", self._cells_per_lambda, "Mesh density target used by EMerge.")
+        self._add_row(grid, panel, "Insertion loss threshold (dB)", self._insertion_loss_db, "FAIL if worst |S21| loss exceeds this threshold.")
+        self._add_row(grid, panel, "Return loss threshold (dB)", self._return_loss_db, "FAIL if best |S11| return loss is below this threshold.")
         self._add_row(grid, panel, "Solver engine", self._solver_engine, "Linear solver backend. List is intentionally limited.")
         self._add_row(grid, panel, "Visualization: geometry", self._show_geometry, "Open geometry viewer before solve.")
         self._add_row(grid, panel, "Visualization: mesh", self._show_mesh, "Open mesh viewer before solve.")
         self._add_row(grid, panel, "Geometry viewer backend", self._geometry_viewer, "Viewer backend choice. Limited values only.")
         self._add_row(grid, panel, "Mesh viewer backend", self._mesh_viewer, "Viewer backend choice. Limited values only.")
+        self._add_row(grid, panel, "Field animation", self._show_field_animation, "Open animated field viewer after the sweep completes.")
+        self._add_row(grid, panel, "Field component", self._field_component, "Field scalar/component for animation and HTML export, for example Ez, Ex, Ey.")
+        self._add_row(grid, panel, "Field animation freq (Hz)", self._field_animation_freq_hz, "0 uses the middle sweep frequency; otherwise use the nearest sweep frequency.")
+        self._add_row(grid, panel, "Export S-parameter PNG", self._export_sparam_png, "Write S_params.png next to the Touchstone result.")
+        self._add_row(grid, panel, "Export field HTML", self._export_field_html, "Write an interactive field cutplane HTML view next to the Touchstone result.")
 
         sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 12)
         sizer.AddStretchSpacer()
         panel.SetSizer(sizer)
-        return panel
+        wrapper = wx.BoxSizer(wx.VERTICAL)
+        wrapper.Add(panel, 1, wx.EXPAND)
+        scroll.SetSizer(wrapper)
+        scroll.Layout()
+        scroll.FitInside()
+        return scroll
 
     def _build_ports_tab(self, parent):
         panel = wx.Panel(parent)
@@ -274,6 +307,16 @@ class EmergeConfigDialog(wx.Dialog):
         self._ports_text.SetToolTip(ports_help)
         sizer.Add(self._ports_text, 1, wx.EXPAND | wx.ALL, 10)
 
+        passives_box = wx.StaticBoxSizer(wx.VERTICAL, panel, "Passive Modeling")
+        self._model_passives = wx.CheckBox(panel, -1, "Model passive R/L/C components")
+        self._skip_passives = wx.TextCtrl(panel, -1, "")
+        passives_grid = wx.FlexGridSizer(cols=2, hgap=8, vgap=8)
+        passives_grid.AddGrowableCol(1, 1)
+        self._add_row(passives_grid, panel, "Enable passive modeling", self._model_passives, "Automatically insert passive R/L/C models from the PCB into the FEM model.")
+        self._add_row(passives_grid, panel, "Skip refs", self._skip_passives, "Comma-separated references to skip, for example: C5, C6, R10")
+        passives_box.Add(passives_grid, 1, wx.EXPAND | wx.ALL, 8)
+        sizer.Add(passives_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
         panel.SetSizer(sizer)
         self._ports_text.Bind(wx.EVT_TEXT, self._on_any_edit)
         return panel
@@ -299,6 +342,18 @@ class EmergeConfigDialog(wx.Dialog):
         self._max_mesh_retries = wx.SpinCtrl(panel, -1, min=0, max=20, initial=2)
         self._simplify_geometry = wx.CheckBox(panel, -1, "Simplify geometry")
         self._simplify_factor = wx.SpinCtrlDouble(panel, -1, min=1.0, max=10.0, initial=2.5, inc=0.1)
+        self._pcb_split_z = wx.CheckBox(panel, -1, "Split PCB in Z")
+        self._pcb_merge = wx.CheckBox(panel, -1, "Merge touching PCB solids")
+        self._artifact_threshold_um = wx.SpinCtrlDouble(panel, -1, min=0.0, max=10000.0, initial=200.0, inc=1.0)
+        self._char_length_max_factor = wx.SpinCtrlDouble(panel, -1, min=0.01, max=100.0, initial=2.5, inc=0.05)
+        self._char_length_max_floor_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=0.8, inc=0.05)
+        self._char_length_max_ceil_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=8.0, inc=0.1)
+        self._sliver_threshold_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=10.0, initial=0.1, inc=0.01)
+        self._mesh_copper_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=0.6, inc=0.05)
+        self._mesh_copper_z_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=0.35, inc=0.05)
+        self._mesh_component_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=0.9, inc=0.05)
+        self._mesh_substrate_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=100.0, initial=2.0, inc=0.1)
+        self._mesh_air_mm = wx.SpinCtrlDouble(panel, -1, min=0.0, max=200.0, initial=10.0, inc=0.5)
 
         self._add_row(grid, panel, "Port focus only", self._port_focus_only, "Ignore keepout/outline and crop by ports.")
         self._add_row(grid, panel, "Domain margin (mm)", self._domain_margin_mm, "Global expansion around the selected domain.")
@@ -312,6 +367,18 @@ class EmergeConfigDialog(wx.Dialog):
         self._add_row(grid, panel, "Max mesh retries", self._max_mesh_retries, "Retries for edge-recovery fixes before fallback.")
         self._add_row(grid, panel, "Simplify geometry", self._simplify_geometry, "Pre-import simplification switch.")
         self._add_row(grid, panel, "Simplify factor", self._simplify_factor, "Higher value gives coarser simplified geometry.")
+        self._add_row(grid, panel, "PCB split Z", self._pcb_split_z, "Split solids at Z interfaces before commit.")
+        self._add_row(grid, panel, "PCB merge", self._pcb_merge, "Merge touching solids before commit.")
+        self._add_row(grid, panel, "Artifact threshold (um)", self._artifact_threshold_um, "Boundary curves shorter than this are ignored in CLmax scan.")
+        self._add_row(grid, panel, "CL max factor", self._char_length_max_factor, "Multiplier applied to shortest valid large-surface boundary curve.")
+        self._add_row(grid, panel, "CL max floor (mm)", self._char_length_max_floor_mm, "Lower clamp for global CharacteristicLengthMax.")
+        self._add_row(grid, panel, "CL max ceil (mm)", self._char_length_max_ceil_mm, "Upper clamp for global CharacteristicLengthMax.")
+        self._add_row(grid, panel, "Sliver threshold (mm)", self._sliver_threshold_mm, "BBox threshold used to classify sliver surfaces.")
+        self._add_row(grid, panel, "Mesh copper (mm)", self._mesh_copper_mm, "Per-region copper mesh target.")
+        self._add_row(grid, panel, "Mesh copper Z (mm)", self._mesh_copper_z_mm, "Through-thickness copper Z refinement target.")
+        self._add_row(grid, panel, "Mesh component (mm)", self._mesh_component_mm, "Per-region component mesh target.")
+        self._add_row(grid, panel, "Mesh substrate (mm)", self._mesh_substrate_mm, "Per-region substrate mesh target.")
+        self._add_row(grid, panel, "Mesh air (mm)", self._mesh_air_mm, "Per-region air/PML mesh target.")
 
         root.Add(grid, 0, wx.EXPAND | wx.ALL, 12)
         panel.SetSizer(root)
@@ -325,7 +392,9 @@ class EmergeConfigDialog(wx.Dialog):
         return scroll
 
     def _build_gerber_tab(self, parent):
-        panel = wx.Panel(parent)
+        scroll = wx.ScrolledWindow(parent, style=wx.VSCROLL)
+        scroll.SetScrollRate(8, 8)
+        panel = wx.Panel(scroll)
         root = wx.BoxSizer(wx.VERTICAL)
 
         info = wx.StaticText(
@@ -347,6 +416,12 @@ class EmergeConfigDialog(wx.Dialog):
         self._gerber_drop_zero_segments = wx.CheckBox(panel, -1, "Drop zero-length segments")
         self._gerber_simplify_regions = wx.CheckBox(panel, -1, "Simplify region polygons")
         self._gerber_region_min_segment_um = wx.SpinCtrlDouble(panel, -1, min=0.0, max=10000.0, initial=120.0, inc=1.0)
+        self._python_exe = wx.TextCtrl(panel, -1, "")
+        self._min_emerge_version = wx.TextCtrl(panel, -1, "")
+        self._layers_copper = wx.TextCtrl(panel, -1, "")
+        self._layers_mask = wx.TextCtrl(panel, -1, "")
+        self._layers_silk = wx.TextCtrl(panel, -1, "")
+        self._layers_edge = wx.TextCtrl(panel, -1, "")
 
         self._add_row(grid, panel, "Gerber loading mode", self._use_gerbers, "If off, use simplified PCBNew path.")
         self._add_row(grid, panel, "kicad-cli path", self._kicad_cli, "Leave empty for auto-detect.")
@@ -357,11 +432,22 @@ class EmergeConfigDialog(wx.Dialog):
         self._add_row(grid, panel, "Drop zero segments", self._gerber_drop_zero_segments, "Always remove zero-length draws.")
         self._add_row(grid, panel, "Simplify regions", self._gerber_simplify_regions, "Enable in-region vertex filtering.")
         self._add_row(grid, panel, "Region min segment (um)", self._gerber_region_min_segment_um, "In-region tiny edge threshold.")
+        self._add_row(grid, panel, "Python executable", self._python_exe, "System Python used to run emerge_runner.py.")
+        self._add_row(grid, panel, "Minimum EMerge version", self._min_emerge_version, "Minimum expected EMerge version.")
+        self._add_row(grid, panel, "Copper layers", self._layers_copper, "Comma-separated copper layer names for standalone runs.")
+        self._add_row(grid, panel, "Mask layers", self._layers_mask, "Comma-separated solder mask layer names.")
+        self._add_row(grid, panel, "Silk layers", self._layers_silk, "Comma-separated silkscreen layer names.")
+        self._add_row(grid, panel, "Edge layers", self._layers_edge, "Comma-separated board edge layer names.")
 
         root.Add(grid, 0, wx.EXPAND | wx.ALL, 12)
         root.AddStretchSpacer()
         panel.SetSizer(root)
-        return panel
+        wrapper = wx.BoxSizer(wx.VERTICAL)
+        wrapper.Add(panel, 1, wx.EXPAND)
+        scroll.SetSizer(wrapper)
+        scroll.Layout()
+        scroll.FitInside()
+        return scroll
 
     def _frequency_help_text(self, focus_label: str) -> str:
         def _parse_hz(raw: str) -> float | None:
@@ -474,15 +560,24 @@ class EmergeConfigDialog(wx.Dialog):
         cfg = self._cfg
         sweep = cfg.get("sweep", {})
         solver = cfg.get("solver", {})
+        thresholds = cfg.get("thresholds", {})
         vis = cfg.get("visualization", {})
         mesh = cfg.get("mesh", {})
+        passives = cfg.get("passives", {})
         gerber = cfg.get("gerber", {})
+        python_cfg = cfg.get("python", {})
+        gerber_layers = gerber.get("layers", {}) if isinstance(gerber, dict) else {}
 
         self._debug.SetValue(bool(cfg.get("debug", False)))
-        self._start_hz.SetValue(str(sweep.get("start_hz", 100000000)))
-        self._stop_hz.SetValue(str(sweep.get("stop_hz", 6000000000)))
-        self._steps.SetValue(_as_int(sweep.get("steps", 9), 9))
+        self._start_hz.SetValue(str(sweep.get("start_hz", 10000000)))
+        self._stop_hz.SetValue(str(sweep.get("stop_hz", 10000000000)))
+        self._steps.SetValue(_as_int(sweep.get("steps", 10), 10))
+        self._sweep_spacing.SetStringSelection(str(sweep.get("spacing", "log")).lower())
+        if self._sweep_spacing.GetSelection() == wx.NOT_FOUND:
+            self._sweep_spacing.SetStringSelection("log")
         self._cells_per_lambda.SetValue(_as_int(sweep.get("cells_per_lambda", 5), 5))
+        self._insertion_loss_db.SetValue(_as_float(thresholds.get("insertion_loss_db", 3.0), 3.0))
+        self._return_loss_db.SetValue(_as_float(thresholds.get("return_loss_db", 10.0), 10.0))
 
         self._solver_engine.SetStringSelection(str(solver.get("engine", "auto")))
         if self._solver_engine.GetSelection() == wx.NOT_FOUND:
@@ -496,6 +591,11 @@ class EmergeConfigDialog(wx.Dialog):
         self._mesh_viewer.SetStringSelection(str(vis.get("mesh_viewer", "auto")))
         if self._mesh_viewer.GetSelection() == wx.NOT_FOUND:
             self._mesh_viewer.SetStringSelection("auto")
+        self._show_field_animation.SetValue(bool(vis.get("show_field_animation", False)))
+        self._field_component.SetValue(str(vis.get("field_component", "Ez") or "Ez"))
+        self._field_animation_freq_hz.SetValue(str(vis.get("field_animation_freq_hz", 0) or 0))
+        self._export_sparam_png.SetValue(bool(vis.get("export_sparam_png", False)))
+        self._export_field_html.SetValue(bool(vis.get("export_field_html", False)))
 
         self._port_focus_only.SetValue(bool(mesh.get("port_focus_only", True)))
         self._domain_margin_mm.SetValue(_as_float(mesh.get("domain_margin_mm", 4.0), 4.0))
@@ -513,6 +613,18 @@ class EmergeConfigDialog(wx.Dialog):
         self._max_mesh_retries.SetValue(_as_int(mesh.get("max_mesh_retries", 2), 2))
         self._simplify_geometry.SetValue(bool(mesh.get("simplify_geometry", True)))
         self._simplify_factor.SetValue(_as_float(mesh.get("simplify_factor", 2.5), 2.5))
+        self._pcb_split_z.SetValue(bool(mesh.get("pcb_split_z", False)))
+        self._pcb_merge.SetValue(bool(mesh.get("pcb_merge", False)))
+        self._artifact_threshold_um.SetValue(_as_float(mesh.get("artifact_threshold_um", 200.0), 200.0))
+        self._char_length_max_factor.SetValue(_as_float(mesh.get("char_length_max_factor", 2.5), 2.5))
+        self._char_length_max_floor_mm.SetValue(_as_float(mesh.get("char_length_max_floor_mm", 0.8), 0.8))
+        self._char_length_max_ceil_mm.SetValue(_as_float(mesh.get("char_length_max_ceil_mm", 8.0), 8.0))
+        self._sliver_threshold_mm.SetValue(_as_float(mesh.get("sliver_threshold_mm", 0.10), 0.10))
+        self._mesh_copper_mm.SetValue(_as_float(mesh.get("mesh_copper_mm", 0.60), 0.60))
+        self._mesh_copper_z_mm.SetValue(_as_float(mesh.get("mesh_copper_z_mm", 0.35), 0.35))
+        self._mesh_component_mm.SetValue(_as_float(mesh.get("mesh_component_mm", 0.90), 0.90))
+        self._mesh_substrate_mm.SetValue(_as_float(mesh.get("mesh_substrate_mm", 2.0), 2.0))
+        self._mesh_air_mm.SetValue(_as_float(mesh.get("mesh_air_mm", 10.0), 10.0))
         self._gerber_res_mm.SetValue(_as_float(mesh.get("gerber_res_mm", 0.2), 0.2))
         self._gerber_circ_segments.SetValue(_as_int(mesh.get("gerber_circ_segments", 64), 64))
         self._gerber_min_circ_segments.SetValue(_as_int(mesh.get("gerber_min_circ_segments", 6), 6))
@@ -523,6 +635,14 @@ class EmergeConfigDialog(wx.Dialog):
 
         self._use_gerbers.SetValue(bool(gerber.get("use_gerbers", True)))
         self._kicad_cli.SetValue(str(gerber.get("kicad_cli", "") or ""))
+        self._python_exe.SetValue(str(python_cfg.get("python_exe", "") or ""))
+        self._min_emerge_version.SetValue(str(python_cfg.get("min_emerge_version", "") or ""))
+        self._layers_copper.SetValue(_csv_from_list(gerber_layers.get("copper", [])))
+        self._layers_mask.SetValue(_csv_from_list(gerber_layers.get("mask", [])))
+        self._layers_silk.SetValue(_csv_from_list(gerber_layers.get("silk", [])))
+        self._layers_edge.SetValue(_csv_from_list(gerber_layers.get("edge", [])))
+        self._model_passives.SetValue(bool(passives.get("model_passives", True)))
+        self._skip_passives.SetValue(_csv_from_list(passives.get("skip", [])))
 
         self._ports_text.ChangeValue(self._ports_to_text(cfg.get("ports", {})))
 
@@ -563,8 +683,14 @@ class EmergeConfigDialog(wx.Dialog):
         sweep["start_hz"] = int(float(self._start_hz.GetValue().strip()))
         sweep["stop_hz"] = int(float(self._stop_hz.GetValue().strip()))
         sweep["steps"] = int(self._steps.GetValue())
+        sweep["spacing"] = self._sweep_spacing.GetStringSelection() or "log"
         sweep["cells_per_lambda"] = int(self._cells_per_lambda.GetValue())
         cfg["sweep"] = sweep
+
+        thresholds = dict(cfg.get("thresholds", {}))
+        thresholds["insertion_loss_db"] = float(self._insertion_loss_db.GetValue())
+        thresholds["return_loss_db"] = float(self._return_loss_db.GetValue())
+        cfg["thresholds"] = thresholds
 
         solver["engine"] = self._solver_engine.GetStringSelection() or "auto"
         cfg["solver"] = solver
@@ -573,6 +699,11 @@ class EmergeConfigDialog(wx.Dialog):
         vis["show_mesh"] = bool(self._show_mesh.GetValue())
         vis["geometry_viewer"] = self._geometry_viewer.GetStringSelection() or "auto"
         vis["mesh_viewer"] = self._mesh_viewer.GetStringSelection() or "auto"
+        vis["show_field_animation"] = bool(self._show_field_animation.GetValue())
+        vis["field_component"] = self._field_component.GetValue().strip() or "Ez"
+        vis["field_animation_freq_hz"] = float(self._field_animation_freq_hz.GetValue().strip() or "0")
+        vis["export_sparam_png"] = bool(self._export_sparam_png.GetValue())
+        vis["export_field_html"] = bool(self._export_field_html.GetValue())
         cfg["visualization"] = vis
 
         mesh["port_focus_only"] = bool(self._port_focus_only.GetValue())
@@ -587,6 +718,18 @@ class EmergeConfigDialog(wx.Dialog):
         mesh["max_mesh_retries"] = int(self._max_mesh_retries.GetValue())
         mesh["simplify_geometry"] = bool(self._simplify_geometry.GetValue())
         mesh["simplify_factor"] = float(self._simplify_factor.GetValue())
+        mesh["pcb_split_z"] = bool(self._pcb_split_z.GetValue())
+        mesh["pcb_merge"] = bool(self._pcb_merge.GetValue())
+        mesh["artifact_threshold_um"] = float(self._artifact_threshold_um.GetValue())
+        mesh["char_length_max_factor"] = float(self._char_length_max_factor.GetValue())
+        mesh["char_length_max_floor_mm"] = float(self._char_length_max_floor_mm.GetValue())
+        mesh["char_length_max_ceil_mm"] = float(self._char_length_max_ceil_mm.GetValue())
+        mesh["sliver_threshold_mm"] = float(self._sliver_threshold_mm.GetValue())
+        mesh["mesh_copper_mm"] = float(self._mesh_copper_mm.GetValue())
+        mesh["mesh_copper_z_mm"] = float(self._mesh_copper_z_mm.GetValue())
+        mesh["mesh_component_mm"] = float(self._mesh_component_mm.GetValue())
+        mesh["mesh_substrate_mm"] = float(self._mesh_substrate_mm.GetValue())
+        mesh["mesh_air_mm"] = float(self._mesh_air_mm.GetValue())
         mesh["gerber_res_mm"] = float(self._gerber_res_mm.GetValue())
         mesh["gerber_circ_segments"] = int(self._gerber_circ_segments.GetValue())
         mesh["gerber_min_circ_segments"] = int(self._gerber_min_circ_segments.GetValue())
@@ -598,7 +741,23 @@ class EmergeConfigDialog(wx.Dialog):
 
         gerber["use_gerbers"] = bool(self._use_gerbers.GetValue())
         gerber["kicad_cli"] = self._kicad_cli.GetValue().strip()
+        gerber["layers"] = {
+            "copper": _parse_csv_list(self._layers_copper.GetValue()),
+            "mask": _parse_csv_list(self._layers_mask.GetValue()),
+            "silk": _parse_csv_list(self._layers_silk.GetValue()),
+            "edge": _parse_csv_list(self._layers_edge.GetValue()),
+        }
         cfg["gerber"] = gerber
+
+        cfg["python"] = {
+            "python_exe": self._python_exe.GetValue().strip(),
+            "min_emerge_version": self._min_emerge_version.GetValue().strip(),
+        }
+
+        cfg["passives"] = {
+            "model_passives": bool(self._model_passives.GetValue()),
+            "skip": _parse_csv_list(self._skip_passives.GetValue()),
+        }
 
         cfg["ports"] = self._parse_ports_text(self._ports_text.GetValue())
         return cfg

@@ -17,12 +17,14 @@
   },
   "versions": [
     {
-      "version": "1.0.0",
+      "version": "1.2.0",
       "status": "stable",
       "kicad_version": "9.0",
+      "kicad_version_max": "10.99",
       "download_sha256": "",
-      "download_url": "",
-      "install_size": 32768,
+      "download_size": 0,
+      "download_url": "https://github.com/<github-user>/KiCAD-Plugin/releases/download/emerge-v1.2.0/emerge_fem_simulation-1.2.0.zip",
+      "install_size": 0,
       "platforms": ["windows", "linux", "macos"]
     }
   ]

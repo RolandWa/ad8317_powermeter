@@ -170,7 +170,8 @@ def _review_outputs(output_dir: pathlib.Path) -> dict[str, Any]:
         if mesh_attempt:
             out["highlights"].append(mesh_attempt)
 
-        ts_path = pathlib.Path(result.get("ts_path", "")) if isinstance(result, dict) else pathlib.Path()
+        _ts_str = result.get("ts_path") if isinstance(result, dict) else None
+        ts_path = pathlib.Path(_ts_str) if _ts_str else None
         if ts_path:
             out["touchstone"] = _analyze_s2p(ts_path)
     else:

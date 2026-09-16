@@ -880,6 +880,7 @@ class EmergeSolver:
 
     def __init__(self, model, output_dir,
                  freq_start=1e6, freq_stop=10e9, freq_steps=201,
+                 freq_spacing="linear",
                  cells_per_lambda=15, solver_engine="auto",
                  show_mesh=False,
                  mesh_viewer="auto",
@@ -911,6 +912,7 @@ class EmergeSolver:
         self.freq_start                 = freq_start
         self.freq_stop                  = freq_stop
         self.freq_steps                 = freq_steps
+        self.freq_spacing               = (freq_spacing or "linear").strip().lower()
         self.cells_per_lambda           = cells_per_lambda
         self.solver_engine              = (solver_engine or "auto").strip().lower()
         self.show_mesh                  = show_mesh
@@ -1082,11 +1084,18 @@ class EmergeSolver:
         self._log(f"  Solver       : {self.solver_engine.upper()}")
 
         sim.set_resolution(1.0 / self.cells_per_lambda)
-        sim.mw.set_frequency_range(
-            fmin    = float(self.freq_start),
-            fmax    = float(self.freq_stop),
-            Npoints = int(self.freq_steps),
-        )
+        if self.freq_spacing == "log":
+            if self.freq_start <= 0 or self.freq_stop <= 0:
+                raise ValueError("Logarithmic sweep frequencies must be greater than zero")
+            sim.mw.frequencies = np.geomspace(
+                float(self.freq_start), float(self.freq_stop), int(self.freq_steps)
+            )
+        else:
+            sim.mw.set_frequency_range(
+                fmin    = float(self.freq_start),
+                fmax    = float(self.freq_stop),
+                Npoints = int(self.freq_steps),
+            )
 
         if self.solver_engine != "auto":
             factory = self._SOLVER_MAP.get(self.solver_engine)
@@ -2543,9 +2552,10 @@ if __name__ == "__main__":
         m_substrate  = float(mesh_cfg.get("mesh_substrate_mm",                0.30))
         m_air        = float(mesh_cfg.get("mesh_air_mm",                      1.00))
 
-        freq_start = float(sweep.get("start_hz",         1e6))
+        freq_start = float(sweep.get("start_hz",        10e6))
         freq_stop  = float(sweep.get("stop_hz",         10e9))
-        freq_steps = int  (sweep.get("steps",            201))
+        freq_steps = int  (sweep.get("steps",            10))
+        freq_spacing = str(sweep.get("spacing",           "log")).strip().lower()
         cpl        = int  (sweep.get("cells_per_lambda",  15))
 
         builder = EmergeModelBuilder(
@@ -2590,6 +2600,7 @@ if __name__ == "__main__":
             freq_start                 = freq_start,
             freq_stop                  = freq_stop,
             freq_steps                 = freq_steps,
+            freq_spacing               = freq_spacing,
             cells_per_lambda           = cpl,
             solver_engine              = solver_cfg.get("engine", "auto"),
             show_mesh                  = bool(vis_cfg.get("show_mesh", False)),

@@ -79,7 +79,7 @@ import zipfile
 # ── paths ─────────────────────────────────────────────────────────────────────
 THIS_DIR   = pathlib.Path(__file__).parent.resolve()  # sim/emerge/plugin/
 EMERGE_DIR = THIS_DIR.parent                          # sim/emerge/
-DIST_DIR   = EMERGE_DIR / "dist"
+DIST_DIR   = THIS_DIR / "build"   # output dir (compatible with central KiCAD-Plugin build.py)
 STAGE_DIR  = DIST_DIR / "stage"
 
 PLUGIN_NAME = "com_github_<github-user>_emerge_fem"
@@ -405,6 +405,8 @@ def _run_headless_debug() -> bool:
 def main():
     parser = argparse.ArgumentParser(
         description="Package and/or deploy the EMerge KiCad plugin")
+    parser.add_argument("--zip",              action="store_true",
+                        help="Build ZIP only (used by central KiCAD-Plugin build.py)")
     parser.add_argument("--deploy",           action="store_true",
                         help="Build ZIP then install into KiCad plugins directory")
     parser.add_argument("--dev-deploy",       action="store_true",

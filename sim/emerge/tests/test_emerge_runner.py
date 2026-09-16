@@ -18,7 +18,33 @@ import sys
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
-from gerber_builder import load_copper_layers, load_vias_from_drills
+from gerber_builder import crop_gerber_to_bbox, load_copper_layers, load_vias_from_drills
+
+
+class TestGerberCrop:
+
+    def test_keeps_region_crossing_simulation_bounds(self, tmp_path):
+        source = tmp_path / "board-F_Cu.gbr"
+        cropped = tmp_path / "cropped-F_Cu.gbr"
+        source.write_text(
+            "%FSLAX46Y46*%\n"
+            "X0Y0D02*\n"
+            "G36*\n"
+            "X-010000Y-010000D02*\n"
+            "X030000Y-010000D01*\n"
+            "X030000Y030000D01*\n"
+            "X-010000Y030000D01*\n"
+            "X-010000Y-010000D01*\n"
+            "G37*\nM02*\n",
+            encoding="utf-8",
+        )
+
+        assert crop_gerber_to_bbox(
+            source, cropped, 0.0, 0.0, 0.02, 0.02
+        )
+        result = cropped.read_text(encoding="utf-8")
+        assert "G36*" in result
+        assert "G37*" in result
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import emerge_runner as er

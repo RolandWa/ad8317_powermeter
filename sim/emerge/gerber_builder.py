@@ -58,8 +58,9 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
     Kept elements:
       D03 flash  — centroid of the flash position
       D01 draw   — current pen position (midpoint of move)
-      Region blocks — all interior coordinates kept once the region opens
-                      inside the box (avoids broken polygon outlines)
+    Region blocks — retained when their bounding box overlaps the export box.
+                      The complete region is kept so copper crossing the box
+                      boundary is not discarded before PCB bounds are applied.
 
     Header / aperture / format lines are always preserved so the output is
     a valid Gerber file.  Returns True if dst was written, False on error.
@@ -101,7 +102,9 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
     cur_y = 0.0
     in_region       = False
     region_in_box   = False
-    region_buf: list[str] = []   # buffered region lines, flushed only if in-box
+    region_buf: list[str] = []   # buffered region lines, flushed on bbox overlap
+    region_xs: list[float] = []
+    region_ys: list[float] = []
     in_header       = True
     prev_in_box     = False      # whether the pen was inside the box before last move
 
@@ -121,19 +124,27 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
 
         if region_start.match(line):
             in_region     = True
-            region_in_box = True  # Assume in-box; set False if ANY vertex outside
+            region_in_box = False
             region_buf    = [raw_line]
+            region_xs      = []
+            region_ys      = []
             continue
 
         if region_end.match(line):
             in_region = False
+            if region_xs and region_ys:
+                region_in_box = not (
+                    max(region_xs) < gx_min or min(region_xs) > gx_max or
+                    max(region_ys) < gy_min or min(region_ys) > gy_max
+                )
             if region_in_box:
-                # Only flush the region if ALL vertices were inside the box.
-                # This prevents large copper pours from outside the crop boundary
-                # from leaking into the simulation domain.
+                # Keep the complete intersecting region. PCB bounds constrain
+                # the final solid after this import stage.
                 region_buf.append(raw_line)
                 body_lines.extend(region_buf)
             region_buf = []
+            region_xs = []
+            region_ys = []
             continue
 
         m = coord_re.search(line)
@@ -146,9 +157,8 @@ def crop_gerber_to_bbox(src: pathlib.Path, dst: pathlib.Path,
                 cur_y = _to_mm(raw_y)
 
             if in_region:
-                if not _in_box(cur_x, cur_y):
-                    # ANY vertex outside the box → discard entire region
-                    region_in_box = False
+                region_xs.append(cur_x)
+                region_ys.append(cur_y)
                 region_buf.append(raw_line)
                 continue
 
