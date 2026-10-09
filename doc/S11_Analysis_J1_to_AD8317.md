@@ -67,6 +67,15 @@ Upstream validation (`run_lumped.py`, `run_rlc.py`, `run_shunt.py`, run here wit
 
 Upstream search (2026-10-09): kicad-rfsim has no open issue on this (only #5, slash-rated values; PR #6 closed). The installed plugin (runner.py, 1175 lines) is much older than upstream main (v1.2.0, 2316 lines), where a lone R or C is no longer put on the series `LEtype=1` path ("R ≥ 150 Ω diverges to NaN" is documented in `_le_topology`) – this explains the NaN of test T3 but not the main fault: upstream runner on the same model (R on the classic path) still gives S11 −0.23 dB / S21 −49 dB at 1 GHz. openEMS issue #136 ("Weird Behavior of Lumped Components", closed, redirected to Discussions) describes the same symptom (lumped R has no effect, `AddMetal` does), no fix recorded.
 
+### CPW port at J1 (test, 2026-10-09, not conclusive)
+
+Port 1 as Coplanar (CPW) (gap 0.493 mm measured at the pad), ports 2/3 lumped on B.Cu, only R1/R2/C1/C2 modelled, coarse mesh, generic stackup, 0.3–6 GHz, domain 2 mm margin (1.3 M cells, timestep 30 fs).
+
+* The runs are slow: the CPW gap needs 4 cells per gap, so ≈ 40 steps/s; the energy decays only to ≈ −11 … −13 dB in 60 000 steps (1.8 ns) and the −30 dB end criterion is not reached (excitation alone is 33 000 steps; a converged run needs more than ≈ 150 000 steps, over 1 h).
+* With the package parasitics of C1/C2 (R+L+C on the series `LEtype=1` path) the energy **grows** exponentially after ≈ 45 000 steps (instability, the "slow mode" that upstream `openems_le_growth.py` studies). With `parasitics=false` (ideal C) the run is stable.
+* Truncated at 60 000 steps neither variant is usable: CPW port S11 −0.2 … −1 dB (Zin ≈ 300–3000 Ω reactive), and the lumped-port twin even gives |S11| > 1 (non-passive). A truncated FDTD run says nothing about S11.
+* So the CPW port itself is accepted by the solver, but a convergence-quality result needs a long run (or a smaller domain / larger end criterion) that was not completed.
+
 ## 3. Result 2 — circuit-level model of the same board (cross-check, case B)
 
 Sections read from the rfsim layout (mm): pad 0.8 wide × 1.1 (to pad edge), 0.2032 × 0.65 → R1 tap → 0.30 × 1.0 → R2 tap → 0.2032 × 1.1 → C1 → 0.1524 × 1.68 → U1:1.
