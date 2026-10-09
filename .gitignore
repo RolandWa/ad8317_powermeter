@@ -26,6 +26,7 @@ memory/
 # Local-only: personal tool settings, saved dialog settings, generated schematics, results
 .claude/
 kicad/RF_config*.json
+kicad/RF_export_settings.json
 kicad/rfsim_results/
 kicad/FEM/
 kicad/*_FEM_export*

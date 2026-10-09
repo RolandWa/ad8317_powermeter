@@ -3,6 +3,7 @@
 Date: 2026-10-09. Board: Würth 60312202114307, 4-layer FR-4 (εr 4.5, tanδ 0.02), In1.Cu GND reference at 0.533 mm.
 Ports: **P1** = J1 pad, **P2** = U1:1 (INHI), **P3** = U1:8 (INLO).
 Everything below is reproducible with `sim/qucs/run_s11_study.py` (qucsator 0.0.19, numpy).
+For the same study with the ADL5507 in place of the AD8317 see `ADL5507_vs_AD8317.md`.
 
 ## 1. AD8317 input model (replaces the 50 Ω terminations of P2/P3)
 

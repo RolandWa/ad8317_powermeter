@@ -1,0 +1,4 @@
+# AD8317 INHI to ground
+Pac:P1 n1 gnd Num="1" Z="50 Ohm" P="0 dBm" f="1e9"
+SPfile:CHIP n1 gnd File="AD8317_INHI_1MHz_10GHz.s1p" Data="rectangular" Interpolator="linear" duringDC="open"
+.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="401"

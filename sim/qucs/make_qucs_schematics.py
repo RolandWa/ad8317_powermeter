@@ -5,6 +5,7 @@ The schematics hold the same circuits as the qucsator netlists of
 Pin positions (grid units, relative to the component origin):
   R, L, C, TLIN, horizontal: (-30,0) (+30,0); rotated by 1: (0,-30) (0,+30)
   Pac rotated by 1: pin 1 (0,-30), pin 2 (0,+30);  GND: pin at its origin
+  SPfile 1 port:  1 (-30,0)  Ref (0,+30)
   SPfile 2 ports: 1 (-30,0)  2 (+30,0)  Ref (0,+30)
   SPfile 3 ports: 1 (-30,-30)  2 (+30,-30)  3 (-30,+30)  Ref (0,+60)
 (found with `qucs -n` on a test schematic; see verify_qucs_schematics.py).
@@ -108,6 +109,8 @@ class Sch:
                  [(fname, 0), ("rectangular", 0), ("linear", 0), ("open", 0), (str(nports), 0)])
         if nports == 3:
             return (x - 30, y - 30), (x + 30, y - 30), (x - 30, y + 30), (x, y + 60)
+        if nports == 1:
+            return (x - 30, y), (x, y + 30)
         return (x - 30, y), (x + 30, y), (x, y + 30)
 
     def sweep_and_plot(self, x, y):
@@ -210,10 +213,12 @@ def B_case(name, title, load, z50=False, chip_file=None):
     return s
 
 
-def C_case(name, title, line, plane, chip_file=None, geom=None):
-    """Substrate-defined lines (SUBST + CLIN/CSTEP or MLIN/MSTEP), see run_s11_study.chain_C."""
-    _, el, taps = st.chain_C(line, plane, chip_file, geom)
-    r_shunt = st.merged_geom(geom)["r_shunt"]
+def _chain_case(name, title, el, taps, plane):
+    """Draw a chain from run_s11_study.chain_C / run_adl5507_study.chain_E.
+
+    el: the series elements (the chip SPfile has no `b` for a 1-port); taps: (name, node, ohm),
+    a shunt resistor with 0.25 nH to ground on that node.
+    """
     sb = st.SUBSTRATES[plane]
     s = Sch(name)
     s.title = title
@@ -222,27 +227,62 @@ def C_case(name, title, line, plane, chip_file=None, geom=None):
     y, x, prev = 200, 130, p1
     pins = {}
     for e in el:
+        one_port = e["kind"] == "SPfile" and not e.get("b")
         if e["kind"] in ("R", "L", "C"):
             a, b = {"R": s.res, "L": s.ind, "C": s.cap}[e["kind"]](e["name"], x, y, e["props"][0][1])
         elif e["kind"] == "SPfile":
-            c = s.spfile("CHIP", x, y, str(HERE / e["props"][0][1]), 2)
-            a, b = c[0], c[1]
-            s.path(c[2], (x, y + 60))
-            s.gnd(x, y + 60)
+            c = s.spfile("CHIP", x, y, str(HERE / e["props"][0][1]), 1 if one_port else 2)
+            a, b = c[0], (c[0] if one_port else c[1])
+            ref = c[1] if one_port else c[2]
+            s.path(ref, (ref[0], ref[1] + 30))
+            s.gnd(ref[0], ref[1] + 30)
         else:
             a, b = s.part2(e["kind"], e["name"], x, y, e["props"])
         s.path(prev, a)
-        pins[e["b"]] = b
+        pins[e["b"] if e.get("b") else e["a"]] = b
         prev = b
         x += 120
-    s.gnd(*prev)
-    for nm, node in taps:                     # 100 ohm + 0.25 nH shunt to ground on that node
+    if not (el[-1]["kind"] == "SPfile" and not el[-1].get("b")):
+        s.gnd(*prev)
+    for nm, node, ohm in taps:
         n = pins[node]
-        top, bot = s.res(nm, n[0], n[1] + 60, "%g Ohm" % r_shunt, 1)
+        top, bot = s.res(nm, n[0], n[1] + 60, "%g Ohm" % ohm, 1)
         s.path(n, top)
         _, l_bot = s.ind(nm + "L", n[0], n[1] + 120, "0.25 nH", 1)
         s.gnd(*l_bot)
     s.subst(900, 500, sb["er"], sb["h"])
+    s.sweep_and_plot(60, 480)
+    return s
+
+
+def C_case(name, title, line, plane, chip_file=None, geom=None):
+    """Substrate-defined lines (SUBST + CLIN/CSTEP or MLIN/MSTEP), see run_s11_study.chain_C."""
+    _, el, taps = st.chain_C(line, plane, chip_file, geom)
+    r_shunt = st.merged_geom(geom)["r_shunt"]
+    return _chain_case(name, title, el, [(nm, node, r_shunt) for nm, node in taps], plane)
+
+
+def E_case(name, title, line, plane, mode):
+    """ADL5507 on the same lines, see run_adl5507_study.chain_E."""
+    import run_adl5507_study as ea
+    _, el, taps = ea.chain_E(line, plane, mode)
+    return _chain_case(name, title, el, taps, plane)
+
+
+def E0_case(name, title, chip_file, shunt_ohm=None):
+    """A detector input alone at a 50 ohm port (1-port file, optional shunt resistor)."""
+    s = Sch(name)
+    s.title = title
+    p1, gp = s.pac(60, 230, 1)
+    s.gnd(*gp)
+    c = s.spfile("CHIP", 200, 200, str(HERE / chip_file), 1)
+    s.path(p1, (140, 200), c[0])             # the wire is split where the shunt resistor taps it
+    s.path(c[1], (200, 260))
+    s.gnd(200, 260)
+    if shunt_ohm:
+        top, bot = s.res("RT", 140, 260, "%g Ohm" % shunt_ohm, 1)
+        s.path((140, 200), top)
+        s.gnd(*bot)
     s.sweep_and_plot(60, 480)
     return s
 
@@ -261,6 +301,26 @@ CASES = {
     "case_C4_ms_bcu_ad8317": lambda n: C_case(n, "C4: microstrip (MLIN) over B.Cu 1.44 mm + AD8317", "ms", "bcu"),
     "case_B2_circuit_z50_ad8317": lambda n: B_case(n, "B2: circuit model with 50 ohm traces + AD8317", "chip", z50=True),
 }
+
+# ADL5507 cases (run_adl5507_study.py): the chips alone, and the board on the four stackups
+_ADL = "ADL5507_RFIN_1MHz_10GHz_raw.s1p", "ADL5507_RFIN_1MHz_10GHz_shunt51.s1p"
+CASES.update({
+    "case_E_A0r_ad8317_bare": lambda n: E0_case(n, "A0r: AD8317 INHI to ground, bare", "AD8317_INHI_1MHz_10GHz.s1p"),
+    "case_E_A0t_ad8317_52R": lambda n: E0_case(n, "A0t: AD8317 INHI with the 52.3 ohm of the datasheet test circuit",
+                                               "AD8317_INHI_1MHz_10GHz.s1p", 52.3),
+    "case_E0r_adl5507_bare": lambda n: E0_case(n, "E0r: ADL5507 bare RFIN (datasheet Table 5)", _ADL[0]),
+    "case_E0s_adl5507_table4": lambda n: E0_case(n, "E0s: ADL5507 with 51 ohm (datasheet Table 4)", _ADL[1]),
+    "case_E0i_adl5507_51R": lambda n: E0_case(n, "E0i: ADL5507 bare RFIN with an ideal 51 ohm", _ADL[0], 51.0),
+})
+for _line, _plane in (("cpw", "bcu"), ("ms", "bcu"), ("cpw", "in1"), ("ms", "in1")):
+    _tag = "%s_%s" % (_line, _plane)
+    for _key, _mode, _what in (("E1", "dropin", "ADL5507 drop-in (R1, R2, C1 as on the AD8317 board)"),
+                               ("E2", "adi", "ADL5507 with one 51 ohm at the pin (ADI reference)"),
+                               ("E3", "table", "ADL5507 as datasheet Table 4 (51 ohm included)")):
+        CASES["case_%s_%s_adl5507_%s" % (_key, _tag, _mode)] = (
+            lambda n, l=_line, p=_plane, m=_mode, w=_what: E_case(n, "E: %s on %s, %s" % (w, l, p), l, p, m))
+    CASES["case_E_C_%s_ad8317" % _tag] = (
+        lambda n, l=_line, p=_plane: C_case(n, "C: AD8317 on %s, %s (as in run_s11_study)" % (l, p), l, p))
 
 
 def main():

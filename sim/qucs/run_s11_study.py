@@ -179,45 +179,88 @@ def merged_geom(geom=None):
     return out
 
 
+def mk_lin(el, line, nm, a, b, w, g, l):
+    """Append a line section: coplanar (CLIN) or microstrip (MLIN)."""
+    if line == "cpw":
+        el.append(dict(kind="CLIN", name=nm, a=a, b=b, props=[
+            ("Subst", "Sub1"), ("W", "%g mm" % w), ("S", "%g mm" % g), ("L", "%g mm" % l),
+            ("Backside", "Metal"), ("Approx", "yes")]))
+    else:
+        el.append(dict(kind="MLIN", name=nm, a=a, b=b, props=[
+            ("Subst", "Sub1"), ("W", "%g mm" % w), ("L", "%g mm" % l),
+            ("Model", "Hammerstad"), ("DispModel", "Kirschning"), ("Temp", "26.85")]))
+
+
+def mk_step(el, line, nm, a, b, w1, w2, g):
+    """Append a width step (CSTEP / MSTEP); equal widths give a 1 uOhm link, Qucs refuses a step of equal widths."""
+    if abs(w1 - w2) < 1e-4:
+        el.append(dict(kind="R", name=nm, a=a, b=b, props=[("R", "1 uOhm")]))
+    elif line == "cpw":
+        el.append(dict(kind="CSTEP", name=nm, a=a, b=b, props=[
+            ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2), ("S", "%g mm" % (max(w1, w2) + 2 * g)),
+            ("Backside", "Metal")]))
+    else:
+        el.append(dict(kind="MSTEP", name=nm, a=a, b=b, props=[
+            ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2),
+            ("MSModel", "Hammerstad"), ("MSDispModel", "Kirschning")]))
+
+
+def mk_part(el, kind, nm, a, b, val):
+    """Append a lumped R, L or C."""
+    el.append(dict(kind=kind, name=nm, a=a, b=b, props=[(kind, val)]))
+
+
+NL = chr(10)
+
+
+def netlist_from_elements(title, el, taps, plane, npts=None):
+    """Qucs netlist text of a chain: the port, SUBST, the series elements and the shunt taps.
+
+    el: elements in order, as made by mk_lin / mk_step / mk_part, plus the SPfile of the chip
+    (a 1-port when it has no `b`, a 2-port otherwise). taps: (name, node, ohm) shunt resistors
+    to GND, each with 0.25 nH of ESL.
+    """
+    sb = SUBSTRATES[plane]
+    sweep = SWEEP if npts is None else '.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="%d"' % npts + NL
+    s = "# " + title + NL + PORT
+    s += 'SUBST:Sub1 er="%s" h="%s" t="35 um" tand="%g" rho="1.72e-8" D="0"' % (sb["er"], sb["h"], TAND) + NL
+    for e in el:
+        if e["kind"] == "SPfile":
+            nodes = e["a"] + (" " + e["b"] if e.get("b") else "") + " gnd"
+            s += ('SPfile:%s %s File="%s" Data="rectangular" Interpolator="linear" duringDC="open"'
+                  % (e["name"], nodes, e["props"][0][1])) + NL
+        elif e["kind"] in ("R", "L", "C"):
+            s += '%s:%s %s %s %s="%s"' % (e["kind"], e["name"], e["a"], e["b"], e["props"][0][0], e["props"][0][1]) + NL
+        else:
+            s += "%s:%s %s %s %s" % (e["kind"], e["name"], e["a"], e["b"],
+                                     " ".join('%s="%s"' % kv for kv in e["props"])) + NL
+    for nm, node, ohm in taps:
+        s += 'R:%s %s %sx R="%g Ohm" Temp="26.85"' % (nm, node, nm, ohm) + NL
+        s += 'L:%sL %sx gnd L="0.25 nH"' % (nm, nm) + NL
+    return s + sweep
+
+
 def chain_C(line, plane, chip_file=None, geom=None, npts=None):
-    """Series chain of the C cases. Returns (netlist text, elements).
+    """Series chain of the C cases. Returns (netlist text, elements, taps).
 
     elements: list of dicts {kind, name, a, b, props} for the two-terminal
-    series parts in order, plus shunt taps. `kind` is the Qucs type. The pad
+    series parts in order. `kind` is the Qucs type. The pad
     (slot 0.49 mm) has no CSTEP to the 0.2 mm slot line, because a Qucs CSTEP
     has ONE ground-plane spacing (its S is that spacing, W + 2 x slot of the
     wider line is used for the 0.2 mm slot sections); a microstrip pad gets an MSTEP.
+    taps: (name, node) of the two shunt resistors (R1, R2).
     """
-    sb = SUBSTRATES[plane]
     G = merged_geom(geom)
-    sweep = SWEEP if npts is None else '.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="%d"\n' % npts
     el = []
 
     def lin(nm, a, b, w, g, l):
-        if line == "cpw":
-            el.append(dict(kind="CLIN", name=nm, a=a, b=b, props=[
-                ("Subst", "Sub1"), ("W", "%g mm" % w), ("S", "%g mm" % g), ("L", "%g mm" % l),
-                ("Backside", "Metal"), ("Approx", "yes")]))
-        else:
-            el.append(dict(kind="MLIN", name=nm, a=a, b=b, props=[
-                ("Subst", "Sub1"), ("W", "%g mm" % w), ("L", "%g mm" % l),
-                ("Model", "Hammerstad"), ("DispModel", "Kirschning"), ("Temp", "26.85")]))
+        mk_lin(el, line, nm, a, b, w, g, l)
 
     def step(nm, a, b, w1, w2, g):
-        if abs(w1 - w2) < 1e-4:     # no width change: Qucs refuses a step of equal widths
-            el.append(dict(kind="R", name=nm, a=a, b=b, props=[("R", "1 uOhm")]))
-        elif line == "cpw":
-            el.append(dict(kind="CSTEP", name=nm, a=a, b=b, props=[
-                ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2), ("S", "%g mm" % (max(w1, w2) + 2 * g)),
-                ("Backside", "Metal")]))
-        else:
-            el.append(dict(kind="MSTEP", name=nm, a=a, b=b, props=[
-                ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2),
-                ("MSModel", "Hammerstad"), ("MSDispModel", "Kirschning")]))
+        mk_step(el, line, nm, a, b, w1, w2, g)
 
     def part(kind, nm, a, b, val):
-        key = {"C": "C", "L": "L", "R": "R"}[kind]
-        el.append(dict(kind=kind, name=nm, a=a, b=b, props=[(key, val)]))
+        mk_part(el, kind, nm, a, b, val)
 
     w, l, g = G["w"], G["l"], G["g"]
     lin("PAD", "n1", "a", G["pad"][0], G["pad"][1], G["pad"][2])
@@ -240,20 +283,9 @@ def chain_C(line, plane, chip_file=None, geom=None, npts=None):
     part("L", "C2L", "c2m", "c2n", "0.25 nH")
     part("R", "C2R", "c2n", "gnd", "0.035 Ohm")
     taps = [("R1", "r1"), ("R2", "r2")]
-
-    s = "# C: %s on plane %s\n" % (line, plane) + PORT
-    s += 'SUBST:Sub1 er="%s" h="%s" t="35 um" tand="%g" rho="1.72e-8" D="0"\n' % (sb["er"], sb["h"], TAND)
-    for e in el:
-        if e["kind"] == "SPfile":
-            s += 'SPfile:CHIP inhi inlo gnd File="%s" Data="rectangular" Interpolator="linear" duringDC="open"\n' % e["props"][0][1]
-        elif e["kind"] in ("R", "L", "C"):
-            extra = ' Temp="26.85"' if e["kind"] == "R" and e["name"] in ("R1", "R2") else ""
-            s += '%s:%s %s %s %s="%s"\n' % (e["kind"], e["name"], e["a"], e["b"], e["props"][0][0], e["props"][0][1])
-        else:
-            s += "%s:%s %s %s %s\n" % (e["kind"], e["name"], e["a"], e["b"], " ".join('%s="%s"' % kv for kv in e["props"]))
-    for nm, node in taps:
-        s += 'R:%s %s %sx R="%g Ohm" Temp="26.85"\nL:%sL %sx gnd L="0.25 nH"\n' % (nm, node, nm, G["r_shunt"], nm, nm)
-    return s + sweep, el, taps
+    text = netlist_from_elements("C: %s on plane %s" % (line, plane), el,
+                                 [(nm, node, G["r_shunt"]) for nm, node in taps], plane, npts)
+    return text, el, taps
 
 
 def netlist_C(line, plane, chip_file=None, geom=None, npts=None):
