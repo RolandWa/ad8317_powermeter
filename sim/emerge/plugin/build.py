@@ -26,7 +26,7 @@ and makes the toolbar icon disappear.  Never copy the plugin to:
     %APPDATA%/kicad/<ver>/scripting/plugins/
 
 Correct install location (Windows):
-    %OneDrive%/Simulation tools/KiCad/<version>/3rdparty/plugins/com_github_<github-user>_emerge_fem/
+    %OneDrive%/Simulation tools/KiCad/<version>/3rdparty/plugins/com_github_<owner>_emerge_fem/
 
 Source layout
 -------------
@@ -82,7 +82,8 @@ EMERGE_DIR = THIS_DIR.parent                          # sim/emerge/
 DIST_DIR   = THIS_DIR / "build"   # output dir (compatible with central KiCAD-Plugin build.py)
 STAGE_DIR  = DIST_DIR / "stage"
 
-PLUGIN_NAME = "com_github_<github-user>_emerge_fem"
+# Folder name of the installed plugin. Set EMERGE_PLUGIN_NAME to keep the name of an existing installation.
+PLUGIN_NAME = os.environ.get("EMERGE_PLUGIN_NAME", "com_github_example_emerge_fem")
 
 # Files that live in THIS_DIR (plugin/) and go into plugins/ in the ZIP
 _PLUGIN_FILES = [
@@ -125,7 +126,7 @@ def _kicad_plugin_dir(kicad_version: str) -> pathlib.Path:
     """Return the KiCad 3rdparty/plugins directory for this machine."""
     if platform.system() == "Windows":
         onedrive = (os.environ.get("OneDrive") or
-                    str(pathlib.Path.home() / "<cloud-folder>"))
+                    str(pathlib.Path.home() / "OneDrive"))
         return (pathlib.Path(onedrive) / "Simulation tools" / "KiCad" /
                 kicad_version / "3rdparty" / "plugins")
     # Linux / macOS fallback
@@ -138,7 +139,7 @@ def _detect_kicad_versions() -> list[str]:
 
     # 1) OneDrive project-local KiCad folders
     onedrive = (os.environ.get("OneDrive") or
-                str(pathlib.Path.home() / "<cloud-folder>"))
+                str(pathlib.Path.home() / "OneDrive"))
     root = pathlib.Path(onedrive) / "Simulation tools" / "KiCad"
     if root.is_dir():
         for d in root.iterdir():

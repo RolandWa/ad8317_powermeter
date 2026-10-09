@@ -1,2 +1,5 @@
 *.dat
 __pycache__/
+*__from_sch.net
+*__ref.net
+*__sch.net

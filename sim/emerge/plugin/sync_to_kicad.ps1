@@ -37,7 +37,7 @@ if ($KiCadVersion -ne "") {
 } else {
     $oneDrive = $env:OneDrive
     if (-not $oneDrive) {
-        $oneDrive = Join-Path $env:USERPROFILE "<cloud-folder>"
+        $oneDrive = Join-Path $env:USERPROFILE "OneDrive"
     }
 
     $kicadRoot = Join-Path $oneDrive "Simulation tools\KiCad"

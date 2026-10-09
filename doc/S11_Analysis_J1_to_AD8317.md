@@ -112,6 +112,52 @@ Not modelled: connector body/launch, vias, pad-to-ground fringe C, the step disc
 The 50 Ω shunt is what gives the match; the trace itself is secondary. The chip's capacitive input is partly compensated by the ~90 Ω (inductive) lines, so
 **re-drawing the line as 50 Ω (plan item 1) makes the 3–4 GHz dip ≈ 1 dB worse in this model**, not better.
 
+### Substrate-defined lines (SUBST + coplanar / microstrip) instead of ideal TLIN
+
+Cases C1–C4 (`case_C*.net`, `case_C*.sch`) replace the ideal `TLIN` lines of model B by Qucs lines on a defined substrate (`SUBST`: 35 µm copper, tanδ 0.02, ρ 1.72e-8 Ω·m), with width steps (`CSTEP`/`MSTEP`) at the tap nodes of R1/R2. Coplanar lines are `CLIN` with `Backside = Metal` (conductor-backed CPW, slot 0.2 mm; the SMA pad has slot 0.49 mm and no step to the 0.2 mm line, because a `CSTEP` has one ground spacing):
+
+| Case | Line | Ground plane under the line | worst \|S11\| per band [dB] 1–100 MHz / 0.1–1 / 1–3 / 3–6 / 6–10 GHz | < −10 dB |
+|---|---|---|---|---|
+| B | ideal TLIN (Z0 from Simons CPWG) | B.Cu, 1.44 mm | −26.5 / −25.1 / −11.2 / −8.7 / −9.2 | 93 % |
+| **C1** | **CPW (CLIN), εr 4.5** | **B.Cu 1.44 mm (as built: In1/In2 void)** | **−26.4 / −24.7 / −11.5 / −9.2 / −9.4** | **95 %** |
+| C1c | as C1, chip data from Fig. 15 at ≥ 5.8 GHz | B.Cu | −26.4 / −24.7 / −11.5 / **−4.6** / −7.4 | 92 % |
+| C2 | CPW, what if In1 were solid | In1, 0.1 mm, εr 4.4 | −26.4 / −15.8 / −7.1 / −6.2 / −6.8 | 85 % |
+| C3 | microstrip (MLIN), what if | In1, 0.1 mm | −26.4 / −15.1 / −6.6 / −5.8 / −5.9 | 84 % |
+| C4 | microstrip, no coplanar ground | B.Cu 1.44 mm | −26.4 / −29.5 / −9.5 / −6.6 / −5.6 | 86 % |
+
+* The ideal-TLIN model B agrees with the real coplanar-line model C1 within 0.5 dB in every band, so the TLIN shortcut was adequate for this board.
+* Keeping the planes In1/In2 void (as built) is **better** than a solid In1 for the match: with In1 at 0.1 mm the 0.8 mm SMA pad becomes an ≈ 18 Ω section (large capacitance, grounded-CPW estimate) and the 0.2 mm traces ≈ 49 Ω, and S11 is 4–10 dB worse above 0.1 GHz (C2, C3). This supports the cut-out under the pad.
+* A microstrip model without coplanar ground over the far plane (C4) is wrong for this board (a 0.2 mm microstrip line over 1.44 mm is ≈ 140 Ω by Hammerstad); it is shown only to demonstrate how much the coplanar ground on F.Cu matters.
+* The chip data uncertainty at 4–6 GHz (C1c, −4.6 dB) is still the largest unknown, larger than the line model.
+* Plot: `sim/qucs/s11_stackup_cpw_1MHz_10GHz.png`.
+
+### Geometry optimiser (`sim/qucs/optimize_geometry.py`)
+
+Differential evolution + pattern search around the as-built geometry (case C1), evaluated with qucsator (≈ 0.1 s per run, parallel). Objective: smallest worst-case |S11| over 1 MHz – 10 GHz (+ 0.05 × the mean in dB), **worst case over both AD8317 data sets** (datasheet table and Figure 15 chart), because that data is the biggest uncertainty. Bounds (editable on the command line): trace and slot ≥ 0.127 mm (5 mil; the DRC minimum is 0.1 mm), L1..L3 sections ≤ 0.6 mm (an 0402 pad), L4/L5 ≤ 0.4 mm, slot of the line sections ≤ 0.30 mm, slot around the SMA pad 0.15–0.80 mm. `python optimize_geometry.py --selftest` checks that the as-built geometry reproduces case C1.
+
+| Run (tag) | Free variables | Cost, as built → optimised | Result |
+|---|---|---|---|
+| `geom` | slot of the SMA pad, slot g of the lines, widths of L1..L5 | −5.99 → **−7.40 dB** | pad slot 0.49 → 0.15 mm, g 0.20 → 0.30 mm, L1 0.20 → **0.60 mm** (70 Ω), L2..L5 → **0.13 mm** (≈ 111 Ω) |
+| `geom_shunt` | as `geom` + value of R1 = R2 | −5.99 → **−7.95 dB** | as `geom`, but L2 also 0.60 mm and R1 = R2 = **109 Ω** (not 100 Ω) |
+| `geom_len_shunt` | as `geom_shunt` + lengths L1..L5 (moves R1, R2, C1) | −5.99 → −9.30 dB | R1 = R2 = 185 Ω, L4/L5 ≈ 2.4 mm, longer L2/L3; the low-frequency match drops to ≈ −11 dB (the optimum trades it for 3–6 GHz) |
+
+Worst |S11| per band [dB] (1–100 MHz / 0.1–1 / 1–3 / 3–6 / 6–10 GHz):
+
+| | table data | chart data | below −10 dB (table / chart) |
+|---|---|---|---|
+| as built | −26.5 / −24.7 / −11.5 / −9.2 / −9.4 | −26.5 / −24.7 / −11.5 / **−4.6** / −7.4 | 94.8 % / 91.8 % |
+| `geom` | −26.5 / −23.8 / −11.0 / −9.1 / **−12.7** | −26.5 / −23.8 / −11.0 / −6.1 / −10.6 | 98.0 % / 93.5 % |
+| `geom_shunt` | −35.7 / −22.5 / −10.9 / −9.3 / −14.7 | −35.7 / −22.5 / −10.9 / −6.2 / −11.5 | 98.3 % / 93.8 % |
+| `geom_len_shunt` | −11.9 / −11.0 / −9.0 / −9.3 / −10.3 | −11.9 / −11.0 / −9.0 / −8.6 / −10.3 | 92.0 % / 87.8 % |
+
+Reading the result:
+
+* The as-built geometry is already close to the best that line geometry can give: with the datasheet-table data the 3–6 GHz band does not improve in any of the optimisations (−9.1 … −9.3 dB); only 6–10 GHz gains (−9.4 → −12.7 dB). With the chart data the gain is 1.5–3 dB. The 3–6 GHz weakness comes from the chip (300 Ω ∥ 0.33 pF at 3.6 GHz), not from the traces.
+* The optimum sits **on the bounds** (widest L1, narrowest L2..L5, widest slot): the response is flat (±10 % on any variable changes the cost by ≤ 0.15 dB, see `optimized_*.json`), so what matters is the direction: a wide first section (≈ 70 Ω) followed by narrow, inductive lines (≈ 110 Ω) that compensate the capacitive chip input.
+* The largest single lever is the shunt value (R1 ∥ R2) and the line lengths, not the widths. A higher shunt value trades low-frequency match for the 3–6 GHz band; choose it with the real requirement in mind.
+* Qucs lines are quasi-static models; the narrow-trace / wide-slot optimum is at the edge of their range. Verify a chosen geometry with the field solver (rfsim with the fixed runner) and measure it with the VNA before layout changes.
+* Files: `optimized_<tag>.json` (variables, per-band tables, sensitivity), `case_OPT_<tag>_cpw_bcu[_chart]_ad8317.net/.sch`, `s11_optimized_<tag>_1MHz_10GHz.png`; the `.sch` files are checked by `verify_qucs_schematics.py` too.
+
 ## 4. Verdict
 
 * Is S11 optimal? **Not with certainty — the EM model as run cannot show it (ports floated over a void In1); the circuit model says "good, not optimal"**: ≤ −10 dB almost everywhere, weak regions 3–4 GHz (−8.7 dB) and ~6 GHz (−9.2 dB), set mainly by the chip's 300 Ω ‖ 0.33 pF at 3.6 GHz and the 50 Ω shunt.
@@ -129,4 +175,4 @@ The 50 Ω shunt is what gives the match; the trace itself is secondary. The chip
 | `run_s11_study.py` | regenerates everything (`--rfsim <results.s3p>` rebuilds the 3-port; `QUCSATOR` env var or PATH finds qucsator; `STACKUP=dialog` reproduces the generic-stackup variant), also cross-checks A1 with an independent numpy Y-matrix reduction (max difference 4e-13) |
 | `s11_results.csv`, `s11_1MHz_10GHz.png` | S11 [dB] per case, plot |
 
-The Qucs GUI could not be driven headless here, so no `.sch` was produced; the `.net` files are the simulation inputs.
+**Qucs schematics (GUI):** `case_*.sch` in `sim/qucs/` (Qucs 0.0.19) hold the same six circuits as the `.net` files. In Qucs use *File → Open*, press F2 (Simulate); the S11 curve appears in the embedded diagram (`S11_dB`). The `.sch` files are **not stored in git** (they hold absolute paths of the machine, which the sensitive-data check forbids): create them with `python make_qucs_schematics.py` (the optimiser ones with `python optimize_geometry.py --regen <tag>`); the S-parameter files are referenced by absolute path, so run the generator again after you move the repository. `python verify_qucs_schematics.py` converts every `.sch` with `qucs -n` and checks that it gives exactly the same S11 as the `.net` (max difference 0).

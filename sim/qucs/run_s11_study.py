@@ -8,6 +8,14 @@ Cases (all solved with qucsator, 401 log points):
   B0  same circuit model with 50 ohm on both pads
   B_chart  as B, with the Figure-15 chart points of the AD8317 at >= 5.8 GHz
            (the datasheet table and the chart disagree there)
+  C1..C4   the same board with the substrate DEFINED in Qucs (SUBST) and the traces
+           as real lines (CLIN coplanar / MLIN microstrip, CSTEP / MSTEP steps)
+           instead of ideal TLIN:
+             C1  coplanar, ground plane B.Cu 1.44 mm below (as built: In1/In2 void)
+             C1c same with the Figure-15 chip data at >= 5.8 GHz
+             C2  coplanar, ground plane In1 0.1 mm below (what if In1 were solid)
+             C3  microstrip over In1 (0.1 mm, what if), no coplanar ground
+             C4  microstrip over B.Cu (1.44 mm), no coplanar ground
 Outputs: *.net / *.dat, s11_results.csv, s11_1MHz_10GHz.png, summary on stdout.
 
 Limits of model B (a circuit model, not a field solution): no connector
@@ -33,14 +41,11 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "analysis"))
 from ad8317_input_model import zin, gamma, file_names
 from s3p_io import read_touchstone, write_touchstone
 
-_DEFAULT_QUCSATOR = r"C:\Users\<user>\<cloud-folder>\tools\RF_Tools\qucs-0.0.19\bin\qucsator.exe"
-
-
 def find_qucsator():
-    for cand in (os.environ.get("QUCSATOR"), shutil.which("qucsator"), _DEFAULT_QUCSATOR):
+    for cand in (os.environ.get("QUCSATOR"), shutil.which("qucsator")):
         if cand and os.path.isfile(cand):
             return cand
-    raise SystemExit("qucsator not found: set the QUCSATOR environment variable "
+    raise SystemExit("qucsator not found: put it on PATH or set the QUCSATOR environment variable "
                      "to the full path of qucsator(.exe)")
 
 
@@ -49,6 +54,7 @@ S3P = "rfsim_J1_U1_3port_1MHz_10GHz.s3p"
 S2P = file_names("table")[1]
 S2P_CHART = file_names("chart")[1]
 NPTS = 401
+TIMEOUT = 60   # s, one qucsator run (a normal run takes 0.2 s)
 SWEEP = '.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="%d"\n' % NPTS
 PORT = 'Pac:P1 n1 gnd Num="1" Z="50 Ohm" P="0 dBm" f="1e9"\n'
 
@@ -142,13 +148,129 @@ def netlist_B(load="chip", z50=False, chip_file=None):
     return s + SWEEP, info
 
 
+# Substrates for the C cases (FR-4, 35 um copper). The planes In1/In2 are void
+# under the RF input by design, so the plane the line really sees is B.Cu.
+SUBSTRATES = {
+    "bcu": dict(er=4.5, h="1.44 mm"),   # F.Cu / 0.1 prepreg / 1.24 core / 0.1 prepreg / B.Cu, mixed er ~4.5
+    "in1": dict(er=4.4, h="0.1 mm"),    # F.Cu / 0.1 mm prepreg (er 4.4) / In1.Cu
+}
+
+
+# The geometry of the board as built (mm): SMA pad (width, slot, length), widths and
+# lengths of the five line sections, the common slot of the line sections, and the
+# value of each of the two shunt resistors (R1, R2, 100 ohm).
+DEFAULT_GEOM = dict(
+    pad=(0.80, 0.49, 1.10),
+    w=dict(L1=0.2032, L2=0.30, L3=0.2032, L4=0.1524, L5=0.25),
+    l=dict(L1=0.65, L2=1.00, L3=1.10, L4=1.68, L5=1.70),
+    g=0.20,
+    r_shunt=100.0,
+)
+
+
+def merged_geom(geom=None):
+    """DEFAULT_GEOM with the given overrides (nested dicts are merged)."""
+    out = {k: (dict(v) if isinstance(v, dict) else v) for k, v in DEFAULT_GEOM.items()}
+    for k, v in (geom or {}).items():
+        if isinstance(v, dict):
+            out[k].update(v)
+        else:
+            out[k] = v
+    return out
+
+
+def chain_C(line, plane, chip_file=None, geom=None, npts=None):
+    """Series chain of the C cases. Returns (netlist text, elements).
+
+    elements: list of dicts {kind, name, a, b, props} for the two-terminal
+    series parts in order, plus shunt taps. `kind` is the Qucs type. The pad
+    (slot 0.49 mm) has no CSTEP to the 0.2 mm slot line, because a Qucs CSTEP
+    has ONE ground-plane spacing (its S is that spacing, W + 2 x slot of the
+    wider line is used for the 0.2 mm slot sections); a microstrip pad gets an MSTEP.
+    """
+    sb = SUBSTRATES[plane]
+    G = merged_geom(geom)
+    sweep = SWEEP if npts is None else '.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="%d"\n' % npts
+    el = []
+
+    def lin(nm, a, b, w, g, l):
+        if line == "cpw":
+            el.append(dict(kind="CLIN", name=nm, a=a, b=b, props=[
+                ("Subst", "Sub1"), ("W", "%g mm" % w), ("S", "%g mm" % g), ("L", "%g mm" % l),
+                ("Backside", "Metal"), ("Approx", "yes")]))
+        else:
+            el.append(dict(kind="MLIN", name=nm, a=a, b=b, props=[
+                ("Subst", "Sub1"), ("W", "%g mm" % w), ("L", "%g mm" % l),
+                ("Model", "Hammerstad"), ("DispModel", "Kirschning"), ("Temp", "26.85")]))
+
+    def step(nm, a, b, w1, w2, g):
+        if abs(w1 - w2) < 1e-4:     # no width change: Qucs refuses a step of equal widths
+            el.append(dict(kind="R", name=nm, a=a, b=b, props=[("R", "1 uOhm")]))
+        elif line == "cpw":
+            el.append(dict(kind="CSTEP", name=nm, a=a, b=b, props=[
+                ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2), ("S", "%g mm" % (max(w1, w2) + 2 * g)),
+                ("Backside", "Metal")]))
+        else:
+            el.append(dict(kind="MSTEP", name=nm, a=a, b=b, props=[
+                ("Subst", "Sub1"), ("W1", "%g mm" % w1), ("W2", "%g mm" % w2),
+                ("MSModel", "Hammerstad"), ("MSDispModel", "Kirschning")]))
+
+    def part(kind, nm, a, b, val):
+        key = {"C": "C", "L": "L", "R": "R"}[kind]
+        el.append(dict(kind=kind, name=nm, a=a, b=b, props=[(key, val)]))
+
+    w, l, g = G["w"], G["l"], G["g"]
+    lin("PAD", "n1", "a", G["pad"][0], G["pad"][1], G["pad"][2])
+    if line == "ms":
+        step("S0", "a", "a2", G["pad"][0], w["L1"], g)
+        lin("L1", "a2", "r1a", w["L1"], g, l["L1"])
+    else:
+        lin("L1", "a", "r1a", w["L1"], g, l["L1"])
+    step("S1", "r1a", "r1", w["L1"], w["L2"], g)          # tap R1 on node r1
+    lin("L2", "r1", "r2a", w["L2"], g, l["L2"])
+    step("S2", "r2a", "r2", w["L2"], w["L3"], g)          # tap R2 on node r2
+    lin("L3", "r2", "c1a", w["L3"], g, l["L3"])
+    part("C", "C1", "c1a", "c1m", "47 nF")
+    part("L", "C1L", "c1m", "c1n", "0.25 nH")
+    part("R", "C1R", "c1n", "c1b", "0.035 Ohm")
+    lin("L4", "c1b", "inhi", w["L4"], g, l["L4"])
+    el.append(dict(kind="SPfile", name="CHIP", a="inhi", b="inlo", props=[("File", chip_file or S2P)]))
+    lin("L5", "inlo", "c2b", w["L5"], g, l["L5"])
+    part("C", "C2", "c2b", "c2m", "47 nF")
+    part("L", "C2L", "c2m", "c2n", "0.25 nH")
+    part("R", "C2R", "c2n", "gnd", "0.035 Ohm")
+    taps = [("R1", "r1"), ("R2", "r2")]
+
+    s = "# C: %s on plane %s\n" % (line, plane) + PORT
+    s += 'SUBST:Sub1 er="%s" h="%s" t="35 um" tand="%g" rho="1.72e-8" D="0"\n' % (sb["er"], sb["h"], TAND)
+    for e in el:
+        if e["kind"] == "SPfile":
+            s += 'SPfile:CHIP inhi inlo gnd File="%s" Data="rectangular" Interpolator="linear" duringDC="open"\n' % e["props"][0][1]
+        elif e["kind"] in ("R", "L", "C"):
+            extra = ' Temp="26.85"' if e["kind"] == "R" and e["name"] in ("R1", "R2") else ""
+            s += '%s:%s %s %s %s="%s"\n' % (e["kind"], e["name"], e["a"], e["b"], e["props"][0][0], e["props"][0][1])
+        else:
+            s += "%s:%s %s %s %s\n" % (e["kind"], e["name"], e["a"], e["b"], " ".join('%s="%s"' % kv for kv in e["props"]))
+    for nm, node in taps:
+        s += 'R:%s %s %sx R="%g Ohm" Temp="26.85"\nL:%sL %sx gnd L="0.25 nH"\n' % (nm, node, nm, G["r_shunt"], nm, nm)
+    return s + sweep, el, taps
+
+
+def netlist_C(line, plane, chip_file=None, geom=None, npts=None):
+    return chain_C(line, plane, chip_file, geom, npts)[0]
+
+
 def run(name, text):
     net = HERE / (name + ".net")
     dat = HERE / (name + ".dat")
     net.write_text(text, encoding="ascii", newline="\n")
     if dat.exists():
         dat.unlink()  # a stale result must not pass for a new one
-    r = subprocess.run([QUCSATOR, "-i", net.name, "-o", dat.name], cwd=HERE, capture_output=True, text=True)
+    try:
+        r = subprocess.run([QUCSATOR, "-i", net.name, "-o", dat.name], cwd=HERE, capture_output=True, text=True,
+                           timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("%s: qucsator did not finish in %d s (geometry outside the model range?)" % (name, TIMEOUT))
     out = r.stdout + r.stderr
     bad = [ln for ln in out.splitlines() if re.search(r"\b(error|syntax|undefined|not found)\b", ln, re.I)
            and not re.search(r"\b0 errors?\b", ln, re.I)]
@@ -210,6 +332,15 @@ def main():
     _, res["B  circuit model + AD8317"] = run("case_B_circuit_ad8317", tb)
     _, res["B_chart circuit model, AD8317 chart points >= 5.8 GHz"] = run(
         "case_B_chart_circuit_ad8317", netlist_B("chip", chip_file=S2P_CHART)[0])
+    c_cases = [
+        ("C1 coplanar, B.Cu 1.44 mm (as built) + AD8317", "case_C1_cpw_bcu_ad8317", ("cpw", "bcu", None)),
+        ("C1c as C1, AD8317 chart points >= 5.8 GHz", "case_C1c_cpw_bcu_chart_ad8317", ("cpw", "bcu", S2P_CHART)),
+        ("C2 coplanar, In1 0.1 mm (what if solid) + AD8317", "case_C2_cpw_in1_ad8317", ("cpw", "in1", None)),
+        ("C3 microstrip, In1 0.1 mm (what if) + AD8317", "case_C3_ms_in1_ad8317", ("ms", "in1", None)),
+        ("C4 microstrip, B.Cu 1.44 mm + AD8317", "case_C4_ms_bcu_ad8317", ("ms", "bcu", None)),
+    ]
+    for label, fname, (ln, pl, cf) in c_cases:
+        _, res[label] = run(fname, netlist_C(ln, pl, cf))
     _, res["B0 circuit model, P2/P3 = 50 ohm"] = run("case_B0_circuit_50ohm", netlist_B("50")[0])
     tb2, info2 = netlist_B("chip", z50=True)
     _, res["B2 circuit model, 50 ohm traces + AD8317"] = run("case_B2_circuit_z50_ad8317", tb2)
@@ -228,9 +359,11 @@ def main():
 
     fig, ax = plt.subplots(2, 1, figsize=(11, 8.5), sharex=True)
     sty = {"A0": ("tab:gray", "--"), "A1": ("tab:red", "-"), "B ": ("tab:blue", "-"), "B0": ("tab:cyan", "--"),
-           "B2": ("tab:green", "-"), "B_": ("tab:purple", ":")}
+           "B2": ("tab:green", "-"), "B_": ("tab:purple", ":"),
+           "C1": ("tab:orange", "-"), "C1c": ("tab:orange", ":"), "C2": ("tab:brown", "-"),
+           "C3": ("tab:pink", "-"), "C4": ("tab:olive", "-")}
     for k, v in res.items():
-        c, ls = sty[k[:2]]
+        c, ls = sty.get(k.split()[0], sty.get(k[:2], ("k", "-")))
         ax[0].semilogx(f / 1e6, db(v), color=c, ls=ls, label=k)
     ax[0].axhline(-10, color="k", lw=.6, ls=":")
     ax[0].set_ylabel("|S11| [dB]")
@@ -246,12 +379,28 @@ def main():
     fig.tight_layout()
     fig.savefig(HERE / "s11_1MHz_10GHz.png", dpi=130)
 
+    fig2, ax2 = plt.subplots(figsize=(11, 6))
+    for k, v in res.items():
+        tag = k.split()[0]
+        if tag in ("B", "B_chart", "C1", "C1c", "C2", "C3", "C4"):
+            c, ls = sty.get(tag, ("k", "-"))
+            ax2.semilogx(f / 1e6, db(v), color=c, ls=ls, label=k)
+    ax2.axhline(-10, color="k", lw=.6, ls=":")
+    ax2.set_xlabel("MHz")
+    ax2.set_ylabel("|S11| [dB]")
+    ax2.set_ylim(-45, 2)
+    ax2.grid(True, which="both", alpha=.3)
+    ax2.legend(fontsize=8, loc="lower left")
+    ax2.set_title("Ideal TLIN (B) vs substrate-defined lines: coplanar (C1, C2) and microstrip (C3, C4)")
+    fig2.tight_layout()
+    fig2.savefig(HERE / "s11_stackup_cpw_1MHz_10GHz.png", dpi=130)
+
     bands = [(1e6, 1e8), (1e8, 1e9), (1e9, 3e9), (3e9, 6e9), (6e9, 1e10)]
     print("\nworst/best |S11| [dB] per band")
     for k, v in res.items():
         print(k)
         for lo, hi in bands:
-            m = (f >= lo) & (f <= hi)
+            m = (f >= lo * (1 - 1e-9)) & (f <= hi * (1 + 1e-9))
             d = db(v[m])
             print("   %6.0f-%6.0f MHz  worst %6.2f dB @ %7.0f MHz   best %6.2f dB @ %7.0f MHz"
                   % (lo / 1e6, hi / 1e6, d.max(), f[m][d.argmax()] / 1e6, d.min(), f[m][d.argmin()] / 1e6))

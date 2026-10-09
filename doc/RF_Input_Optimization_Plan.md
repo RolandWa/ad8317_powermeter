@@ -18,6 +18,8 @@ Status: **proposal, not yet simulated or implemented.** Based on rfsim/openEMS r
 
 > **Update 2026-10-09:** see `S11_Analysis_J1_to_AD8317.md`. The rfsim 3-port turned out to be decoupled from ports 2/3 (lumped R/C not effective), so finding 3 ("capacitive/open") is a solver artefact; a circuit model with the real AD8317 input gives S11 ≤ −10 dB except ~−9 dB near 3.6 GHz, and a 50 Ω re-draw (change 1) does not improve it.
 
+> **Targets and next steps:** see `RF_Input_Targets_vs_Lab_Power_Meters.md` (return-loss targets, mismatch budget, input pad, calibration) and the optimiser results in `S11_Analysis_J1_to_AD8317.md`.
+
 Caveats: ports 2/3 are 50 Ω terminations, not the AD8317 input; connector body is not modelled
 (only the pad position); 1–100 MHz is not covered by FDTD; old connector was never simulated above 6 GHz.
 

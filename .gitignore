@@ -22,3 +22,14 @@ sim/emerge/python_bridge.py
 
 # Memory (local only)
 memory/
+
+# Local-only: personal tool settings, saved dialog settings, generated schematics, results
+.claude/
+kicad/RF_config*.json
+kicad/rfsim_results/
+kicad/FEM/
+kicad/*_FEM_export*
+emerge_results/emerge_output_review.*
+sim/qucs/case_*.sch
+sim/qucs/*.dat
+sim/qucs/opt_tmp_*

@@ -278,7 +278,7 @@ repair_regions = true
 # ─────────────────────────────────────────────────────────────────────────────
 
 [python]
-python_exe = "C:\\Users\\<user>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+python_exe = ""   # empty = auto-detect
 min_emerge_version = "2.8.1"  # bump when the codebase adopts a newer API
 
 [gerber.layers]

@@ -1,0 +1,178 @@
+{
+ "objective": "worst |S11| (dB) over 1e+06..1e+10 Hz + 0.05*mean, worst case over chip sets ['table', 'chart']",
+ "cost_as_built_dB": -5.99,
+ "cost_optimized_dB": -9.3,
+ "variables": {
+  "pad_slot": {
+   "as_built": 0.49,
+   "optimized": 0.15
+  },
+  "g": {
+   "as_built": 0.2,
+   "optimized": 0.3
+  },
+  "w_L1": {
+   "as_built": 0.2032,
+   "optimized": 0.6
+  },
+  "w_L2": {
+   "as_built": 0.3,
+   "optimized": 0.6
+  },
+  "w_L3": {
+   "as_built": 0.2032,
+   "optimized": 0.13
+  },
+  "w_L4": {
+   "as_built": 0.1524,
+   "optimized": 0.13
+  },
+  "w_L5": {
+   "as_built": 0.25,
+   "optimized": 0.13
+  },
+  "l_L1": {
+   "as_built": 0.65,
+   "optimized": 0.39
+  },
+  "l_L2": {
+   "as_built": 1.0,
+   "optimized": 1.4
+  },
+  "l_L3": {
+   "as_built": 1.1,
+   "optimized": 1.54
+  },
+  "l_L4": {
+   "as_built": 1.68,
+   "optimized": 2.35
+  },
+  "l_L5": {
+   "as_built": 1.7,
+   "optimized": 2.38
+  },
+  "r_shunt": {
+   "as_built": 100.0,
+   "optimized": 185.0
+  }
+ },
+ "worst_S11_per_band_dB": {
+  "bands_Hz": [
+   [
+    1000000.0,
+    100000000.0
+   ],
+   [
+    100000000.0,
+    1000000000.0
+   ],
+   [
+    1000000000.0,
+    3000000000.0
+   ],
+   [
+    3000000000.0,
+    6000000000.0
+   ],
+   [
+    6000000000.0,
+    10000000000.0
+   ]
+  ],
+  "as_built": {
+   "table": [
+    -26.45,
+    -24.72,
+    -11.5,
+    -9.18,
+    -9.36
+   ],
+   "table_pct_below_-10dB": 94.8,
+   "chart": [
+    -26.45,
+    -24.72,
+    -11.5,
+    -4.58,
+    -7.37
+   ],
+   "chart_pct_below_-10dB": 91.8
+  },
+  "optimized": {
+   "table": [
+    -11.92,
+    -10.98,
+    -8.98,
+    -9.27,
+    -10.34
+   ],
+   "table_pct_below_-10dB": 92.0,
+   "chart": [
+    -11.92,
+    -10.98,
+    -8.98,
+    -8.58,
+    -10.34
+   ],
+   "chart_pct_below_-10dB": 87.8
+  }
+ },
+ "sensitivity_dB_for_plus_minus_10pct": {
+  "pad_slot": [
+   0.11,
+   0.0
+  ],
+  "g": [
+   0.0,
+   0.13
+  ],
+  "w_L1": [
+   0.0,
+   0.04
+  ],
+  "w_L2": [
+   0.0,
+   0.08
+  ],
+  "w_L3": [
+   0.02,
+   -0.0
+  ],
+  "w_L4": [
+   0.08,
+   -0.02
+  ],
+  "w_L5": [
+   0.07,
+   -0.01
+  ],
+  "l_L1": [
+   0.03,
+   0.0
+  ],
+  "l_L2": [
+   0.0,
+   0.05
+  ],
+  "l_L3": [
+   0.0,
+   0.14
+  ],
+  "l_L4": [
+   -0.0,
+   0.18
+  ],
+  "l_L5": [
+   0.0,
+   0.32
+  ],
+  "r_shunt": [
+   0.32,
+   0.12
+  ]
+ },
+ "evaluations": 4382,
+ "seconds": 268.3,
+ "min_feature_mm": 0.127,
+ "free_lengths": true,
+ "shunt": true
+}
