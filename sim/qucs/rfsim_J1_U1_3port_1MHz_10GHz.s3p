@@ -1,5 +1,5 @@
-! rfsim (KiCad+openEMS) run_20261009_115836: P1=J1 pad, P2=U1:1 INHI pad, P3=U1:8 INLO pad
-! 1 MHz point = copy of 10 MHz point (flat extension, FDTD starts at 10 MHz)
+! rfsim result results.s3p: P1 = J1 pad, P2 = U1:1 (INHI), P3 = U1:8 (INLO)
+! points below the first rfsim frequency are copies of it (flat extension)
 # HZ S RI R 50
 1.000000e+06 9.783525102e-01 -2.161882403e-03 -2.803798836e-05 3.412493833e-07 -9.291029593e-07 -1.463296108e-07
     6.876152509e-07 -5.975807459e-08 9.932245181e-01 -5.922576122e-04 9.219515052e-07 -2.758934865e-07

@@ -6,9 +6,23 @@ Cases (all solved with qucsator, 401 log points):
   B   circuit model of the same board (CPWG stackup lines + R1/R2/C1/C2 with
       parasitics) + AD8317 Zin: cross-check of the EM result
   B0  same circuit model with 50 ohm on both pads
+  B_chart  as B, with the Figure-15 chart points of the AD8317 at >= 5.8 GHz
+           (the datasheet table and the chart disagree there)
 Outputs: *.net / *.dat, s11_results.csv, s11_1MHz_10GHz.png, summary on stdout.
+
+Limits of model B (a circuit model, not a field solution): no connector
+launch, no pad-to-trace step capacitance, no via or ground-return
+inductance for R1/R2/C2 beyond 0.25 nH, no radiation, no coupling between the
+INHI and INLO lines; the pad is a 1.1 mm piece of grounded CPW. It is a
+cross-check and a design aid, not a replacement for a VNA measurement.
+
+qucsator is found with the QUCSATOR environment variable, then on PATH, then
+at the default Windows install path below. Usage:
+    python run_s11_study.py [--rfsim path\to\results.s3p]
+(--rfsim rebuilds the 3-port file for Qucs from an rfsim result, flat from
+10 MHz down to 1 MHz.)
 """
-import re, subprocess, sys
+import os, re, shutil, subprocess, sys
 from pathlib import Path
 import numpy as np
 import matplotlib; matplotlib.use("Agg")
@@ -16,12 +30,24 @@ import matplotlib.pyplot as plt
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "analysis"))
-from ad8317_input_model import zin, gamma
-from s3p_io import read_touchstone
+from ad8317_input_model import zin, gamma, file_names
+from s3p_io import read_touchstone, write_touchstone
 
-QUCSATOR = r"C:\Users\<user>\<cloud-folder>\tools\RF_Tools\qucs-0.0.19\bin\qucsator.exe"
+_DEFAULT_QUCSATOR = r"C:\Users\<user>\<cloud-folder>\tools\RF_Tools\qucs-0.0.19\bin\qucsator.exe"
+
+
+def find_qucsator():
+    for cand in (os.environ.get("QUCSATOR"), shutil.which("qucsator"), _DEFAULT_QUCSATOR):
+        if cand and os.path.isfile(cand):
+            return cand
+    raise SystemExit("qucsator not found: set the QUCSATOR environment variable "
+                     "to the full path of qucsator(.exe)")
+
+
+QUCSATOR = find_qucsator()
 S3P = "rfsim_J1_U1_3port_1MHz_10GHz.s3p"
-S2P = "AD8317_INHI_INLO_series_1MHz_10GHz.s2p"
+S2P = file_names("table")[1]
+S2P_CHART = file_names("chart")[1]
 NPTS = 401
 SWEEP = '.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="%d"\n' % NPTS
 PORT = 'Pac:P1 n1 gnd Num="1" Z="50 Ohm" P="0 dBm" f="1e9"\n'
@@ -85,7 +111,7 @@ def width_for_z0(z_target, gap_mm):
     return (lo + hi) / 2
 
 
-def netlist_B(load="chip", z50=False):
+def netlist_B(load="chip", z50=False, chip_file=None):
     """Circuit model. Segment geometry read from the rfsim layout picture (mm).
     z50=True: every trace section after the pad re-drawn as 50 ohm (same 0.2 mm gap)."""
     segs = [  # name, from, to, w, gap, length
@@ -110,7 +136,7 @@ def netlist_B(load="chip", z50=False):
     s += 'C:C1 c1a c1m C="47 nF"\nL:C1L c1m c1n L="0.25 nH"\nR:C1R c1n c1b R="0.035 Ohm"\n'
     s += 'C:C2 c2b c2m C="47 nF"\nL:C2L c2m c2n L="0.25 nH"\nR:C2R c2n gnd R="0.035 Ohm"\n'
     if load == "chip":
-        s += 'SPfile:CHIP inhi inlo gnd File="%s" Data="rectangular" Interpolator="linear" duringDC="open"\n' % S2P
+        s += 'SPfile:CHIP inhi inlo gnd File="%s" Data="rectangular" Interpolator="linear" duringDC="open"\n' % (chip_file or S2P)
     else:
         s += 'R:RP2 inhi gnd R="50 Ohm"\nR:RP3 inlo gnd R="50 Ohm"\n'
     return s + SWEEP, info
@@ -120,10 +146,17 @@ def run(name, text):
     net = HERE / (name + ".net")
     dat = HERE / (name + ".dat")
     net.write_text(text, encoding="ascii", newline="\n")
+    if dat.exists():
+        dat.unlink()  # a stale result must not pass for a new one
     r = subprocess.run([QUCSATOR, "-i", net.name, "-o", dat.name], cwd=HERE, capture_output=True, text=True)
-    if "error" in (r.stdout + r.stderr).lower():
-        raise SystemExit(name + ": " + r.stdout[-400:] + r.stderr[-400:])
+    out = r.stdout + r.stderr
+    bad = [ln for ln in out.splitlines() if re.search(r"\b(error|syntax|undefined|not found)\b", ln, re.I)
+           and not re.search(r"\b0 errors?\b", ln, re.I)]
+    if r.returncode != 0 or bad or not dat.exists():
+        raise SystemExit("%s: qucsator failed (rc=%s)\n%s" % (name, r.returncode, "\n".join(bad or out.splitlines()[-8:])))
     t = dat.read_text()
+    if "<dep S[1,1] frequency>" not in t:
+        raise SystemExit(name + ": no S[1,1] in the qucsator result")
     f = np.array([float(x) for x in re.search(r"<indep frequency \d+>\n(.*?)</indep>", t, re.S).group(1).split()])
     body = re.search(r"<dep S\[1,1\] frequency>\n(.*?)</dep>", t, re.S).group(1).split()
     pat = re.compile(r"([+-][\d.]+e[+-]\d+)([+-])j([\d.]+e[+-]\d+)")
@@ -154,12 +187,29 @@ def db(x):
     return 20 * np.log10(np.maximum(np.abs(x), 1e-12))
 
 
+def build_s3p(src):
+    """Write the Qucs-readable 3-port from an rfsim result, flat below its first point."""
+    f, S, z0 = read_touchstone(src)
+    if f[0] > 1e6:
+        f = np.r_[1e6, f]
+        S = np.concatenate([S[:1], S])
+    write_touchstone(HERE / S3P, f, S,
+                     ["rfsim result %s: P1 = J1 pad, P2 = U1:1 (INHI), P3 = U1:8 (INLO)" % Path(src).name,
+                      "points below the first rfsim frequency are copies of it (flat extension)"], z0)
+
+
 def main():
+    if "--rfsim" in sys.argv:
+        build_s3p(sys.argv[sys.argv.index("--rfsim") + 1])
+    if not (HERE / S3P).exists():
+        raise SystemExit("%s is missing: run with --rfsim <results.s3p>" % S3P)
     res = {}
     f, res["A0 rfsim 3-port, P2/P3 = 50 ohm"] = run("case_A0_rfsim_50ohm", netlist_A(False))
     _, res["A1 rfsim 3-port + AD8317"] = run("case_A1_rfsim_ad8317", netlist_A(True))
     tb, info = netlist_B("chip")
     _, res["B  circuit model + AD8317"] = run("case_B_circuit_ad8317", tb)
+    _, res["B_chart circuit model, AD8317 chart points >= 5.8 GHz"] = run(
+        "case_B_chart_circuit_ad8317", netlist_B("chip", chip_file=S2P_CHART)[0])
     _, res["B0 circuit model, P2/P3 = 50 ohm"] = run("case_B0_circuit_50ohm", netlist_B("50")[0])
     tb2, info2 = netlist_B("chip", z50=True)
     _, res["B2 circuit model, 50 ohm traces + AD8317"] = run("case_B2_circuit_z50_ad8317", tb2)
@@ -177,7 +227,8 @@ def main():
             fh.write("%.6e," % fk + ",".join("%.3f" % db(v[i]) for v in res.values()) + "\n")
 
     fig, ax = plt.subplots(2, 1, figsize=(11, 8.5), sharex=True)
-    sty = {"A0": ("tab:gray", "--"), "A1": ("tab:red", "-"), "B ": ("tab:blue", "-"), "B0": ("tab:cyan", "--"), "B2": ("tab:green", "-")}
+    sty = {"A0": ("tab:gray", "--"), "A1": ("tab:red", "-"), "B ": ("tab:blue", "-"), "B0": ("tab:cyan", "--"),
+           "B2": ("tab:green", "-"), "B_": ("tab:purple", ":")}
     for k, v in res.items():
         c, ls = sty[k[:2]]
         ax[0].semilogx(f / 1e6, db(v), color=c, ls=ls, label=k)
