@@ -1,0 +1,6 @@
+# A: rfsim 3-port + 50 ohm on ports 2,3
+Pac:P1 n1 gnd Num="1" Z="50 Ohm" P="0 dBm" f="1e9"
+SPfile:EM n1 n2 n3 gnd File="rfsim_J1_U1_3port_1MHz_10GHz.s3p" Data="rectangular" Interpolator="linear" duringDC="open"
+R:RP2 n2 gnd R="50 Ohm"
+R:RP3 n3 gnd R="50 Ohm"
+.SP:SP1 Type="log" Start="1e6" Stop="1e10" Points="401"
