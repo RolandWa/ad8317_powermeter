@@ -1,0 +1,338 @@
+(footprint "Teko_435_RF_Shield_44x50.5mm_custom"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Teko Enclosures 435 drawn-metal RF shield lid, flange 44x50.5mm, body 42x49.5mm, height 9mm. Pads follow the 0.5mm rim wall (1mm wide, centred on wall), https://www.teko.it/uploads/manuali/pdf/435.pdf")
+	(tags "Shielding Cabinet Teko 435")
+	(property "Reference" "J6"
+		(at 0 -27.5 0)
+		(layer "F.SilkS")
+		
+		(uuid "9f2cf7c8-7cc8-4330-984f-0f7fea890680")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "RFShield_Teko435"
+		(at 0 27.5 0)
+		(layer "F.Fab")
+		
+		(uuid "61da5314-b898-4d90-a1ab-3bc9f1a6b8d7")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.teko.it/uploads/manuali/pdf/435.pdf"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "2c492f4b-01c3-4bfd-b2dc-ed46d66cebcf")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "028400be-bf6d-46ca-8f99-2181cfc01a08")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -22.4 -25.65)
+		(end -18.4 -25.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "cbab872d-0c02-4409-830b-5bbd165283b9")
+	)
+	(fp_line
+		(start -22.4 -25.65)
+		(end -22.4 -21.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "392449b8-318a-4fa5-b3a1-b97a1571349f")
+	)
+	(fp_line
+		(start -22.4 25.65)
+		(end -18.4 25.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "e8b13305-155e-47aa-bc29-0157c7e38a94")
+	)
+	(fp_line
+		(start -22.4 25.65)
+		(end -22.4 21.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "1d3ebca1-40f3-47e0-be85-09f2cb9cbd7a")
+	)
+	(fp_line
+		(start 22.4 -25.65)
+		(end 18.4 -25.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "a1c56d88-b1a2-4fff-bdec-1d31ae1a5199")
+	)
+	(fp_line
+		(start 22.4 -25.65)
+		(end 22.4 -21.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "4fbba3fc-aede-4531-9c5f-1b2d2dad9a59")
+	)
+	(fp_line
+		(start 22.4 25.65)
+		(end 18.4 25.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "273a744b-926e-45f2-adfc-8e55dbc1a5a3")
+	)
+	(fp_line
+		(start 22.4 25.65)
+		(end 22.4 21.65)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "6319a661-1833-4cae-93fe-280a33e976dc")
+	)
+	(fp_rect
+		(start -22.5 -25.75)
+		(end 22.5 25.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "706b295d-1790-457d-b2af-ca8f8a462a79")
+	)
+	(fp_rect
+		(start -22 -25.25)
+		(end 22 25.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "e118d1ce-08a7-4a35-89e8-10363ba714e3")
+	)
+	(fp_rect
+		(start -21 -24.75)
+		(end 21 24.75)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "6dffa317-4774-4d03-948a-166fa642cab2")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "7dced828-0002-4749-a370-79a3ebf4e14b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at -20.5 -24.25)
+		(size 1 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "621107dc-5db4-4e36-a300-5847b4f66b14")
+	)
+	(pad "1" smd rect
+		(at -20.5 24.25)
+		(size 1 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "8135239d-02bc-4658-9101-50201547bef6")
+	)
+	(pad "1" smd rect
+		(at 20.5 -24.25)
+		(size 1 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "08510b11-203f-4eba-8df8-147b3605487a")
+	)
+	(pad "1" smd rect
+		(at 20.5 24.25)
+		(size 1 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "0397ffb1-a31b-4fd7-a199-38e8b3bf3eeb")
+	)
+	(pad "1" smd rect
+		(at -16 -24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "2495e818-ab7b-4701-87ba-ba4db9a5c068")
+	)
+	(pad "1" smd rect
+		(at -8 -24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "f7f275fa-00d2-4ea7-b18f-d3188d7073a0")
+	)
+	(pad "1" smd rect
+		(at 0 -24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "c1c10fec-8b0e-496c-99ac-c0aecc512489")
+	)
+	(pad "1" smd rect
+		(at 8 -24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "daf72016-1a78-451a-9055-544f49377e1e")
+	)
+	(pad "1" smd rect
+		(at 16 -24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "132ae82b-4ddd-4488-8005-83468e69ab99")
+	)
+	(pad "1" smd rect
+		(at -16 24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "52c4c2be-bcca-4ea7-ada4-41e737c30f9f")
+	)
+	(pad "1" smd rect
+		(at -8 24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "a4657a93-2be3-4609-b3c1-c094b6c72ca6")
+	)
+	(pad "1" smd rect
+		(at 0 24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "fb1ce3b9-32b5-404e-9237-ddfe6b1dc995")
+	)
+	(pad "1" smd rect
+		(at 8 24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "be493f54-7d74-4b07-8f84-c6f90c1da58d")
+	)
+	(pad "1" smd rect
+		(at 16 24.25)
+		(size 6.5 1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "6ce39f2a-db80-45f8-abfe-7a0d46182002")
+	)
+	(pad "1" smd rect
+		(at -20.5 -18)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "770a0295-059c-4b20-b6cf-f3f2320588e2")
+	)
+	(pad "1" smd rect
+		(at -20.5 -9)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "4bbdbd25-b9e9-4587-95a6-26c3b27d244a")
+	)
+	(pad "1" smd rect
+		(at -20.5 0)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "a3513fe5-cec9-4adb-8c8e-0f708b4e96be")
+	)
+	(pad "1" smd rect
+		(at -20.5 9)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "cf03e788-9c66-4faa-a9e3-c61a40c5286e")
+	)
+	(pad "1" smd rect
+		(at -20.5 18)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "2eaa4fc8-85d8-4ae6-8bf7-51775b2fa1ec")
+	)
+	(pad "1" smd rect
+		(at 20.5 -18)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "6cf190b1-7b07-4f09-9b92-b7a24ed9be81")
+	)
+	(pad "1" smd rect
+		(at 20.5 -9)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "52e75bf3-a894-44bf-80f5-a8f04bf99aef")
+	)
+	(pad "1" smd rect
+		(at 20.5 0)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "c46bc959-707e-405b-b3bd-49e9408441b8")
+	)
+	(pad "1" smd rect
+		(at 20.5 9)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "e32721f9-017d-49c6-85f1-618454cfde8a")
+	)
+	(pad "1" smd rect
+		(at 20.5 18)
+		(size 1 7)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "6bf759ff-5045-4b6b-8126-11ec21bbe4ae")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/../lib/3dmodels/RF_Shielding.3dshapes/Teko_435_RF_Shield_44x50.5mm.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

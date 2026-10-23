@@ -179,4 +179,15 @@
 		(uuid "8e6adc94-7e53-495d-b55b-06c74c63c31e")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/../lib/3dmodels/Hammond_Cases.3dshapes/Hammond_1590A_kicad.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
