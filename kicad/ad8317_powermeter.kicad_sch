@@ -9,7 +9,7 @@
 		(date "2026-08-07")
 		(rev "A")
 		(company "Author")
-		(comment 1 "SMA (J1 Amphenol RF 132372)")
+		(comment 1 "SMA (J1 Wurth Elektronik 60312202114307)")
 		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
 	)
 	(lib_symbols)
@@ -45,6 +45,17 @@
 			(justify left)
 		)
 		(uuid "1f38efcb-837b-4935-a265-4d46635588e8")
+	)
+	(text "RFef to: https://www.eevblog.com/forum/rf-microwave/how-to-properly-use-these-sma-connectors/new/#new"
+		(exclude_from_sim no)
+		(at 90.678 42.418 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(href "https://www.eevblog.com/forum/rf-microwave/how-to-properly-use-these-sma-connectors/new/#new")
+		)
+		(uuid "27b27bf0-f2ea-4f41-9241-1f04c11e3fc8")
 	)
 	(text "Power: MCP73831 U6, AP2112K-3.3 U4 (digital), ADP150-2.8 U5 (analog 9uVrms), MOSFETs, AP9101/FS8205A; +3V3/+3V3_A/VBAT out"
 		(exclude_from_sim no)
@@ -477,7 +488,7 @@
 				(justify right)
 			)
 		)
-		(pin "USB_DM" bidirectional
+		(pin "USB_DN" bidirectional
 			(at 244.475 134.62 0)
 			(uuid "e1000002-0000-0000-0000-000000000009")
 			(effects
@@ -490,6 +501,16 @@
 		(pin "VBAT" input
 			(at 207.01 133.35 180)
 			(uuid "b65adf23-d856-47ca-a500-24b9236b3b37")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "CHG_STAT" input
+			(at 207.01 125.73 180)
+			(uuid "cc002870-3808-49a3-8601-3b645b86172d")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -681,7 +702,7 @@
 				(justify left)
 			)
 		)
-		(pin "USB_DM" bidirectional
+		(pin "USB_DN" bidirectional
 			(at 257.81 134.62 180)
 			(uuid "e1000004-0000-0000-0000-000000000005")
 			(effects

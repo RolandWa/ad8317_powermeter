@@ -845,6 +845,25 @@ def place_sma(oEditor, side, comp_path, hx, z_pin):
             os.path.basename(comp_path), x_contact, z_pin))
         return
 
+    if side == "left":
+        # AEDT 2026.1: TargetCS xvec=(-1,0,0) alone does not fully orient the
+        # SMA body. Script recorder (2026-08-13) confirmed two rotations on the
+        # inserted body are required to reach the correct orientation.
+        # These must happen BEFORE GetModelBoundingBox is called for WP1.
+        sma_body = "2023R1_HRMG_300_468B1"
+        for axis, angle in [("Y", "90deg"), ("X", "90deg")]:
+            try:
+                oEditor.Rotate(
+                    ["NAME:Selections",
+                     "Selections:=",        sma_body,
+                     "NewPartsModelFlag:=", "Model"],
+                    ["NAME:RotateParameters",
+                     "RotateAxis:=",  axis,
+                     "RotateAngle:=", angle])
+                _log("  {} rotated {}  {}".format(sma_body, axis, angle))
+            except Exception as e:
+                _warn("  Rotate {} {}: {}".format(sma_body, axis, str(e)))
+
     if side == "right":
         def _try_mirror(target, desc):
             try:
@@ -894,8 +913,9 @@ def make_right_end_termination(oDesign, oEditor, hx, pcb):
     Expected S11 at WP1 after this fix: -15 to -30 dB for a well-designed
     SMA-to-GCPW transition.
 
-    API note: AEDT IronPython requires "RLC Type:=" (with space) — confirmed
-    by AEDT 2026.1 script recorder. "RLCType:=" (no space) is rejected silently.
+    API: AssignImpedance (not AssignLumpedRLC) confirmed by AEDT 2026.1 script
+    recorder on 2026-08-13.  Values are plain numbers without unit suffix.
+    Reactance=0 gives a pure resistive 50 Ohm load.
     """
     sheet  = "Load_Sheet_Right"
     z_bot  = pcb["z_bcu_bot"]     # full board height — B.Cu bottom
@@ -914,25 +934,22 @@ def make_right_end_termination(oDesign, oEditor, hx, pcb):
 
     try:
         oBdry = oDesign.GetModule("BoundarySetup")
-        # AEDT 2026.1 fix: UseLineModeAlignment / NumModes are wave-port params
-        # that are not valid for AssignLumpedRLC.  When AEDT encounters an
-        # unknown key it stops parsing the array, so Resistance/Inductance/
-        # Capacitance are never reached → "At least one must be defined".
-        # Minimal call: only NAME, Objects, RLC Type, and R/L/C values.
-        # Unit-string format ("50ohm", "0nH", "0pF") used per AEDT scripting guide.
-        oBdry.AssignLumpedRLC(
+        # AEDT 2026.1: AssignLumpedRLC does not work for a passive sheet load.
+        # Script recorder (2026-08-13) shows AssignImpedance is the correct API.
+        # Values are plain numbers without unit suffix (confirmed by recorder).
+        # Reactance=0 → pure 50 Ohm resistive termination (absorbs GCPW mode).
+        oBdry.AssignImpedance(
             ["NAME:Load_50R",
-             "Objects:=",   [sheet],
-             "RLC Type:=",  "Parallel",
-             "Resistance:=", "50ohm",
-             "Inductance:=", "0nH",
-             "Capacitance:=", "0pF"])
-        _log("  Lumped 50 Ohm RLC (Load_50R) assigned — not in S-matrix")
+             "Objects:=",        [sheet],
+             "Resistance:=",     "50",
+             "Reactance:=",      "0",
+             "InfGroundPlane:=", False])
+        _log("  Impedance boundary Load_50R assigned  (50 Ohm, X=0)")
         _log("  S11 at WP1 now measures SMA connector reflection only")
     except Exception as e:
-        _err("  AssignLumpedRLC: " + str(e))
-        _warn("  Manual: select Load_Sheet_Right > Assign Boundary > Lumped RLC")
-        _warn("  R=50ohm  L=0nH  C=0pF  Type=Parallel  uncheck Include in S-matrix")
+        _err("  AssignImpedance: " + str(e))
+        _warn("  Manual: select Load_Sheet_Right > Assign Boundary > Impedance")
+        _warn("  Resistance=50  Reactance=0  uncheck Infinite Ground Plane")
 
 
 # ===========================================================================

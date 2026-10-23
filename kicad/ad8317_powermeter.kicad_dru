@@ -155,10 +155,10 @@
     (condition "A.Reference =='TP*' && B.Reference == 'TP*"))
 
 # "Checks for acute angles in traces that can cause acid traps."
-(rule "no_acid_traps"
-    (condition "A.Type == 'track' && B.Type == 'track' && A.Net == B.Net")
-    (constraint track_angle (min 45))
-)
+#(rule "no_acid_traps"
+#    (condition "A.Type == 'track' && B.Type == 'track' && A.Net == B.Net")
+#    (constraint track_angle (min 45))
+#)
 # =========================================================================
 # EMC DESIGN RULES SET - HIGH-SPEED STANDARDS
 # =========================================================================

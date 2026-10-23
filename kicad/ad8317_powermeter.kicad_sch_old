@@ -1,0 +1,729 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+	(paper "A3")
+	(title_block
+		(title "RF Frontend")
+		(date "2026-08-07")
+		(rev "A")
+		(company "Author")
+		(comment 1 "SMA (J1 Wurth Elektronik 60312202114307)")
+		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
+	)
+	(lib_symbols)
+	(text "UI: SSD1306 OLED DISP1 USB-C CONN1; I2C/USB"
+		(exclude_from_sim no)
+		(at 262.636 98.298 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "0098f5e6-280a-4e96-be39-d164529aa75a")
+	)
+	(text "MCU: STM32F373 U1, REF3030 U3; pins: power in, PC13_PWR/I2C/USB out"
+		(exclude_from_sim no)
+		(at 198.374 98.044 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "177bb3a6-ce95-42e3-9830-004a17d75195")
+	)
+	(text "RF Frontend: SMA J1, AD8317 U2, RC filter; +3V3_A in, VDET/AGND_RF out"
+		(exclude_from_sim no)
+		(at 117.645 94.2 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "1f38efcb-837b-4935-a265-4d46635588e8")
+	)
+	(text "RFef to: https://www.eevblog.com/forum/rf-microwave/how-to-properly-use-these-sma-connectors/new/#new"
+		(exclude_from_sim no)
+		(at 90.678 42.418 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(href "https://www.eevblog.com/forum/rf-microwave/how-to-properly-use-these-sma-connectors/new/#new")
+		)
+		(uuid "27b27bf0-f2ea-4f41-9241-1f04c11e3fc8")
+	)
+	(text "Power: MCP73831 U6, AP2112K-3.3 U4 (digital), ADP150-2.8 U5 (analog 9uVrms), MOSFETs, AP9101/FS8205A; +3V3/+3V3_A/VBAT out"
+		(exclude_from_sim no)
+		(at 128.524 158.242 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "35641809-fae8-43f9-a2cd-3c3a31ddce9b")
+	)
+	(text "ad8317_powermeter.kicad_sch — top-level A3: 4 hierarchical sub-sheets"
+		(exclude_from_sim no)
+		(at 117.645 89.2 0)
+		(effects
+			(font
+				(size 1.2 1.2)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "b0a19ae4-90d0-44ee-b000-1c9f8f3169d0")
+	)
+	(junction
+		(at 251.46 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "3e09270c-684b-4c06-a074-d8f5a3aea117")
+	)
+	(junction
+		(at 181.61 109.22)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "72a58687-97ab-4938-9598-16403895510e")
+	)
+	(wire
+		(pts
+			(xy 175.26 114.3) (xy 207.01 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "11eb3a1e-b1aa-44bf-83f4-87ef7503489a")
+	)
+	(wire
+		(pts
+			(xy 175.26 109.22) (xy 181.61 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1b051120-4633-4a0c-8eb3-58047433b3ca")
+	)
+	(wire
+		(pts
+			(xy 244.475 134.62) (xy 257.81 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "229eab1e-852f-41f1-a4e8-d2f859287f09")
+	)
+	(wire
+		(pts
+			(xy 251.46 172.72) (xy 251.46 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2fd5d0e1-369f-4977-a50d-0c9001502d0b")
+	)
+	(wire
+		(pts
+			(xy 244.475 115.57) (xy 257.81 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "30dfa328-4678-4341-9dc3-26e55705b99f")
+	)
+	(wire
+		(pts
+			(xy 251.46 106.68) (xy 257.81 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "37e95a5e-1bbc-434c-a37e-034a289fff84")
+	)
+	(wire
+		(pts
+			(xy 186.69 118.11) (xy 186.69 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40bfbda3-6d29-452d-926b-dff718180bf1")
+	)
+	(wire
+		(pts
+			(xy 244.475 128.27) (xy 257.81 128.27)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4aee4f27-e6e6-4040-b800-3fd389b91297")
+	)
+	(wire
+		(pts
+			(xy 181.61 109.22) (xy 207.01 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4c79ade2-1641-47b1-bfa3-add63b041cd8")
+	)
+	(wire
+		(pts
+			(xy 244.475 121.92) (xy 257.81 121.92)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4d2dc42a-02f6-4dea-a68d-5001a392d6d0")
+	)
+	(wire
+		(pts
+			(xy 195.58 133.35) (xy 207.01 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5d18a2b2-0a53-4b99-9ba2-403bab0db569")
+	)
+	(wire
+		(pts
+			(xy 175.26 189.23) (xy 191.77 189.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5f595a25-7445-4405-8258-d7f1976273a4")
+	)
+	(wire
+		(pts
+			(xy 191.77 189.23) (xy 191.77 125.73)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6290c8a6-c612-4e93-8770-5580d689101b")
+	)
+	(wire
+		(pts
+			(xy 175.26 194.31) (xy 195.58 194.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "71c08f86-3f27-419b-9d94-c9c7700b413d")
+	)
+	(wire
+		(pts
+			(xy 175.26 179.07) (xy 181.61 179.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7281066d-12f8-4e36-8fdc-589d89ddde26")
+	)
+	(wire
+		(pts
+			(xy 195.58 194.31) (xy 195.58 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b00f6332-cfc2-4938-8709-a64d42a27625")
+	)
+	(wire
+		(pts
+			(xy 181.61 109.22) (xy 181.61 179.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b86e6aa9-c981-4346-ac6c-040a420b7d10")
+	)
+	(wire
+		(pts
+			(xy 175.26 172.72) (xy 251.46 172.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bfd0f969-58be-4956-a1d6-7da5c43ef644")
+	)
+	(wire
+		(pts
+			(xy 191.77 125.73) (xy 207.01 125.73)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d54aa1ab-b15b-4c00-948c-2955a0a10c35")
+	)
+	(wire
+		(pts
+			(xy 244.475 106.68) (xy 251.46 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d85b794f-37bc-405a-9261-6bb2925f6083")
+	)
+	(wire
+		(pts
+			(xy 207.01 118.11) (xy 186.69 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e4d86c8a-3ebf-4c6f-8fb4-29136c7d1839")
+	)
+	(wire
+		(pts
+			(xy 186.69 185.42) (xy 175.26 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ec3f11a6-ee7b-4c6d-a7d5-76971449274e")
+	)
+	(sheet
+		(at 146.685 102.87)
+		(size 28.575 40.64)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 255 255 204 0.3)
+		)
+		(uuid "b1000001-0000-0000-0000-000000000001")
+		(property "Sheetname" "RF_Frontend"
+			(at 146.685 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "RF_Frontend.kicad_sch"
+			(at 146.685 144.0934 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "+3V3_A" input
+			(at 175.26 109.22 0)
+			(uuid "e1000001-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VDET" output
+			(at 175.26 114.3 0)
+			(uuid "e1000001-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 207.01 102.87)
+		(size 37.465 40.005)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 204 228 255 0.3)
+		)
+		(uuid "b1000002-0000-0000-0000-000000000002")
+		(property "Sheetname" "MCU"
+			(at 207.01 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "MCU.kicad_sch"
+			(at 207.01 143.4584 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "+3V3" input
+			(at 244.475 106.68 0)
+			(uuid "e1000002-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "+3V3_A" input
+			(at 207.01 109.22 180)
+			(uuid "e1000002-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "VDET" input
+			(at 207.01 114.3 180)
+			(uuid "e1000002-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "ANALOG_PWR" output
+			(at 207.01 118.11 180)
+			(uuid "e1000002-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "I2C_SCL" output
+			(at 244.475 115.57 0)
+			(uuid "e1000002-0000-0000-0000-000000000006")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "I2C_SDA" output
+			(at 244.475 121.92 0)
+			(uuid "e1000002-0000-0000-0000-000000000007")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "USB_DP" bidirectional
+			(at 244.475 128.27 0)
+			(uuid "e1000002-0000-0000-0000-000000000008")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "USB_DN" bidirectional
+			(at 244.475 134.62 0)
+			(uuid "e1000002-0000-0000-0000-000000000009")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VBAT" input
+			(at 207.01 133.35 180)
+			(uuid "b65adf23-d856-47ca-a500-24b9236b3b37")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "CHG_STAT" input
+			(at 207.01 125.73 180)
+			(uuid "cc002870-3808-49a3-8601-3b645b86172d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 147.955 166.37)
+		(size 27.305 41.91)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 255 220 204 0.3)
+		)
+		(uuid "b1000003-0000-0000-0000-000000000003")
+		(property "Sheetname" "Power_Management"
+			(at 147.955 165.5446 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Power_Management.kicad_sch"
+			(at 147.955 208.8634 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "ANALOG_PWR" input
+			(at 175.26 185.42 0)
+			(uuid "e1000003-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "CHG_STAT" output
+			(at 175.26 189.23 0)
+			(uuid "e1000003-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "+3V3" output
+			(at 175.26 172.72 0)
+			(uuid "e1000003-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "+3V3_A" output
+			(at 175.26 179.07 0)
+			(uuid "e1000003-0000-0000-0000-000000000004")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VBAT" output
+			(at 175.26 194.31 0)
+			(uuid "e1000003-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 257.81 102.87)
+		(size 20.32 40.005)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(fill
+			(color 220 255 220 0.3)
+		)
+		(uuid "b1000004-0000-0000-0000-000000000004")
+		(property "Sheetname" "User_Interface"
+			(at 257.81 102.0446 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "User_Interface.kicad_sch"
+			(at 257.81 143.4584 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left top)
+			)
+		)
+		(pin "I2C_SCL" input
+			(at 257.81 115.57 180)
+			(uuid "e1000004-0000-0000-0000-000000000001")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "I2C_SDA" input
+			(at 257.81 121.92 180)
+			(uuid "e1000004-0000-0000-0000-000000000002")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "+3V3" input
+			(at 257.81 106.68 180)
+			(uuid "e1000004-0000-0000-0000-000000000003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USB_DP" bidirectional
+			(at 257.81 128.27 180)
+			(uuid "e1000004-0000-0000-0000-000000000004")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "USB_DN" bidirectional
+			(at 257.81 134.62 180)
+			(uuid "e1000004-0000-0000-0000-000000000005")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

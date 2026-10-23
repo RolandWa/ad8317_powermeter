@@ -1,0 +1,410 @@
+vrms:
+- name: C25
+  output:
+    ref: C25
+    net: +5V
+    pins: []
+  voltage: 4.7
+  kind: source
+  efficiency: 0.9
+  quiescent_a: 0.0
+  input: null
+  sense: null
+  ground:
+    ref: C26
+    net: GND
+    pins: []
+  ground_sense: null
+  phases: []
+  current_limit_a: 5.0
+  dropout_v: 0.0
+  vin_min: null
+  vin_max: null
+  vin_pct: false
+  vin_dv: false
+  acc_min: null
+  acc_max: null
+  acc_pct: true
+  acc_dv: false
+  load_line_mohm: 0.2
+  bandwidth_khz: 10.0
+  mesh_sense: false
+  sense_points: []
+- name: U6
+  output:
+    ref: U6
+    net: /MCU/+3V3
+    pins: []
+  voltage: 3.3
+  kind: ldo
+  efficiency: 0.9
+  quiescent_a: 0.001
+  input:
+    ref: U6
+    net: /MCU/VBAT
+    pins: []
+  sense: null
+  ground:
+    ref: U6
+    net: GND
+    pins: []
+  ground_sense: null
+  phases: []
+  current_limit_a: 0.6
+  dropout_v: 0.1
+  vin_min: null
+  vin_max: null
+  vin_pct: false
+  vin_dv: false
+  acc_min: null
+  acc_max: null
+  acc_pct: true
+  acc_dv: false
+  load_line_mohm: 0.1
+  bandwidth_khz: 20.0
+  mesh_sense: false
+  sense_points: []
+- name: U4
+  output:
+    ref: U4
+    net: /MCU/+3V3_A
+    pins: []
+  voltage: 3.3
+  kind: ldo
+  efficiency: 0.9
+  quiescent_a: 0.001
+  input:
+    ref: U4
+    net: /MCU/VBAT
+    pins: []
+  sense: null
+  ground:
+    ref: U4
+    net: GND
+    pins: []
+  ground_sense: null
+  phases: []
+  current_limit_a: 0.6
+  dropout_v: 0.35
+  vin_min: null
+  vin_max: null
+  vin_pct: false
+  vin_dv: false
+  acc_min: null
+  acc_max: null
+  acc_pct: true
+  acc_dv: false
+  load_line_mohm: 0.1
+  bandwidth_khz: 20.0
+  mesh_sense: false
+  sense_points: []
+loads:
+- name: U1
+  supply:
+    ref: C5
+    net: /MCU/+3V3_A
+    pins: []
+  current: 0.02
+  ground:
+    ref: C5
+    net: GND
+    pins: []
+  tol_min: null
+  tol_max: null
+  tol_pct: true
+  tol_dv: false
+  groups: []
+- name: U2
+  supply:
+    ref: U2
+    net: /MCU/+3V3
+    pins: []
+  current: 0.05
+  ground:
+    ref: U2
+    net: GND
+    pins: []
+  tol_min: null
+  tol_max: null
+  tol_pct: true
+  tol_dv: false
+  groups: []
+- name: U7
+  supply:
+    ref: U7
+    net: /MCU/+3V3
+    pins: []
+  current: 0.05
+  ground:
+    ref: U7
+    net: GND
+    pins: []
+  tol_min: null
+  tol_max: null
+  tol_pct: true
+  tol_dv: false
+  groups: []
+- name: J3
+  supply:
+    ref: J3
+    net: /MCU/+3V3
+    pins: []
+  current: 0.1
+  ground:
+    ref: J3
+    net: GND
+    pins: []
+  tol_min: null
+  tol_max: null
+  tol_pct: true
+  tol_dv: false
+  groups: []
+links:
+- name: 5V to VBAT
+  side_a:
+    ref: C28
+    net: +5V
+    pins: []
+  side_b:
+    ref: C29
+    net: /MCU/VBAT
+    pins: []
+  resistance: 0.01
+  esl_h: null
+settings:
+  max_edge_mm: 0.5
+  min_angle_deg: 28.0
+  simplify_mm: 0.003
+  circle_quad_segs: 4
+  min_edge_mm: 0.02
+  grading: 0.2
+  via_rules:
+  - kind: micro
+    plating_mm: 0.012
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: buried
+    plating_mm: 0.013
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: blind
+    plating_mm: 0.02
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: blind_buried
+    plating_mm: 0.02
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: through
+    plating_mm: 0.02
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: pth
+    plating_mm: 0.02
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  - kind: any
+    plating_mm: 0.02
+    drill_min_mm: 0.0
+    drill_max_mm: null
+    fill: nonconductive
+    fill_rho_ohm_mm: null
+  rho_ohm_mm: 1.724e-05
+  tcr_per_c: 0.00393
+  rho_by_layer: {}
+  tcr_by_layer: {}
+  conductor_by_layer: {}
+  tol: 1.0e-10
+  max_iter: 2000
+via_current_limit_a: 1.0
+thermal:
+  enabled: true
+  ambient_c: 25.0
+  iterations: 3
+  airflow_m_s: 0.0
+  grid_mm: 0.0
+  load_power: false
+  max_temp_c: null
+  max_rise_c: null
+html_report: true
+report_format: html
+nets:
+- +5V
+- /MCU/+3V3
+- /MCU/+3V3_A
+- /MCU/ANALOG_PWR
+- /MCU/VBAT
+- /MCU/VREF
+- Net-(F1-Pad1)
+- GND
+excluded_nets: []
+stackup: null
+caps:
+- name: 100nF
+  capacitance_f: 1.0e-07
+  esl_h: 5.000000000000001e-11
+  esr_ohm: 0.0005
+  refs:
+  - C4
+  - C13
+  - C17
+  - C18
+  - C19
+  - C25
+  - C26
+  - C27
+  rated_v: null
+  kept_at_rated_pct: 40.0
+  dielectric: X7R
+  aging_pct_per_decade: 4.0
+  mfg_tolerance_pct: 1.0
+- name: 10uF/
+  capacitance_f: 9.999999999999999e-06
+  esl_h: 1.0000000000000002e-10
+  esr_ohm: 0.001
+  refs:
+  - C5
+  - C8
+  - C12
+  - C14
+  - C15
+  - C16
+  rated_v: null
+  kept_at_rated_pct: 40.0
+  dielectric: X7R
+  aging_pct_per_decade: 2.0
+  mfg_tolerance_pct: null
+- name: 10uF/16V
+  capacitance_f: 9.999999999999999e-06
+  esl_h: 1.5e-10
+  esr_ohm: 0.0015
+  refs:
+  - C28
+  - C29
+  rated_v: null
+  kept_at_rated_pct: 40.0
+  dielectric: X7R
+  aging_pct_per_decade: 2.0
+  mfg_tolerance_pct: null
+- name: 1uF/
+  capacitance_f: 1.0e-06
+  esl_h: 1.5e-10
+  esr_ohm: 0.0015
+  refs:
+  - C23
+  - C24
+  - C31
+  - C32
+  rated_v: null
+  kept_at_rated_pct: 40.0
+  dielectric: X7R
+  aging_pct_per_decade: 2.0
+  mfg_tolerance_pct: null
+- name: 4.7uF
+  capacitance_f: 4.7e-06
+  esl_h: 1.0000000000000002e-10
+  esr_ohm: 0.0015
+  refs:
+  - C11
+  rated_v: null
+  kept_at_rated_pct: 40.0
+  dielectric: X7R
+  aging_pct_per_decade: 2.0
+  mfg_tolerance_pct: 1.0
+probes:
+- name: Main Power
+  rail:
+    ref: U2
+    net: /MCU/+3V3
+    pins: []
+  ground:
+    ref: U2
+    net: GND
+    pins: []
+  target_ohm: 2.0
+  target_hz: 65000000.0
+  target_custom: false
+  target_points:
+  - - 65000000.0
+    - 2.0
+- name: U1
+  rail:
+    ref: C5
+    net: /MCU/+3V3_A
+    pins: []
+  ground:
+    ref: C5
+    net: GND
+    pins: []
+  target_ohm: 1.0
+  target_hz: 63661977.2368
+  target_custom: false
+  target_points: []
+- name: U4 input
+  rail:
+    ref: U4
+    net: /MCU/VBAT
+    pins: []
+  ground:
+    ref: U4
+    net: GND
+    pins: []
+  target_ohm: null
+  target_hz: null
+  target_custom: false
+  target_points: []
+ac:
+  f_start_hz: 1000.0
+  f_stop_hz: 300000000.0
+  points_per_decade: 250
+  field_points_per_decade: 20
+  max_edge_mm: 1.0
+  grading: 0.3
+  min_edge_mm: 0.03
+  grade_near_rail_only: true
+  loss_tangent: 0.02
+  default_er: 4.3
+  rail: C25
+  ground: GND
+  html_report: true
+  report_format: html
+  dc_bias: true
+  mfg_tolerance: false
+  aging: false
+  aging_hours: 87600.0
+  temperature: none
+  temperature_c: 25.0
+aggressors: []
+victims: []
+noise:
+  aggressor: ''
+  f_max_hz: null
+  max_harmonics: 4000
+  periods_shown: 2
+  dead_time_ns: 20.0
+  segment_mm: 0.5
+  window_mm: 3.0
+  board_model: true
+  field_per_decade: 10
+  victims: all
+  scan: false
+  scan_radius_mm: 10.0
+  scan_top_n: 10
+  scan_preset: hiz
+  scan_driver_ohm: 33.0
+  scan_logic_v: 3.3
+  html_report: false
+  report_format: html
+format_version: 1

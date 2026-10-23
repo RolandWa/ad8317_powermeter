@@ -20,6 +20,12 @@
 		},
 		{
 			"path": "../HW_Test"
+		},
+		{
+			"path": "K:/"
+		},
+		{
+			"path": "../../KiCad/10.0/3rdparty/plugins/com_github_nbalciunas_kicad-rfsim"
 		}
 	],
 	"settings": {

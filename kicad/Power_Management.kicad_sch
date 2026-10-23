@@ -9,7 +9,7 @@
 		(date "2026-07-19")
 		(rev "A")
 		(company "Author")
-		(comment 1 "SMA (J1 Amphenol RF 132372)")
+		(comment 1 "SMA (J1 Wurth Elektronik 60312202114307)")
 		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
 		(comment 3 "AP9101 protection (U7), FS8205A cell FETs (T_PCM), FB1-FB3 600R@100MHz")
 	)
@@ -2672,7 +2672,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 174.498 60.96 90)
 			(hide yes)
 			(show_name no)
@@ -2738,6 +2738,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 172.72 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "06d9878f-0cd9-4f07-87bd-b7f93608f3fb")
 		)
@@ -2787,7 +2798,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 33.3248 133.35 0)
 			(hide yes)
 			(show_name no)
@@ -2810,6 +2821,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 34.29 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 34.29 137.16 0)
 			(hide yes)
 			(show_name no)
@@ -3180,6 +3202,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 127 44.45 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "9b10c33d-37ba-4424-8f97-34e530f6b516")
 		)
@@ -3293,6 +3326,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 60.96 69.85 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "cb35209a-d7cc-46ad-9ce4-3378a82762de")
 		)
@@ -3341,7 +3385,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 42.8752 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -3398,6 +3442,17 @@
 		)
 		(property "LCSC" "C9900019493"
 			(at 45.72 59.6899 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 41.91 60.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3487,6 +3542,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 69.85 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "38d3d92b-bd59-4516-a389-98478936d7c9")
 		)
@@ -3545,7 +3611,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 85.3948 171.45 0)
 			(hide yes)
 			(show_name no)
@@ -3568,6 +3634,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 86.36 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 86.36 175.26 0)
 			(hide yes)
 			(show_name no)
@@ -3693,6 +3770,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 167.64 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "cfe9be2f-a760-4c4c-b2c6-a409c21a5a42")
 		)
@@ -3799,6 +3887,17 @@
 		)
 		(property "LCSC" "C269672"
 			(at 129.54 31.7499 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 127 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3922,6 +4021,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 31.75 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "6c53ce42-1a99-4d6b-8442-505eedb5dcc5")
 		)
@@ -4028,6 +4138,17 @@
 		)
 		(property "LCSC" "C9900199398"
 			(at 55.88 59.6899 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 53.34 60.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4164,7 +4285,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 33.3248 171.45 0)
 			(hide yes)
 			(show_name no)
@@ -4187,6 +4308,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 34.29 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 34.29 175.26 0)
 			(hide yes)
 			(show_name no)
@@ -4357,6 +4489,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 55.88 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "fc5acbd3-6c97-4baf-bf17-791201c084eb")
 		)
@@ -4470,6 +4613,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 93.98 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "166dd192-5ba4-4d55-add6-d40289812599")
 		)
@@ -4546,7 +4700,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 85.3948 133.35 0)
 			(hide yes)
 			(show_name no)
@@ -4569,6 +4723,17 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 86.36 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 86.36 137.16 0)
 			(hide yes)
 			(show_name no)
@@ -4694,6 +4859,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 116.84 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "49d558a8-cbe6-4247-953e-a6d1a6cf5a5c")
 		)
@@ -4743,7 +4919,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 155.9052 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -4800,6 +4976,17 @@
 		)
 		(property "LCSC" "C9900019493"
 			(at 158.75 55.8799 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 154.94 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4913,6 +5100,17 @@
 		)
 		(property "LCSC" "C140225"
 			(at 73.66 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 73.66 60.96 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5048,6 +5246,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 116.84 44.45 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "58dd1e60-931b-49d0-907c-3deeecbfcea0")
 		)
@@ -5130,6 +5339,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 55.88 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "61a38f9f-9d26-4580-b4dd-f3ae0fabf414")
 		)
@@ -5200,6 +5420,17 @@
 			)
 		)
 		(property "Description" "Ultralow Noise, 150 mA, 3.3V,Noise 9uV, PSSR 70dB"
+			(at 69.85 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 69.85 168.91 0)
 			(hide yes)
 			(show_name no)

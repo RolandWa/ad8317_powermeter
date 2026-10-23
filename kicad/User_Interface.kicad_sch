@@ -9,7 +9,7 @@
 		(date "2026-07-19")
 		(rev "A")
 		(company "Author")
-		(comment 1 "SMA (J1 Amphenol RF 132372)")
+		(comment 1 "SMA (J1 Wurth Elektronik 60312202114307)")
 		(comment 2 "AD8317 log detector (U2), RC filter R_RC=1kR C_RC=1nF C0G")
 		(comment 3 "USB-C connector USB4110-GF-A (CONN1) — shared net with Power sheet")
 	)
@@ -1935,6 +1935,656 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Power_Protection:TPD4E1U06"
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "U"
+				(at -0.635 8.89 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "TPD4E1U06"
+				(at 8.89 -10.16 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "Package_TO_SOT_SMD:SOT-23-6"
+				(at -24.13 -10.16 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" "https://www.ti.com/lit/gpn/TPD4E1U06"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "4-Channel ESD Protection for Super-Speed USB 3.0 Interface,"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "ESD protection USB 3.0"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "*SOT-23-6*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "TPD4E1U06_0_0"
+				(rectangle
+					(start -5.715 6.477)
+					(end 5.715 -6.604)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -3.175 -6.604) (xy -3.175 6.477)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 6.477) (xy 0 -6.604)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.175 6.477) (xy 3.175 -6.604)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "TPD4E1U06_0_1"
+				(polyline
+					(pts
+						(xy -7.747 2.54) (xy -3.175 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -7.62 7.62)
+					(end 7.62 -7.62)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(polyline
+					(pts
+						(xy -7.62 -2.54) (xy -5.715 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center -5.715 -2.54)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -5.08 5.08) (xy -6.35 5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -5.08 3.81) (xy -6.35 3.81) (xy -5.715 5.08) (xy -5.08 3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -5.08 -3.81) (xy -6.35 -3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -5.08 -5.08) (xy -6.35 -5.08) (xy -5.715 -3.81) (xy -5.08 -5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center -3.175 6.477)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center -3.175 2.54)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center -3.175 -6.604)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 5.08) (xy -3.81 5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 3.81) (xy -3.81 3.81) (xy -3.175 5.08) (xy -2.54 3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 -3.81) (xy -3.81 -3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 -5.08) (xy -3.81 -5.08) (xy -3.175 -3.81) (xy -2.54 -5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.635 0.889) (xy -1.016 0.635)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 6.477)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 -6.604) (xy 0 -7.62)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 -6.604)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 0.889) (xy -0.635 0.889)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 0.889) (xy 1.016 1.143)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 -0.381) (xy -0.635 -0.381) (xy 0 0.889) (xy 0.635 -0.381)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 3.175 6.477)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 3.175 -2.54)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 3.175 -6.604)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 5.08) (xy 2.54 5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 3.81) (xy 2.54 3.81) (xy 3.175 5.08) (xy 3.81 3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 -3.81) (xy 2.54 -3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 -5.08) (xy 2.54 -5.08) (xy 3.175 -3.81) (xy 3.81 -5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 5.715 2.54)
+					(radius 0.2794)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 6.35 5.08) (xy 5.08 5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 6.35 3.81) (xy 5.08 3.81) (xy 5.715 5.08) (xy 6.35 3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 6.35 -3.81) (xy 5.08 -3.81)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 6.35 -5.08) (xy 5.08 -5.08) (xy 5.715 -3.81) (xy 6.35 -5.08)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 7.62 2.54) (xy 5.715 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 7.62 -2.54) (xy 3.175 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "TPD4E1U06_1_1"
+				(pin passive line
+					(at -12.7 2.54 0)
+					(length 5.08)
+					(name "D1+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 0 -12.7 90)
+					(length 5.08)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 12.7 2.54 180)
+					(length 5.08)
+					(name "D2+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 12.7 -2.54 180)
+					(length 5.08)
+					(name "D2-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -12.7 -2.54 0)
+					(length 5.08)
+					(name "D1-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "active_probe-altium-import:GND_POWER_GROUND"
 			(power global)
 			(exclude_from_sim no)
@@ -2208,6 +2858,16 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "ESD protection for the Dataline and Power"
+		(exclude_from_sim no)
+		(at 138.938 148.336 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "4f666b83-a7df-48ff-99b5-34398bf1f2fd")
+	)
 	(text "SBC-OLED01 SSD1306 I2C DISP1"
 		(exclude_from_sim no)
 		(at 115.062 43.18 0)
@@ -2218,24 +2878,14 @@
 		)
 		(uuid "7833e781-38ea-43e6-bfe4-3175efa47d6b")
 	)
-	(text "https://www.tme.eu/pl/details/pusb3fr4z/diody-zabezpieczajace-drabinki/nexperia/"
+	(text "https://www.we-online.com/components/media/o109030v410%20ANP002d_The%20protection%20of%20USB%202.0%20applications.pdf"
 		(exclude_from_sim no)
-		(at 127.254 151.384 0)
+		(at 89.916 176.784 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-		)
-		(uuid "a720a25a-e5dc-488c-adf7-db28f7bf22e2")
-	)
-	(text "https://www.mouser.pl/en/ProductDetail/Wurth-Elektronik/744231091?qs=PGXP4M47uW7beLYOUbZm8Q%3D%3D"
-		(exclude_from_sim no)
-		(at 140.208 143.764 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(href "https://www.mouser.pl/en/ProductDetail/Wurth-Elektronik/744231091?qs=PGXP4M47uW7beLYOUbZm8Q%3D%3D")
+			(href "https://www.we-online.com/components/media/o109030v410%20ANP002d_The%20protection%20of%20USB%202.0%20applications.pdf")
 		)
 		(uuid "dd53857b-7b77-4862-9e20-c888ea8c5451")
 	)
@@ -2257,6 +2907,12 @@
 		(uuid "01276741-df0b-4543-9a64-351642401f5c")
 	)
 	(junction
+		(at 86.36 124.46)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0183857f-5f24-4f9a-861e-b4ef5267f5fd")
+	)
+	(junction
 		(at 82.55 124.46)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2269,10 +2925,16 @@
 		(uuid "2b2450f4-7109-46a9-ae27-9501f1a40c42")
 	)
 	(junction
+		(at 83.82 119.38)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "54bc1e02-b799-453f-9113-c74978a920f1")
+	)
+	(junction
 		(at 67.31 46.99)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "996f64f1-7e97-45a2-a457-ebd4c7fbd975")
+		(uuid "57f7e19b-a59c-436e-aad2-ddb87fc46399")
 	)
 	(junction
 		(at 63.5 148.59)
@@ -2301,16 +2963,6 @@
 			(type default)
 		)
 		(uuid "039efa18-894b-4ce4-956b-e9f40d856691")
-	)
-	(wire
-		(pts
-			(xy 87.63 49.53) (xy 110.49 49.53)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "08e0f8a8-ce1d-4fc5-8610-f9607a99ffe0")
 	)
 	(wire
 		(pts
@@ -2354,6 +3006,16 @@
 	)
 	(wire
 		(pts
+			(xy 101.6 160.02) (xy 101.6 163.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2f337c1f-efff-4ec4-9889-7a3c911db5fd")
+	)
+	(wire
+		(pts
 			(xy 78.74 111.76) (xy 133.35 111.76)
 		)
 		(stroke
@@ -2374,13 +3036,13 @@
 	)
 	(wire
 		(pts
-			(xy 87.63 49.53) (xy 87.63 58.42)
+			(xy 83.82 149.86) (xy 83.82 119.38)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "3fbff16e-d6f7-4112-b791-bdeb67a53474")
+		(uuid "44eaf0fd-fe64-4a14-a49f-ff25ace34736")
 	)
 	(wire
 		(pts
@@ -2404,7 +3066,7 @@
 	)
 	(wire
 		(pts
-			(xy 82.55 124.46) (xy 101.6 124.46)
+			(xy 82.55 124.46) (xy 86.36 124.46)
 		)
 		(stroke
 			(width 0)
@@ -2434,7 +3096,7 @@
 	)
 	(wire
 		(pts
-			(xy 82.55 119.38) (xy 101.6 119.38)
+			(xy 82.55 119.38) (xy 83.82 119.38)
 		)
 		(stroke
 			(width 0)
@@ -2454,13 +3116,53 @@
 	)
 	(wire
 		(pts
-			(xy 67.31 46.99) (xy 110.49 46.99)
+			(xy 86.36 124.46) (xy 101.6 124.46)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "79fbd9cd-ff6f-4656-8900-195011456a4a")
+		(uuid "5fa3a292-b9e5-44da-a656-0bf33635c579")
+	)
+	(wire
+		(pts
+			(xy 77.47 46.99) (xy 67.31 46.99)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "65aa18ca-04c6-4a1e-914f-7d56270ddd53")
+	)
+	(wire
+		(pts
+			(xy 87.63 46.99) (xy 87.63 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "71fa4288-0813-41e4-9d48-9cac8c453e10")
+	)
+	(wire
+		(pts
+			(xy 77.47 49.53) (xy 77.47 46.99)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "78e182f4-c623-41c4-bb10-001e7a833d0d")
+	)
+	(wire
+		(pts
+			(xy 110.49 46.99) (xy 87.63 46.99)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8595d4e0-d7de-49d0-837d-b3d75dfa1585")
 	)
 	(wire
 		(pts
@@ -2474,6 +3176,16 @@
 	)
 	(wire
 		(pts
+			(xy 86.36 124.46) (xy 86.36 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8d8b21e9-8cff-4f0d-89a7-f4d00496cbb0")
+	)
+	(wire
+		(pts
 			(xy 116.84 106.68) (xy 121.92 106.68)
 		)
 		(stroke
@@ -2484,6 +3196,16 @@
 	)
 	(wire
 		(pts
+			(xy 88.9 144.78) (xy 86.36 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "939e953f-d94d-4840-8cb7-4976cc1d82ad")
+	)
+	(wire
+		(pts
 			(xy 87.63 58.42) (xy 67.31 58.42)
 		)
 		(stroke
@@ -2491,6 +3213,26 @@
 			(type default)
 		)
 		(uuid "b236a4a9-38dd-4292-a90b-e8d856e3f169")
+	)
+	(wire
+		(pts
+			(xy 114.3 144.78) (xy 119.38 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b2d3d4c3-e231-4ec7-970c-e2cc04b0bdd6")
+	)
+	(wire
+		(pts
+			(xy 88.9 149.86) (xy 83.82 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7ee4bd2-d6af-4594-b08f-b52384d2eb79")
 	)
 	(wire
 		(pts
@@ -2604,6 +3346,16 @@
 	)
 	(wire
 		(pts
+			(xy 83.82 119.38) (xy 101.6 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e2c44fe8-5cbe-4b99-9142-7ef00d8e8199")
+	)
+	(wire
+		(pts
 			(xy 58.42 46.99) (xy 67.31 46.99)
 		)
 		(stroke
@@ -2611,6 +3363,16 @@
 			(type default)
 		)
 		(uuid "e41e1eb3-4122-44af-ace6-af4f434c540d")
+	)
+	(wire
+		(pts
+			(xy 110.49 49.53) (xy 77.47 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "efcdb963-564e-4cb8-94e3-fb1c54a5225d")
 	)
 	(wire
 		(pts
@@ -2642,6 +3404,26 @@
 		)
 		(uuid "fa385c7b-6a7f-45e5-a2c6-0518e3eada50")
 	)
+	(label "USB_D1P"
+		(at 88.9 124.46 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "4c67a8ef-4459-4a2f-ac1c-81f6537af860")
+	)
+	(label "USB_D1N"
+		(at 88.9 119.38 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "ae913d48-40d2-4d73-8a8a-54c7fd759041")
+	)
 	(hierarchical_label "+3V3"
 		(shape input)
 		(at 58.42 46.99 180)
@@ -2664,7 +3446,7 @@
 		)
 		(uuid "690217dc-e8b2-4802-956c-f094489e8230")
 	)
-	(hierarchical_label "USB_DM"
+	(hierarchical_label "USB_DN"
 		(shape bidirectional)
 		(at 116.84 119.38 0)
 		(effects
@@ -2728,13 +3510,14 @@
 			(justify right bottom)
 		)
 		(uuid "44b61ffd-cc6e-4c91-9a27-3cd47cc98489")
-		(property "Netclass" "USB_diff"
+		(property "Netclass" "USB_Diff_Line"
 			(at 129.54 125.0315 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 205 255 139 1)
 				)
 				(justify left)
 			)
@@ -2970,6 +3753,39 @@
 				)
 			)
 		)
+		(property "LCSC" "C9900014224"
+			(at 113.03 106.68 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 113.03 106.68 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "TME" "AC0402KRX7R7BB104"
+			(at 113.03 106.68 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "45f5054e-9b8a-466a-b36a-7b0a1824cff1")
 		)
@@ -3042,6 +3858,39 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 67.31 52.07 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C9900014224"
+			(at 67.31 52.07 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 67.31 52.07 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "TME" "AC0402KRX7R7BB104"
 			(at 67.31 52.07 0)
 			(hide yes)
 			(show_name no)
@@ -3143,6 +3992,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 88.9 106.68 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "4d49e8db-cb5f-4183-a105-59cc96f4e6da")
 		)
@@ -3230,6 +4090,83 @@
 			(project "ad8317_powermeter"
 				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b1000004-0000-0000-0000-000000000004"
 					(reference "#PWR011")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "active_probe-altium-import:GND_POWER_GROUND")
+		(at 101.6 163.83 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "5af318fa-d643-40ff-b329-360972514600")
+		(property "Reference" "#PWR026"
+			(at 101.6 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 101.6 170.18 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 101.6 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 101.6 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin ""
+			(uuid "21620f15-f132-4ab3-ae86-40164b9ddddb")
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b1000004-0000-0000-0000-000000000004"
+					(reference "#PWR026")
 					(unit 1)
 				)
 			)
@@ -3346,7 +4283,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
 			(at 115.57 52.07 0)
 			(hide yes)
 			(show_name no)
@@ -3379,6 +4316,17 @@
 				)
 			)
 		)
+		(property "Mouser" ""
+			(at 115.57 52.07 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "3"
 			(uuid "6f10cad9-25e8-4247-a521-22c080d1c267")
 		)
@@ -3401,8 +4349,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Filter:0603USB-142")
-		(at 106.68 121.92 0)
+		(lib_id "Power_Protection:TPD4E1U06")
+		(at 101.6 147.32 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3411,9 +4359,175 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
+		(uuid "7f9d13a4-d444-4c72-b229-418a48bd6f25")
+		(property "Reference" "U8"
+			(at 101.6 134.62 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "TPD4E1U06"
+			(at 101.6 137.16 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-6"
+			(at 77.47 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://www.ti.com/lit/gpn/TPD4E1U06"
+			(at 101.6 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "4-Channel ESD Protection for Super-Speed USB 3.0 Interface,"
+			(at 101.6 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "6"
+			(uuid "c0d80590-36f2-4e81-8321-527c1d599a34")
+		)
+		(pin "4"
+			(uuid "73c4a9ef-ddfe-4c03-8b36-955fbec54e31")
+		)
+		(pin "3"
+			(uuid "bee668fe-7292-497f-87ef-5ed3f732db2d")
+		)
+		(pin "1"
+			(uuid "f52883de-e802-4d9d-beb0-22355fc0a400")
+		)
+		(pin "2"
+			(uuid "d2f016c1-3ebb-44e0-bdf8-c8745ad389eb")
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b1000004-0000-0000-0000-000000000004"
+					(reference "U8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "active_probe-altium-import:V+_BAR")
+		(at 119.38 144.78 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "8e5a06d2-d46a-4cd0-b577-2f544c5f90e6")
+		(property "Reference" "#PWR027"
+			(at 119.38 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 119.38 140.97 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 119.38 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 119.38 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 119.38 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin ""
+			(uuid "ed708cab-bf42-4d3b-8155-00393c0a84ed")
+		)
+		(instances
+			(project "ad8317_powermeter"
+				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b1000004-0000-0000-0000-000000000004"
+					(reference "#PWR027")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Filter:0603USB-142")
+		(at 106.68 121.92 0)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
 		(uuid "9e0ca65f-7d49-4339-bdaf-5f0e66db5fcc")
 		(property "Reference" "FL1"
-			(at 106.553 114.3 0)
+			(at 106.553 129.54 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3423,7 +4537,7 @@
 			)
 		)
 		(property "Value" "0603USB-142"
-			(at 106.553 116.84 0)
+			(at 106.553 127 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3433,7 +4547,7 @@
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_CommonModeChoke_Coilcraft_0603USB"
-			(at 106.68 128.27 0)
+			(at 106.68 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3444,7 +4558,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.coilcraft.com/pdfs/0603usb.pdf"
-			(at 106.68 130.175 0)
+			(at 106.68 113.665 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3455,6 +4569,17 @@
 			)
 		)
 		(property "Description" "Coilcraft common mode choke, 500mA, 250VAC, 98nH, 174mohm, 1.9Ghz"
+			(at 106.68 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 106.68 121.92 0)
 			(hide yes)
 			(show_name no)
@@ -3550,8 +4675,30 @@
 				)
 			)
 		)
-		(property "LCSC Part #" "C5913162"
+		(property "LCSC Part #" ""
 			(at 137.16 119.38 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C5913162"
+			(at 137.16 119.38 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 137.16 119.38 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3641,8 +4788,30 @@
 				)
 			)
 		)
-		(property "LCSC Part #" "C5913162"
+		(property "LCSC Part #" ""
 			(at 137.16 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C5913162"
+			(at 137.16 111.76 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
+			(at 137.16 111.76 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3799,6 +4968,17 @@
 			)
 		)
 		(property "Description" "USB 2.0-only 16P Type-C Receptacle connector"
+			(at 63.5 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Mouser" ""
 			(at 63.5 121.92 0)
 			(hide yes)
 			(show_name no)
