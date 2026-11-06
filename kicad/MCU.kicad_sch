@@ -3209,6 +3209,17 @@
 		)
 		(uuid "87b31817-b7c8-4d39-8441-1e2d6b7e6f55")
 	)
+	(text "Assessment\nCorrect\nCorrect"
+		(exclude_from_sim no)
+		(at 225 35 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left top)
+		)
+		(uuid "48006a18-8414-410b-8642-a8c519c5f99f")
+	)
 	(text "667-EVQ-Q2203W"
 		(exclude_from_sim no)
 		(at 80.772 156.464 90)
