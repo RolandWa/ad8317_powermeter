@@ -1,0 +1,222 @@
+{
+  "basis": "quasi-static grounded CPW (conformal mapping), h=0.1 mm FR4 er=4.4 to In1 GND; t-correction Wheeler dw=0.0306 mm",
+  "segments": [
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.1524,
+      "length_mm": 0.335,
+      "start_mm": [
+        146.72,
+        85.59
+      ],
+      "end_mm": [
+        147.055,
+        85.59
+      ],
+      "top_gnd_gap_min_mm": 0.574,
+      "top_gnd_gap_max_mm": 0.614,
+      "eeff_at_gap_min": 3.481,
+      "z0_cpwg_t0_ohm": [
+        61.3,
+        61.5
+      ],
+      "z0_cpwg_t35um_ohm": [
+        54.9,
+        55.1
+      ]
+    },
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.1524,
+      "length_mm": 0.22,
+      "start_mm": [
+        145.95,
+        85.04
+      ],
+      "end_mm": [
+        146.17,
+        85.04
+      ],
+      "top_gnd_gap_min_mm": 0.318,
+      "top_gnd_gap_max_mm": 0.384,
+      "eeff_at_gap_min": 3.374,
+      "z0_cpwg_t0_ohm": [
+        59.6,
+        60.2
+      ],
+      "z0_cpwg_t35um_ohm": [
+        53.3,
+        53.8
+      ]
+    },
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.15,
+      "length_mm": 0.99,
+      "start_mm": [
+        145.95,
+        85.01
+      ],
+      "end_mm": [
+        144.96,
+        85.01
+      ],
+      "top_gnd_gap_min_mm": 0.252,
+      "top_gnd_gap_max_mm": 0.354,
+      "eeff_at_gap_min": 3.323,
+      "z0_cpwg_t0_ohm": [
+        59.3,
+        60.4
+      ],
+      "z0_cpwg_t35um_ohm": [
+        52.9,
+        54.0
+      ]
+    },
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.2032,
+      "length_mm": 0.073,
+      "start_mm": [
+        143.246828,
+        84.91
+      ],
+      "end_mm": [
+        143.195178,
+        84.96165
+      ],
+      "top_gnd_gap_min_mm": 0.448,
+      "top_gnd_gap_max_mm": 0.484,
+      "eeff_at_gap_min": 3.515,
+      "z0_cpwg_t0_ohm": [
+        51.0,
+        51.2
+      ],
+      "z0_cpwg_t35um_ohm": [
+        46.5,
+        46.7
+      ]
+    },
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.1524,
+      "length_mm": 0.7778,
+      "start_mm": [
+        146.17,
+        85.04
+      ],
+      "end_mm": [
+        146.72,
+        85.59
+      ],
+      "top_gnd_gap_min_mm": 0.16,
+      "top_gnd_gap_max_mm": 0.706,
+      "eeff_at_gap_min": 3.232,
+      "z0_cpwg_t0_ohm": [
+        57.1,
+        61.8
+      ],
+      "z0_cpwg_t35um_ohm": [
+        50.6,
+        55.4
+      ]
+    },
+    {
+      "net": "Net-(U1-INHI)",
+      "width_mm": 0.25,
+      "length_mm": 1.535,
+      "start_mm": [
+        148.015,
+        85.59
+      ],
+      "end_mm": [
+        149.55,
+        85.59
+      ],
+      "top_gnd_gap_min_mm": 0.526,
+      "top_gnd_gap_max_mm": 0.566,
+      "eeff_at_gap_min": 3.602,
+      "z0_cpwg_t0_ohm": [
+        44.9,
+        45.1
+      ],
+      "z0_cpwg_t35um_ohm": [
+        41.4,
+        41.6
+      ]
+    },
+    {
+      "net": "Net-(U1-INHI)",
+      "width_mm": 0.25,
+      "length_mm": 0.2616,
+      "start_mm": [
+        149.55,
+        85.59
+      ],
+      "end_mm": [
+        149.735,
+        85.405
+      ],
+      "top_gnd_gap_min_mm": 0.656,
+      "top_gnd_gap_max_mm": 0.786,
+      "eeff_at_gap_min": 3.637,
+      "z0_cpwg_t0_ohm": [
+        45.3,
+        45.6
+      ],
+      "z0_cpwg_t35um_ohm": [
+        41.8,
+        42.1
+      ]
+    },
+    {
+      "net": "Net-(U1-INLO)",
+      "width_mm": 0.25,
+      "length_mm": 1.7,
+      "start_mm": [
+        148.035,
+        83.49
+      ],
+      "end_mm": [
+        149.735,
+        83.49
+      ],
+      "top_gnd_gap_min_mm": 0.396,
+      "top_gnd_gap_max_mm": 0.406,
+      "eeff_at_gap_min": 3.553,
+      "z0_cpwg_t0_ohm": [
+        44.4,
+        44.4
+      ],
+      "z0_cpwg_t35um_ohm": [
+        40.9,
+        41.0
+      ]
+    },
+    {
+      "net": "Net-(J1-In)",
+      "width_mm": 0.15,
+      "length_mm": 1.07,
+      "copper_graphic": true,
+      "start_mm": [
+        144.915,
+        84.96
+      ],
+      "end_mm": [
+        143.845,
+        84.96
+      ],
+      "top_gnd_gap_min_mm": 0.3,
+      "top_gnd_gap_max_mm": 0.364,
+      "eeff_at_gap_min": 3.358,
+      "z0_cpwg_t0_ohm": [
+        59.9,
+        60.5
+      ],
+      "z0_cpwg_t35um_ohm": [
+        53.5,
+        54.1
+      ]
+    }
+  ]
+}

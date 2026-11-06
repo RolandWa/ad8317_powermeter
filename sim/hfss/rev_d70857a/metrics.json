@@ -1,0 +1,804 @@
+{
+  "source": {
+    "repo": "<repo>",
+    "head": "e24b8f321389f287f1b40f7165f56e79a7aa447d",
+    "branch": "feature/wurth-60312202114307-short-sma",
+    "pcb_committed": false,
+    "kicad_dirty": [
+      " M kicad/MCU.kicad_sch",
+      " M kicad/ad8317_powermeter.kicad_dru",
+      " M kicad/ad8317_powermeter.kicad_pcb",
+      " M kicad/ad8317_powermeter.kicad_prl",
+      " M kicad/ad8317_powermeter.kicad_pro",
+      "?? kicad/ad8317_powermeter_C25_ac_report_2026-10-23_163854.html",
+      "?? kicad/ad8317_powermeter_U4_ac_report_2026-10-23_165127.html",
+      "?? kicad/ad8317_powermeter_U4_ac_report_2026-10-23_165435.html",
+      "?? kicad/ad8317_powermeter_U6_ac_report_2026-10-23_164117.html",
+      "?? kicad/ad8317_powermeter_U6_ac_report_2026-10-23_164514.html",
+      "?? kicad/ad8317_powermeter_kipi_report_2026-10-23_161944.html",
+      "?? kicad/ad8317_powermeter_kipi_report_2026-10-23_162059.html",
+      "?? kicad/bom/"
+    ],
+    "sha256": {
+      "kicad_pcb": "40B50F9777C088D6D1443CFE98E02D2643AFA4114B9AC75A422C345D8D388F5D",
+      "kicad_pro": "77A22E89C3A01B9D266E4C6F74364403E1F79801DC45A6E4AFFC8205DD91B79D",
+      "kicad_dru": "95AB98D75091A8476D60A936A460FA61EE68C9FC67F5CA1A11AA6E3C7353E304",
+      "kicad_prl": "0951B9D668A25B049A1239C0CB553609FC0F7A2D04A59D32BBB17C882B952264"
+    },
+    "captured": "2026-11-06T14:56:17"
+  },
+  "solution": {
+    "status": "SOLVED_CONVERGED_EXPORTED",
+    "hpc_job_id": 4251,
+    "adaptive_passes": [
+      {
+        "pass": 2,
+        "max_delta_s": 0.096695
+      },
+      {
+        "pass": 3,
+        "max_delta_s": 0.044713
+      },
+      {
+        "pass": 4,
+        "max_delta_s": 0.023028
+      },
+      {
+        "pass": 5,
+        "max_delta_s": 0.0078417
+      },
+      {
+        "pass": 6,
+        "max_delta_s": 0.0033186
+      }
+    ],
+    "required_max_delta_s": 0.02,
+    "required_last_converged_passes": 2,
+    "samples": 1001,
+    "port_order": [
+      "P1_SMA",
+      "P2_INHI",
+      "P3_INLO",
+      "P4_R1",
+      "P5_R2",
+      "P6_C1",
+      "P7_C2"
+    ],
+    "s7p_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+    "native_convergence_export": "adaptive_convergence.txt",
+    "native_profile_export": "solution_profile.txt",
+    "native_passivity_messages": [
+      "[info] Project:AD8317_RF, Setup1 : [PROFILE]        The interpolating frequency sweep converged but had one or more non passive basis solutions.  Passivity cannot be enforced for the sweep. (04:26:36 PM  Nov 06, 2026)",
+      "[info] Project:AD8317_RF, Design:RF_7port (Modal Network), The interpolating frequency sweep converged but had one or more non passive basis solutions.  Passivity cannot be enforced for the sweep. -- Simulating on machine: <hpc-node> (04:26:37 PM  Nov 06, 2026)"
+    ]
+  },
+  "cases": {
+    "actual/ideal/table": {
+      "touchstone_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0003930818554287,
+      "minimum_em_loss_fraction": 0.00024562311355447305,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.6930930955169885,
+        "mean_s11_db": -7.368970392118833,
+        "h_flatness_db": 23.14275530535474,
+        "fraction_below_minus10": 0.17658930373360243,
+        "worst_s11_f_ghz": 9.110089,
+        "minimum_transfer_db": -19.454306739189416,
+        "minimum_transfer_f_ghz": 9.350065,
+        "mean_chip_absorbed_power_fraction": 0.14986530087258715
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -15.698245280515797,
+          "mean_s11_db": -21.32979751674428,
+          "h_flatness_db": 0.46712829488276497,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.2373563721575037,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.039408529483046004
+        },
+        "1-3GHz": {
+          "worst_s11_db": -6.169844762178096,
+          "mean_s11_db": -9.795443475918367,
+          "h_flatness_db": 3.020794440820531,
+          "fraction_below_minus10": 0.425,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.23780698899898461,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.11109222661737386
+        },
+        "3-6GHz": {
+          "worst_s11_db": -5.461507046916973,
+          "mean_s11_db": -6.657184174139118,
+          "h_flatness_db": 7.885874260561476,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 3.550645,
+          "minimum_transfer_db": -4.19742569439615,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.33694067589612064
+        },
+        "6-8GHz": {
+          "worst_s11_db": -2.7058872515517103,
+          "mean_s11_db": -4.7747806916519195,
+          "h_flatness_db": 13.806063467622206,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.990201,
+          "minimum_transfer_db": -18.088713228346712,
+          "minimum_transfer_f_ghz": 7.990201,
+          "mean_chip_absorbed_power_fraction": 0.08938890163139396
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.6930930955169885,
+          "mean_s11_db": -2.347103464313366,
+          "h_flatness_db": 12.112202426095816,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 9.110089,
+          "minimum_transfer_db": -19.454306739189416,
+          "minimum_transfer_f_ghz": 9.350065,
+          "mean_chip_absorbed_power_fraction": 0.018862274092885288
+        }
+      }
+    },
+    "actual/generic_0402/table": {
+      "touchstone_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0003930818554287,
+      "minimum_em_loss_fraction": 0.0002456134774473833,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.2959826414483842,
+        "mean_s11_db": -7.18726918245652,
+        "h_flatness_db": 44.15639445061514,
+        "fraction_below_minus10": 0.16750756811301715,
+        "worst_s11_f_ghz": 8.570143,
+        "minimum_transfer_db": -39.643600866983284,
+        "minimum_transfer_f_ghz": 9.810019,
+        "mean_chip_absorbed_power_fraction": 0.14657586041181084
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -15.344375152239405,
+          "mean_s11_db": -21.041165326274427,
+          "h_flatness_db": 0.5960303271853061,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.23612397779272,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.039817854001886796
+        },
+        "1-3GHz": {
+          "worst_s11_db": -5.869202111408404,
+          "mean_s11_db": -9.310409992266308,
+          "h_flatness_db": 3.990814319118858,
+          "fraction_below_minus10": 0.38,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.3708835697915742,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.13545637183525486
+        },
+        "3-6GHz": {
+          "worst_s11_db": -5.79673782285759,
+          "mean_s11_db": -7.233441293500125,
+          "h_flatness_db": 10.056205906100491,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 3.210679,
+          "minimum_transfer_db": -5.543412322468633,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.3338785870089747
+        },
+        "6-8GHz": {
+          "worst_s11_db": -1.7521996983061774,
+          "mean_s11_db": -3.5813485394893854,
+          "h_flatness_db": 13.74672829216577,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.990201,
+          "minimum_transfer_db": -19.39806341918293,
+          "minimum_transfer_f_ghz": 7.950205,
+          "mean_chip_absorbed_power_fraction": 0.05964394581803588
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.2959826414483842,
+          "mean_s11_db": -2.3905213236245593,
+          "h_flatness_db": 23.738487209791295,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 8.570143,
+          "minimum_transfer_db": -39.643600866983284,
+          "minimum_transfer_f_ghz": 9.810019,
+          "mean_chip_absorbed_power_fraction": 0.012385229724299287
+        }
+      }
+    },
+    "actual/user_assumption/table": {
+      "touchstone_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0003930818554287,
+      "minimum_em_loss_fraction": 0.0002455648457122873,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.3006991953017712,
+        "mean_s11_db": -8.131220438334617,
+        "h_flatness_db": 46.052332963218944,
+        "fraction_below_minus10": 0.25630676084762866,
+        "worst_s11_f_ghz": 8.0002,
+        "minimum_transfer_db": -40.95446873258895,
+        "minimum_transfer_f_ghz": 8.90011,
+        "mean_chip_absorbed_power_fraction": 0.1503917361101618
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -16.437583881883782,
+          "mean_s11_db": -22.063009241686224,
+          "h_flatness_db": 0.7119874312061476,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.2332767500078349,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.04021544654690564
+        },
+        "1-3GHz": {
+          "worst_s11_db": -6.277716395081855,
+          "mean_s11_db": -9.94614922432892,
+          "h_flatness_db": 4.590914871009913,
+          "fraction_below_minus10": 0.44,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.4922166529098703,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.15805422766451893
+        },
+        "3-6GHz": {
+          "worst_s11_db": -6.273251583744565,
+          "mean_s11_db": -8.546705791617306,
+          "h_flatness_db": 10.738913005680603,
+          "fraction_below_minus10": 0.25333333333333335,
+          "worst_s11_f_ghz": 3.030697,
+          "minimum_transfer_db": -5.641048775050609,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.33748728386250604
+        },
+        "6-8GHz": {
+          "worst_s11_db": -1.3030941879056175,
+          "mean_s11_db": -3.5095558506976396,
+          "h_flatness_db": 13.756013237758335,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.990201,
+          "minimum_transfer_db": -19.510343468701684,
+          "minimum_transfer_f_ghz": 7.990201,
+          "mean_chip_absorbed_power_fraction": 0.05831955936635861
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.3006991953017712,
+          "mean_s11_db": -4.0657505977479635,
+          "h_flatness_db": 21.436793619812025,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 8.0002,
+          "minimum_transfer_db": -40.95446873258895,
+          "minimum_transfer_f_ghz": 8.90011,
+          "mean_chip_absorbed_power_fraction": 0.004467053388166658
+        }
+      }
+    },
+    "prev_e24b8f3/user_assumption/table": {
+      "touchstone_sha256": "5c61b6568c7bfb84ba58590a5e12ff8bf104b52dc14d220d5a2fd9ed96863d9e",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0002790848712753,
+      "minimum_em_loss_fraction": 0.00024253743934681948,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -0.9903922050784613,
+        "mean_s11_db": -6.923900278517664,
+        "h_flatness_db": 51.842214624792504,
+        "fraction_below_minus10": 0.18365287588294651,
+        "worst_s11_f_ghz": 8.020198,
+        "minimum_transfer_db": -46.912525596575854,
+        "minimum_transfer_f_ghz": 8.760124,
+        "mean_chip_absorbed_power_fraction": 0.1288678139103513
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -17.51106072445263,
+          "mean_s11_db": -23.099747901349637,
+          "h_flatness_db": 0.7625374421871254,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.23265622146475193,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.040386519896659215
+        },
+        "1-3GHz": {
+          "worst_s11_db": -5.493639519439755,
+          "mean_s11_db": -10.090103799177568,
+          "h_flatness_db": 4.385250520809481,
+          "fraction_below_minus10": 0.46,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.54443850740717,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.16040908632644169
+        },
+        "3-6GHz": {
+          "worst_s11_db": -3.9733415214377557,
+          "mean_s11_db": -6.173412470040062,
+          "h_flatness_db": 12.350036960023848,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 5.990401,
+          "minimum_transfer_db": -7.4346885172657355,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.28445140254675805
+        },
+        "6-8GHz": {
+          "worst_s11_db": -1.0038475775819957,
+          "mean_s11_db": -2.0843482820938375,
+          "h_flatness_db": 16.46382402463149,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.940206,
+          "minimum_transfer_db": -24.022879746673734,
+          "minimum_transfer_f_ghz": 7.950205,
+          "mean_chip_absorbed_power_fraction": 0.03168498620431439
+        },
+        "8-10GHz": {
+          "worst_s11_db": -0.9903922050784613,
+          "mean_s11_db": -2.46613784887183,
+          "h_flatness_db": 24.897628936901814,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 8.020198,
+          "minimum_transfer_db": -46.912525596575854,
+          "minimum_transfer_f_ghz": 8.760124,
+          "mean_chip_absorbed_power_fraction": 0.0015869727576128046
+        }
+      }
+    },
+    "old_baseline/user_assumption/table": {
+      "touchstone_sha256": "dd98a9abb3a595d7d27d32634e81b0b8fcf5974070e649e3da8f468695844d13",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0002751113330188,
+      "minimum_em_loss_fraction": 0.00012482050471124013,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.085023259147345,
+        "mean_s11_db": -8.262594533269562,
+        "h_flatness_db": 48.59544258989776,
+        "fraction_below_minus10": 0.2250252270433905,
+        "worst_s11_f_ghz": 8.220178,
+        "minimum_transfer_db": -43.424728974483635,
+        "minimum_transfer_f_ghz": 9.010099,
+        "mean_chip_absorbed_power_fraction": 0.1405789959799114
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -23.748400754802667,
+          "mean_s11_db": -28.16103472935721,
+          "h_flatness_db": 0.8291500517050756,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.23365662857041403,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.040614047218372314
+        },
+        "1-3GHz": {
+          "worst_s11_db": -6.156523145894525,
+          "mean_s11_db": -13.67685733661774,
+          "h_flatness_db": 4.559414011659641,
+          "fraction_below_minus10": 0.665,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.611299603754485,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.1705943095965765
+        },
+        "3-6GHz": {
+          "worst_s11_db": -5.159793639492085,
+          "mean_s11_db": -6.219492628314911,
+          "h_flatness_db": 10.674511889036125,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 3.550645,
+          "minimum_transfer_db": -5.584459069027099,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.2971868008400565
+        },
+        "6-8GHz": {
+          "worst_s11_db": -1.1576234572695803,
+          "mean_s11_db": -3.8194091515633306,
+          "h_flatness_db": 17.90320763673233,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.990201,
+          "minimum_transfer_db": -23.589900762690945,
+          "minimum_transfer_f_ghz": 7.990201,
+          "mean_chip_absorbed_power_fraction": 0.06067576448094153
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.085023259147345,
+          "mean_s11_db": -1.4360048293398033,
+          "h_flatness_db": 19.744132186736675,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 8.220178,
+          "minimum_transfer_db": -43.424728974483635,
+          "minimum_transfer_f_ghz": 9.010099,
+          "mean_chip_absorbed_power_fraction": 0.0012361477558116615
+        }
+      }
+    },
+    "previous_lc_geometry/user_assumption/table": {
+      "touchstone_sha256": "7b671515524eb822a8c4f3f71bb99c26ca1159e3a25479d42c53949603a8ab45",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.000429443504482,
+      "minimum_em_loss_fraction": 0.00012344455307128355,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.8318683444062633,
+        "mean_s11_db": -8.961366404047522,
+        "h_flatness_db": 53.63902252600813,
+        "fraction_below_minus10": 0.3713420787083754,
+        "worst_s11_f_ghz": 9.880012,
+        "minimum_transfer_db": -48.318344647645155,
+        "minimum_transfer_f_ghz": 8.960104,
+        "mean_chip_absorbed_power_fraction": 0.15548395860439818
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -17.70711340198559,
+          "mean_s11_db": -23.068317009551134,
+          "h_flatness_db": 0.7636830626029891,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.24704680399169154,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.040257075761484615
+        },
+        "1-3GHz": {
+          "worst_s11_db": -6.98136743386805,
+          "mean_s11_db": -10.940199666545288,
+          "h_flatness_db": 4.7888712370501425,
+          "fraction_below_minus10": 0.52,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.5312139641120365,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.1673150592012817
+        },
+        "3-6GHz": {
+          "worst_s11_db": -6.959981190409589,
+          "mean_s11_db": -10.300610786927512,
+          "h_flatness_db": 10.567571363610881,
+          "fraction_below_minus10": 0.58,
+          "worst_s11_f_ghz": 3.070693,
+          "minimum_transfer_db": -5.246893485247908,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.3445325165617833
+        },
+        "6-8GHz": {
+          "worst_s11_db": -2.0264092818452357,
+          "mean_s11_db": -4.8346301581644955,
+          "h_flatness_db": 14.006631557549758,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.950205,
+          "minimum_transfer_db": -19.365423578972496,
+          "minimum_transfer_f_ghz": 7.950205,
+          "mean_chip_absorbed_power_fraction": 0.06368028711926656
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.8318683444062633,
+          "mean_s11_db": -2.7831660424441944,
+          "h_flatness_db": 29.287313342973135,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 9.880012,
+          "minimum_transfer_db": -48.318344647645155,
+          "minimum_transfer_f_ghz": 8.960104,
+          "mean_chip_absorbed_power_fraction": 0.004490755849653432
+        }
+      }
+    },
+    "actual/user_assumption/chart": {
+      "touchstone_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+      "samples": 1001,
+      "frequency_range_ghz": [
+        0.001,
+        10.0
+      ],
+      "max_em_singular_value": 1.0003930818554287,
+      "minimum_em_loss_fraction": 0.0002455648457122873,
+      "summary_0.1_10ghz": {
+        "worst_s11_db": -1.2799155905181394,
+        "mean_s11_db": -8.846629782433274,
+        "h_flatness_db": 46.7072198996041,
+        "fraction_below_minus10": 0.33703329969727547,
+        "worst_s11_f_ghz": 8.0002,
+        "minimum_transfer_db": -41.6093556689741,
+        "minimum_transfer_f_ghz": 8.90011,
+        "mean_chip_absorbed_power_fraction": 0.11248346019666508
+      },
+      "bands": {
+        "0.1-1GHz": {
+          "worst_s11_db": -16.437583881883782,
+          "mean_s11_db": -22.063009241686224,
+          "h_flatness_db": 0.7119874312061476,
+          "fraction_below_minus10": 1.0,
+          "worst_s11_f_ghz": 0.990901,
+          "minimum_transfer_db": -0.2332767500078349,
+          "minimum_transfer_f_ghz": 0.10099,
+          "mean_chip_absorbed_power_fraction": 0.04021544654690564
+        },
+        "1-3GHz": {
+          "worst_s11_db": -6.277716395081855,
+          "mean_s11_db": -9.94614922432892,
+          "h_flatness_db": 4.590914871009913,
+          "fraction_below_minus10": 0.44,
+          "worst_s11_f_ghz": 2.990701,
+          "minimum_transfer_db": 0.4922166529098703,
+          "minimum_transfer_f_ghz": 1.0009,
+          "mean_chip_absorbed_power_fraction": 0.15805422766451893
+        },
+        "3-6GHz": {
+          "worst_s11_db": -6.273251583744565,
+          "mean_s11_db": -10.927273489020902,
+          "h_flatness_db": 14.321500420872567,
+          "fraction_below_minus10": 0.52,
+          "worst_s11_f_ghz": 3.030697,
+          "minimum_transfer_db": -9.223636190242575,
+          "minimum_transfer_f_ghz": 5.990401,
+          "mean_chip_absorbed_power_fraction": 0.23315825084706526
+        },
+        "6-8GHz": {
+          "worst_s11_db": -1.2822857925317621,
+          "mean_s11_db": -3.487628789501928,
+          "h_flatness_db": 10.824844050987018,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 7.990201,
+          "minimum_transfer_db": -20.140162303723947,
+          "minimum_transfer_f_ghz": 7.990201,
+          "mean_chip_absorbed_power_fraction": 0.027927572177579144
+        },
+        "8-10GHz": {
+          "worst_s11_db": -1.2799155905181394,
+          "mean_s11_db": -4.061699667498379,
+          "h_flatness_db": 21.463235641030447,
+          "fraction_below_minus10": 0.0,
+          "worst_s11_f_ghz": 8.0002,
+          "minimum_transfer_db": -41.6093556689741,
+          "minimum_transfer_f_ghz": 8.90011,
+          "mean_chip_absorbed_power_fraction": 0.0035218091698228653
+        }
+      }
+    }
+  },
+  "rf_line": {
+    "basis": "quasi-static grounded CPW (conformal mapping), h=0.1 mm FR4 er=4.4 to In1 GND; t-correction Wheeler dw=0.0306 mm",
+    "segments": [
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.1524,
+        "length_mm": 0.335,
+        "start_mm": [
+          146.72,
+          85.59
+        ],
+        "end_mm": [
+          147.055,
+          85.59
+        ],
+        "top_gnd_gap_min_mm": 0.574,
+        "top_gnd_gap_max_mm": 0.614,
+        "eeff_at_gap_min": 3.481,
+        "z0_cpwg_t0_ohm": [
+          61.3,
+          61.5
+        ],
+        "z0_cpwg_t35um_ohm": [
+          54.9,
+          55.1
+        ]
+      },
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.1524,
+        "length_mm": 0.22,
+        "start_mm": [
+          145.95,
+          85.04
+        ],
+        "end_mm": [
+          146.17,
+          85.04
+        ],
+        "top_gnd_gap_min_mm": 0.318,
+        "top_gnd_gap_max_mm": 0.384,
+        "eeff_at_gap_min": 3.374,
+        "z0_cpwg_t0_ohm": [
+          59.6,
+          60.2
+        ],
+        "z0_cpwg_t35um_ohm": [
+          53.3,
+          53.8
+        ]
+      },
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.15,
+        "length_mm": 0.99,
+        "start_mm": [
+          145.95,
+          85.01
+        ],
+        "end_mm": [
+          144.96,
+          85.01
+        ],
+        "top_gnd_gap_min_mm": 0.252,
+        "top_gnd_gap_max_mm": 0.354,
+        "eeff_at_gap_min": 3.323,
+        "z0_cpwg_t0_ohm": [
+          59.3,
+          60.4
+        ],
+        "z0_cpwg_t35um_ohm": [
+          52.9,
+          54.0
+        ]
+      },
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.2032,
+        "length_mm": 0.073,
+        "start_mm": [
+          143.246828,
+          84.91
+        ],
+        "end_mm": [
+          143.195178,
+          84.96165
+        ],
+        "top_gnd_gap_min_mm": 0.448,
+        "top_gnd_gap_max_mm": 0.484,
+        "eeff_at_gap_min": 3.515,
+        "z0_cpwg_t0_ohm": [
+          51.0,
+          51.2
+        ],
+        "z0_cpwg_t35um_ohm": [
+          46.5,
+          46.7
+        ]
+      },
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.1524,
+        "length_mm": 0.7778,
+        "start_mm": [
+          146.17,
+          85.04
+        ],
+        "end_mm": [
+          146.72,
+          85.59
+        ],
+        "top_gnd_gap_min_mm": 0.16,
+        "top_gnd_gap_max_mm": 0.706,
+        "eeff_at_gap_min": 3.232,
+        "z0_cpwg_t0_ohm": [
+          57.1,
+          61.8
+        ],
+        "z0_cpwg_t35um_ohm": [
+          50.6,
+          55.4
+        ]
+      },
+      {
+        "net": "Net-(U1-INHI)",
+        "width_mm": 0.25,
+        "length_mm": 1.535,
+        "start_mm": [
+          148.015,
+          85.59
+        ],
+        "end_mm": [
+          149.55,
+          85.59
+        ],
+        "top_gnd_gap_min_mm": 0.526,
+        "top_gnd_gap_max_mm": 0.566,
+        "eeff_at_gap_min": 3.602,
+        "z0_cpwg_t0_ohm": [
+          44.9,
+          45.1
+        ],
+        "z0_cpwg_t35um_ohm": [
+          41.4,
+          41.6
+        ]
+      },
+      {
+        "net": "Net-(U1-INHI)",
+        "width_mm": 0.25,
+        "length_mm": 0.2616,
+        "start_mm": [
+          149.55,
+          85.59
+        ],
+        "end_mm": [
+          149.735,
+          85.405
+        ],
+        "top_gnd_gap_min_mm": 0.656,
+        "top_gnd_gap_max_mm": 0.786,
+        "eeff_at_gap_min": 3.637,
+        "z0_cpwg_t0_ohm": [
+          45.3,
+          45.6
+        ],
+        "z0_cpwg_t35um_ohm": [
+          41.8,
+          42.1
+        ]
+      },
+      {
+        "net": "Net-(U1-INLO)",
+        "width_mm": 0.25,
+        "length_mm": 1.7,
+        "start_mm": [
+          148.035,
+          83.49
+        ],
+        "end_mm": [
+          149.735,
+          83.49
+        ],
+        "top_gnd_gap_min_mm": 0.396,
+        "top_gnd_gap_max_mm": 0.406,
+        "eeff_at_gap_min": 3.553,
+        "z0_cpwg_t0_ohm": [
+          44.4,
+          44.4
+        ],
+        "z0_cpwg_t35um_ohm": [
+          40.9,
+          41.0
+        ]
+      },
+      {
+        "net": "Net-(J1-In)",
+        "width_mm": 0.15,
+        "length_mm": 1.07,
+        "copper_graphic": true,
+        "start_mm": [
+          144.915,
+          84.96
+        ],
+        "end_mm": [
+          143.845,
+          84.96
+        ],
+        "top_gnd_gap_min_mm": 0.3,
+        "top_gnd_gap_max_mm": 0.364,
+        "eeff_at_gap_min": 3.358,
+        "z0_cpwg_t0_ohm": [
+          59.9,
+          60.5
+        ],
+        "z0_cpwg_t35um_ohm": [
+          53.5,
+          54.1
+        ]
+      }
+    ]
+  },
+  "build_receipt_status": "GEOMETRY_VALIDATED_NOT_SOLVED"
+}

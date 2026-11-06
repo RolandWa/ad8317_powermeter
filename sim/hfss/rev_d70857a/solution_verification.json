@@ -1,0 +1,45 @@
+{
+  "status": "SOLVED_CONVERGED_EXPORTED",
+  "hpc_job_id": 4251,
+  "adaptive_passes": [
+    {
+      "pass": 2,
+      "max_delta_s": 0.096695
+    },
+    {
+      "pass": 3,
+      "max_delta_s": 0.044713
+    },
+    {
+      "pass": 4,
+      "max_delta_s": 0.023028
+    },
+    {
+      "pass": 5,
+      "max_delta_s": 0.0078417
+    },
+    {
+      "pass": 6,
+      "max_delta_s": 0.0033186
+    }
+  ],
+  "required_max_delta_s": 0.02,
+  "required_last_converged_passes": 2,
+  "samples": 1001,
+  "port_order": [
+    "P1_SMA",
+    "P2_INHI",
+    "P3_INLO",
+    "P4_R1",
+    "P5_R2",
+    "P6_C1",
+    "P7_C2"
+  ],
+  "s7p_sha256": "2527d4698c9723498440fb104e53040a83c43a646813a921f5f2ae9762e2661e",
+  "native_convergence_export": "adaptive_convergence.txt",
+  "native_profile_export": "solution_profile.txt",
+  "native_passivity_messages": [
+    "[info] Project:AD8317_RF, Setup1 : [PROFILE]        The interpolating frequency sweep converged but had one or more non passive basis solutions.  Passivity cannot be enforced for the sweep. (04:26:36 PM  Nov 06, 2026)",
+    "[info] Project:AD8317_RF, Design:RF_7port (Modal Network), The interpolating frequency sweep converged but had one or more non passive basis solutions.  Passivity cannot be enforced for the sweep. -- Simulating on machine: <hpc-node> (04:26:37 PM  Nov 06, 2026)"
+  ]
+}

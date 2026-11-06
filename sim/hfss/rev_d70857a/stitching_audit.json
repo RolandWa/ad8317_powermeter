@@ -1,0 +1,452 @@
+[
+  {
+    "xy_mm": [
+      140.445178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      139.645178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      138.845178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      138.045178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      137.245178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      136.445178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      135.645178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      134.845178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      134.045178,
+      79.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.279524210735,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.279524210735
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      80.46165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      81.26165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      82.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      82.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      83.66165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      144.245178,
+      84.11165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      144.245178,
+      85.81165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      86.26165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      87.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      87.86165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      88.66165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      141.065178,
+      89.46165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      140.445178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      139.645178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      138.845178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      138.045178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      137.245178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      136.445178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      135.645178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      134.845178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  },
+  {
+    "xy_mm": [
+      134.045178,
+      90.06165
+    ],
+    "diameter_mm": 0.6,
+    "drill_mm": 0.3,
+    "zone_contacts": {
+      "F.Cu": 0.27952420822,
+      "In1.Cu": 0.27952420822,
+      "In2.Cu": 0.0,
+      "B.Cu": 0.27952420822
+    },
+    "native_connected_items": 401
+  }
+]

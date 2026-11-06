@@ -1,0 +1,7 @@
+{
+  "kicad_pcb_sha256": "40B50F9777C088D6D1443CFE98E02D2643AFA4114B9AC75A422C345D8D388F5D",
+  "branch": "feature/wurth-60312202114307-short-sma",
+  "pushed": "2026-11-06",
+  "note": "PCB identical to the simulated wip_40b50f97 revision (HPC job 4251)",
+  "commit": "d70857a"
+}
