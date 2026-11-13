@@ -1466,18 +1466,6 @@
 		(uuid "aba1e907-05bc-4b13-a9b1-872602058e67")
 	)
 	(junction
-		(at 106.68 97.79)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ba9697bd-6de4-406e-8238-e9044a8cc4a6")
-	)
-	(junction
-		(at 106.68 106.68)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "db0dc834-0a0a-4ad0-8918-a6648b906314")
-	)
-	(junction
 		(at 161.29 82.55)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1512,16 +1500,6 @@
 			(type default)
 		)
 		(uuid "16c70992-6a47-4016-b432-841441c1b37a")
-	)
-	(wire
-		(pts
-			(xy 106.68 97.79) (xy 115.57 97.79)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "26113d87-958d-4e00-b50b-ccf8c80385ad")
 	)
 	(wire
 		(pts
@@ -1565,16 +1543,6 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 106.68) (xy 106.68 106.68)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4235c8b5-684c-4cc4-896a-8dc5e67e6fcc")
-	)
-	(wire
-		(pts
 			(xy 191.77 118.11) (xy 191.77 125.73)
 		)
 		(stroke
@@ -1605,7 +1573,7 @@
 	)
 	(wire
 		(pts
-			(xy 96.52 97.79) (xy 106.68 97.79)
+			(xy 96.52 97.79) (xy 115.57 97.79)
 		)
 		(stroke
 			(width 0)
@@ -1695,16 +1663,6 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 105.41) (xy 106.68 106.68)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "88ad66ea-5c30-4f8e-a2e7-391ce7672a19")
-	)
-	(wire
-		(pts
 			(xy 158.75 68.58) (xy 161.29 68.58)
 		)
 		(stroke
@@ -1715,7 +1673,7 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 106.68) (xy 115.57 106.68)
+			(xy 91.44 106.68) (xy 115.57 106.68)
 		)
 		(stroke
 			(width 0)
@@ -1964,99 +1922,6 @@
 			(justify left)
 		)
 		(uuid "d0fcf068-87ce-47cb-9342-4533f412abc8")
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 106.68 101.6 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "08872cff-673d-4b76-be30-44cf04d4b840")
-		(property "Reference" "R2"
-			(at 109.22 100.3299 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "100R"
-			(at 109.22 102.8699 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 104.902 101.6 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 106.68 101.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 106.68 101.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Mouser" ""
-			(at 106.68 101.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "0fc45fc4-40b5-48a1-80f5-339186563856")
-		)
-		(pin "2"
-			(uuid "fb3c7e17-2e35-4e1e-88c3-8f38145c528a")
-		)
-		(instances
-			(project "ad8317_powermeter"
-				(path "/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b1000001-0000-0000-0000-000000000001"
-					(reference "R2")
-					(unit 1)
-				)
-			)
-		)
 	)
 	(symbol
 		(lib_id "power:GND")
@@ -3687,7 +3552,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100R"
+		(property "Value" "50R"
 			(at 118.11 102.8699 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3709,7 +3574,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "AR02BTCY0500"
 			(at 115.57 101.6 0)
 			(hide yes)
 			(show_name no)
@@ -3732,6 +3597,17 @@
 			)
 		)
 		(property "Mouser" ""
+			(at 115.57 101.6 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "TME" "AR0402-50R-0.1%"
 			(at 115.57 101.6 0)
 			(hide yes)
 			(show_name no)
